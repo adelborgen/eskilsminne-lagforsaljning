@@ -1,0 +1,278 @@
+/* Tester för Server.gs. Kör: node --test test/server.test.cjs
+   Servern körs mot låtsas-versioner av Googles tjänster (se harness.cjs), så ingen riktig data rörs. */
+const test = require("node:test");
+const assert = require("node:assert/strict");
+const { skapaMiljo } = require("./harness.cjs");
+
+function ny() {
+  const m = skapaMiljo();
+  m.setup();
+  return { m, sk: m.superNyckel() };
+}
+const lagData = (o = {}) => ({ namn: "F2017", kampanj: "Chokladförsäljning", swishNummer: "123 456 78 90", mottagare: "Eskilsminne IF F2017",
+  pris: 30, inkopspris: 14.5, minimum: 240, mal: 300, kartong: 24, status: "pagar", ...o });
+function skapaLag(m, sk, o) {
+  const r = m.admin("*", sk, "lagNy", { data: lagData(o) });
+  assert.equal(r.ok, true, JSON.stringify(r));
+  return r;   // { slug, key }
+}
+const bestall = (m, lag, o = {}) => m.post({ lag, barn: "Emil", mobil: "070 123 45 67", antal: 5, samtycke: true, website: "", t: 5000, ...o });
+
+test("setup skapar flikarna och sparar bara hashen av superadmin-nyckeln", () => {
+  const { m, sk } = ny();
+  assert.deepEqual(Object.keys(m.blad), ["Lag", "Beställningar", "Logg"]);
+  assert.match(sk, /^([0-9a-f]{4}-){7}[0-9a-f]{4}$/);
+  const lagrad = m.props.get("SUPER_HASH");
+  assert.match(lagrad, /^[0-9a-f]{64}$/);
+  assert.ok(!lagrad.includes(sk.replace(/-/g, "")));
+  const forsta = m.props.get("SUPER_HASH");
+  m.setup();   // en andra körning ska inte byta nyckeln
+  assert.equal(m.props.get("SUPER_HASH"), forsta);
+});
+
+test("laglistan är publik men innehåller aldrig nyckel, hash eller radnummer", () => {
+  const { m, sk } = ny();
+  assert.deepEqual(m.get({ action: "lag" }), { ok: true, lag: [] });
+  const { key } = skapaLag(m, sk);
+  const txt = JSON.stringify(m.get({ action: "lag" }));
+  assert.ok(txt.includes('"slug":"f2017"') && txt.includes("123 456 78 90"));
+  for (const hemligt of ["hash", "_rad", "nyckel", key, key.replace(/-/g, "")]) assert.ok(!txt.includes(hemligt), "läcker: " + hemligt);
+});
+
+test("nytt lag: kontroller, standardvärden och slug", () => {
+  const { m, sk } = ny();
+  const fel = (o) => m.admin("*", sk, "lagNy", { data: lagData(o) });
+  assert.match(fel({ namn: "" }).fel, /namn/i);
+  assert.match(fel({ namn: "=HYPERLINK" }).fel, /namn/i);
+  assert.match(fel({ swishNummer: "12345" }).fel, /Swish/);
+  assert.match(fel({ pris: 0 }).fel, /Priset/);
+  assert.match(fel({ pris: "abc" }).fel, /Priset/);
+  assert.match(fel({ inkopspris: 31 }).fel, /Inköpspriset/);
+  assert.match(fel({ minimum: 400 }).fel, /Målet/);
+  assert.match(fel({ minimum: 2.5 }).fel, /Minimum/);
+  assert.match(fel({ status: "hej" }).fel, /status/i);
+  assert.match(fel({ slug: "Fel Slug!" }).fel, /Adressen/);
+  assert.equal(fel({ pris: undefined }).ok, false);
+
+  const r = m.admin("*", sk, "lagNy", { data: { namn: "Flickor Å-Ö", pris: "35,5", inkopspris: 10, minimum: 100, mal: 150 } });
+  assert.equal(r.ok, true, JSON.stringify(r));
+  assert.equal(r.slug, "flickor-a-o");
+  assert.deepEqual(r.lag, { slug: "flickor-a-o", namn: "Flickor Å-Ö", kampanj: "Lagförsäljning", status: "snart",
+    swish: { nummer: "", namnPaKonto: "", meddelande: "Flickor Å-Ö försäljning" }, pris: 35.5, inkopspris: 10, minimum: 100, mal: 150, maxAntal: 50, kartong: 0 });
+  assert.match(m.admin("*", sk, "lagNy", { data: { namn: "Flickor Å-Ö", pris: 1, inkopspris: 0, minimum: 1, mal: 1 } }).fel, /finns redan/);
+});
+
+test("både privata Swish-nummer och Swish Handel-nummer godtas, och formateras lika", () => {
+  const { m, sk } = ny();
+  const a = m.admin("*", sk, "lagNy", { data: lagData({ namn: "A", swishNummer: "0701234567" }) });
+  assert.equal(a.ok, false);   // namnet "A" är för kort, inte numret
+  const b = m.admin("*", sk, "lagNy", { data: lagData({ namn: "Lag A", swishNummer: "070 123 45 67" }) });
+  const c = m.admin("*", sk, "lagNy", { data: lagData({ namn: "Lag B", swishNummer: "1234567890" }) });
+  assert.equal(b.lag.swish.nummer, "070 123 45 67");
+  assert.equal(c.lag.swish.nummer, "123 456 78 90");
+});
+
+test("text som börjar med formeltecken rensas innan den hamnar i kalkylarket", () => {
+  const { m, sk } = ny();
+  const r = m.admin("*", sk, "lagNy", { data: lagData({ kampanj: "=IMPORTXML(\"http://x\")", mottagare: "+46 hej", meddelande: "@SUM(A1)" }) });
+  assert.equal(r.ok, true);
+  assert.ok(!/^[=+\-@]/.test(r.lag.kampanj) && !/^[=+\-@]/.test(r.lag.swish.namnPaKonto) && !/^[=+\-@]/.test(r.lag.swish.meddelande));
+});
+
+test("bara superadmin kan lägga till lag", () => {
+  const { m, sk } = ny();
+  const { slug, key } = skapaLag(m, sk);
+  assert.match(m.admin("*", key, "lagNy", { data: lagData({ namn: "Nytt" }) }).fel, /Fel lag eller nyckel/);
+  assert.match(m.admin(slug, key, "lagNy", { data: lagData({ namn: "Nytt" }) }).fel, /Bara klubbens administratör/);
+  assert.match(m.admin(slug, key, "lagLista").fel, /Bara klubbens administratör/);
+  assert.match(m.admin(slug, key, "nyNyckel", { slug }).fel, /Bara klubbens administratör/);
+  assert.match(m.admin(slug, key, "lagUppdatera", { slug, falt: { pris: 1 } }).fel, /Bara klubbens administratör/);
+});
+
+test("beställning: priset räknas på servern och ordernumren är löpande per lag", () => {
+  const { m, sk } = ny();
+  const a = skapaLag(m, sk, { namn: "Lag A", pris: 30 }), b = skapaLag(m, sk, { namn: "Lag B", pris: 50, inkopspris: 20, mal: 300 });
+  const r1 = bestall(m, "lag-a", { antal: 5, belopp: 1, pris: 1 });   // ett fuskat belopp ska ignoreras
+  assert.deepEqual([r1.ok, r1.id, r1.belopp], [true, "0001", 150]);
+  const r2 = bestall(m, "lag-a", { mobil: "0702222222", antal: 2 });
+  const r3 = bestall(m, "lag-b", { mobil: "0703333333", antal: 3 });
+  assert.deepEqual([r2.id, r2.belopp, r3.id, r3.belopp], ["0002", 60, "0001", 150]);
+  assert.deepEqual(m.get({ action: "status", lag: "lag-a" }), { ok: true, bestallt: 7 });
+  assert.deepEqual(m.get({ action: "status", lag: "lag-b" }), { ok: true, bestallt: 3 });
+  assert.equal(m.blad["Beställningar"].data[1][1], "0001");   // sparas som text, nollan finns kvar
+  assert.equal(m.blad["Beställningar"].data[1][2], "lag-a");
+  assert.equal(a.slug, "lag-a"); assert.equal(b.slug, "lag-b");
+});
+
+test("beställning: avvisas för okänt lag, stängt lag och felaktiga uppgifter", () => {
+  const { m, sk } = ny();
+  skapaLag(m, sk, { namn: "Lag A", maxAntal: 10 }); skapaLag(m, sk, { namn: "Snart", status: "snart" }); skapaLag(m, sk, { namn: "Klar", status: "avslutad" });
+  assert.match(bestall(m, "finns-inte").fel, /Okänt lag/);
+  assert.match(bestall(m, "snart").fel, /inte öppen/);
+  assert.match(bestall(m, "klar").fel, /inte öppen/);
+  assert.match(bestall(m, "lag-a", { t: 100 }).fel, /Vänta/);
+  assert.match(bestall(m, "lag-a", { t: "5000" }).fel, /Vänta/);
+  assert.match(bestall(m, "lag-a", { barn: "1" }).fel, /barnets namn/);
+  assert.match(bestall(m, "lag-a", { barn: "=cmd" }).fel, /barnets namn/);
+  assert.match(bestall(m, "lag-a", { mobil: "123" }).fel, /mobilnummer/);
+  assert.match(bestall(m, "lag-a", { antal: 0 }).fel, /Välj mellan 1 och 10/);
+  assert.match(bestall(m, "lag-a", { antal: 11 }).fel, /Välj mellan 1 och 10/);
+  assert.match(bestall(m, "lag-a", { antal: 1.5 }).fel, /Välj mellan/);
+  assert.match(bestall(m, "lag-a", { samtycke: false }).fel, /godkänna/);
+  assert.equal(m.blad["Beställningar"].getLastRow(), 1, "inget av det här fick sparas");
+  const hp = bestall(m, "lag-a", { website: "http://spam" });   // honeypot: låtsas lyckas, spara inget
+  assert.deepEqual([hp.ok, hp.id], [true, "0000"]);
+  assert.equal(m.blad["Beställningar"].getLastRow(), 1);
+  assert.equal(bestall(m, "LAG-A").ok, true);   // versaler i adressen går bra
+});
+
+test("beställning: mobilnummer normaliseras och spärr efter fem beställningar", () => {
+  const { m, sk } = ny();
+  skapaLag(m, sk, { namn: "Lag A" });
+  assert.equal(bestall(m, "lag-a", { mobil: "+46 70 123 45 67" }).ok, true);
+  assert.equal(m.blad["Beställningar"].data[1][4], "0701234567");
+  for (let i = 0; i < 4; i++) assert.equal(bestall(m, "lag-a").ok, true);
+  assert.match(bestall(m, "lag-a").fel, /Många beställningar/);
+  assert.equal(bestall(m, "lag-a", { mobil: "0709999999" }).ok, true, "andra nummer påverkas inte");
+});
+
+test("admin: fel nyckel avvisas, och ett lags nyckel ger bara det laget", () => {
+  const { m, sk } = ny();
+  const a = skapaLag(m, sk, { namn: "Lag A" }), b = skapaLag(m, sk, { namn: "Lag B" });
+  const fel = /Fel lag eller nyckel/;
+  assert.match(m.admin("lag-a", "", "oversikt").fel, fel);
+  assert.match(m.admin("lag-a", "abc", "oversikt").fel, fel);
+  assert.match(m.admin("lag-a", "0".repeat(32), "oversikt").fel, fel);
+  assert.match(m.admin("lag-a", b.key, "oversikt").fel, fel);
+  assert.match(m.admin("lag-b", a.key, "lista").fel, fel);
+  assert.match(m.admin("finns-inte", a.key, "oversikt").fel, fel);
+  assert.equal(m.admin("lag-a", a.key, "oversikt").roll, "lag");
+  assert.equal(m.admin("lag-a", a.key.toUpperCase().replace(/-/g, " "), "oversikt").ok, true, "nyckeln får klistras in med versaler och mellanslag");
+  const s = m.admin("lag-b", sk, "oversikt");
+  assert.deepEqual([s.ok, s.roll], [true, "super"]);
+  assert.equal(m.admin("*", sk, "lagLista").lag.length, 2);
+  assert.match(m.admin("*", a.key, "oversikt").fel, fel, "lagets nyckel gäller inte för '*'");
+  assert.match(m.admin("*", sk, "oversikt").fel, /Okänt lag/, "superadmin utan lag har inget lag att visa");
+});
+
+test("admin: lagen ser bara sina egna beställningar och kan inte ändra andras", () => {
+  const { m, sk } = ny();
+  const a = skapaLag(m, sk, { namn: "Lag A" }), b = skapaLag(m, sk, { namn: "Lag B" });
+  bestall(m, "lag-a", { barn: "Alva" }); bestall(m, "lag-b", { barn: "Bosse", mobil: "0702222222" });
+  const la = m.admin("lag-a", a.key, "lista");
+  assert.deepEqual(la.ordrar.map((o) => o.barn), ["Alva"]);
+  assert.equal(la.ordrar[0].mobil, "0701234567");
+  assert.match(JSON.stringify(la), /^((?!Bosse).)*$/s);
+  // Lag B:s admin försöker sätta Lag A:s order 0001 (som har samma nummer som B:s egen)
+  const r = m.admin("lag-b", b.key, "satt", { id: "0001", varde: "JA" });
+  assert.equal(r.order.barn, "Bosse");
+  assert.equal(m.admin("lag-a", a.key, "lista").ordrar[0].betald, "", "Lag A:s order är orörd");
+  assert.match(m.admin("lag-b", b.key, "satt", { id: "0002", varde: "JA" }).fel, /Hittar ingen order/);
+});
+
+test("admin: betald, avbruten och ångra uppdaterar siffrorna", () => {
+  const { m, sk } = ny();
+  const a = skapaLag(m, sk, { namn: "Lag A", pris: 30, inkopspris: 14.5, minimum: 10, mal: 20, kartong: 24 });
+  bestall(m, "lag-a", { antal: 10, barn: "Alva" });
+  bestall(m, "lag-a", { antal: 5, barn: "Bo", mobil: "0702222222" });
+  bestall(m, "lag-a", { antal: 2, barn: "Cia", mobil: "0703333333" });
+  let ov = m.admin("lag-a", a.key, "oversikt").oversikt;
+  assert.deepEqual([ov.bestallt, ov.betalt, ov.obetalt, ov.obetaltKr, ov.minimumNatt, ov.kartonger, ov.levereras, ov.faktura],
+    [17, 0, 17, 510, true, 1, 24, 348]);
+  let r = m.admin("lag-a", a.key, "satt", { id: "0001", varde: "JA" });
+  assert.deepEqual([r.order.betald, r.oversikt.betalt, r.oversikt.betaltKr, r.oversikt.betaltMinusFaktura], ["JA", 10, 300, -48]);
+  r = m.admin("lag-a", a.key, "satt", { id: "2", varde: "avbruten" });   // "2" och gemener går bra
+  assert.deepEqual([r.order.id, r.order.betald, r.oversikt.bestallt, r.oversikt.avbrutna, r.oversikt.minimumNatt, r.oversikt.minimumKvar], ["0002", "AVBRUTEN", 12, 5, true, 0]);
+  assert.deepEqual(m.get({ action: "status", lag: "lag-a" }), { ok: true, bestallt: 12 }, "avbrutna räknas inte i mätaren");
+  r = m.admin("lag-a", a.key, "satt", { id: "0001", varde: "" });
+  assert.deepEqual([r.order.betald, r.oversikt.betalt], ["", 0]);
+  assert.match(m.admin("lag-a", a.key, "satt", { id: "0001", varde: "NEJ" }).fel, /Felaktigt värde/);
+  assert.match(m.admin("lag-a", a.key, "satt", { id: "x", varde: "JA" }).fel, /ordernummer/);
+  assert.match(m.admin("lag-a", a.key, "satt", { id: "0099", varde: "JA" }).fel, /Hittar ingen order/);
+  const logg = m.blad["Logg"].data.slice(1).map((r) => r[2]);
+  assert.deepEqual(logg.filter((x) => x.startsWith("betald")), ["betald=JA", "betald=AVBRUTEN", "betald=(ångrad)"]);
+});
+
+test("översikt: lag utan kartonger fakturerar det som beställts", () => {
+  const { m, sk } = ny();
+  const a = skapaLag(m, sk, { namn: "Bingo", pris: 50, inkopspris: 20, minimum: 100, mal: 200, kartong: 0 });
+  bestall(m, "bingo", { antal: 7 });
+  const ov = m.admin("bingo", a.key, "oversikt").oversikt;
+  assert.deepEqual([ov.kartonger, ov.levereras, ov.faktura, ov.minimumNatt, ov.minimumKvar], [0, 7, 140, false, 93]);
+});
+
+test("ändra lag: bara tillåtna fält, och siffrorna kontrolleras mot de befintliga", () => {
+  const { m, sk } = ny();
+  const a = skapaLag(m, sk, { namn: "Lag A" });
+  const hashFore = m.blad["Lag"].data[1][13];
+  let r = m.admin("*", sk, "lagUppdatera", { slug: "lag-a", falt: { pris: 40, status: "avslutad", slug: "kapad", hash: "x", nyckel: "y", _hash: "z", _rad: 9 } });
+  assert.equal(r.ok, true);
+  assert.deepEqual([r.lag.slug, r.lag.pris, r.lag.status], ["lag-a", 40, "avslutad"]);
+  assert.equal(m.blad["Lag"].data[1][13], hashFore, "nyckelns hash kan inte ändras den vägen");
+  assert.equal(m.blad["Lag"].data[1][0], "lag-a");
+  assert.match(m.admin("*", sk, "lagUppdatera", { slug: "lag-a", falt: { mal: 100 } }).fel, /Målet/);   // minimum är 240
+  assert.match(m.admin("*", sk, "lagUppdatera", { slug: "lag-a", falt: { inkopspris: 99 } }).fel, /Inköpspriset/);
+  assert.match(m.admin("*", sk, "lagUppdatera", { slug: "lag-a", falt: { swishNummer: "0" } }).fel, /Swish/);
+  assert.match(m.admin("*", sk, "lagUppdatera", { slug: "finns-inte", falt: { pris: 1 } }).fel, /Okänt lag/);
+  assert.equal(m.admin("lag-a", a.key, "oversikt").lag.pris, 40);
+  assert.match(bestall(m, "lag-a").fel, /inte öppen/, "ett avslutat lag tar inte emot beställningar");
+  assert.equal(m.admin("*", sk, "lagUppdatera", { slug: "lag-a", falt: { status: "pagar", swishNummer: "070-123 45 67" } }).lag.swish.nummer, "070 123 45 67");
+});
+
+test("ny nyckel: den gamla slutar fungera och nyckeln syns bara i svaret på just det anropet", () => {
+  const { m, sk } = ny();
+  const a = skapaLag(m, sk, { namn: "Lag A" });
+  const svar = [];
+  const spara = (r) => { svar.push(JSON.stringify(r)); return r; };
+  spara(m.get({ action: "lag" })); spara(m.admin("lag-a", a.key, "oversikt")); spara(m.admin("lag-a", a.key, "lista")); spara(m.admin("*", sk, "lagLista"));
+  const n = m.admin("*", sk, "nyNyckel", { slug: "lag-a" });
+  assert.equal(n.ok, true);
+  assert.notEqual(n.key, a.key);
+  assert.match(m.admin("lag-a", a.key, "oversikt").fel, /Fel lag eller nyckel/);
+  assert.equal(m.admin("lag-a", n.key, "oversikt").ok, true);
+  spara(m.admin("lag-a", n.key, "oversikt")); spara(m.admin("*", sk, "lagLista"));
+  const alla = svar.join("\n");
+  for (const hemlig of [a.key, n.key, sk, a.key.replace(/-/g, ""), n.key.replace(/-/g, ""), m.props.get("SUPER_HASH"), m.blad["Lag"].data[1][13]]) assert.ok(!alla.includes(hemlig), "läcker: " + hemlig);
+  assert.match(m.admin("*", sk, "nyNyckel", { slug: "finns-inte" }).fel, /Okänt lag/);
+});
+
+test("ny superadmin-nyckel byter ut den gamla", () => {
+  const { m, sk } = ny();
+  const ny2 = m.ctx.nySuperNyckel();
+  assert.equal(m.admin("*", sk, "lagLista").ok, false);
+  assert.equal(m.admin("*", ny2, "lagLista").ok, true);
+});
+
+test("spärr efter för många felaktiga försök, även med rätt nyckel tills spärren löpt ut", () => {
+  const { m, sk } = ny();
+  const a = skapaLag(m, sk, { namn: "Lag A" });
+  for (let i = 0; i < 10; i++) assert.match(m.admin("lag-a", "f".repeat(32), "oversikt").fel, /Fel lag eller nyckel/);
+  assert.match(m.admin("lag-a", a.key, "oversikt").fel, /För många felaktiga försök/);
+  assert.equal(m.admin("*", sk, "lagLista").ok, true, "en annan adress och rätt superadmin-nyckel påverkas inte av ett enskilt lags spärr");
+  m.cache.clear();
+  assert.equal(m.admin("lag-a", a.key, "oversikt").ok, true);
+  for (let i = 0; i < 40; i++) m.admin("slug" + i, "f".repeat(32), "oversikt");
+  assert.match(m.admin("lag-a", a.key, "oversikt").fel, /För många felaktiga försök/, "den gemensamma spärren gäller alla lag");
+});
+
+test("felaktiga anrop ger ett fel, inte ett krasch", () => {
+  const { m, sk } = ny();
+  const a = skapaLag(m, sk, { namn: "Lag A" });
+  assert.match(m.postRaw("inte json").fel, /Felaktig förfrågan/);
+  assert.match(m.postRaw("null").fel, /Okänt lag|Vänta/);
+  assert.match(m.get({ action: "x" }).fel, /Okänd förfrågan/);
+  assert.match(m.get({}).fel, /Okänd förfrågan/);
+  assert.match(m.get({ action: "status", lag: "finns-inte" }).fel, /Okänt lag/);
+  assert.match(m.admin("lag-a", a.key, "constructor").fel, /Okänd åtgärd/);
+  assert.match(m.admin("lag-a", a.key, "__proto__").fel, /Okänd åtgärd/);
+  assert.match(m.admin("lag-a", a.key, "").fel, /Okänd åtgärd/);
+  assert.match(m.admin("*", sk, "lagNy", { data: null }).fel, /namn/i);
+});
+
+test("offentliga svar innehåller aldrig mobilnummer eller barnens namn", () => {
+  const { m, sk } = ny();
+  skapaLag(m, sk, { namn: "Lag A" });
+  bestall(m, "lag-a", { barn: "Hemligsson", mobil: "0705551234" });
+  const alla = JSON.stringify([m.get({ action: "lag" }), m.get({ action: "status", lag: "lag-a" })]);
+  assert.ok(!alla.includes("Hemligsson") && !alla.includes("0705551234"));
+});

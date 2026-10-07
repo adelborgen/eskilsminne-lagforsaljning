@@ -1,0 +1,25 @@
+/* Typsnitt för Kassaskrinet (arbetsnamn). Självhostade, så att inget anrop går till Google.
+   Båda är SIL Open Font License 1.1 (se LICENSE-*.txt) och får användas, kopieras och ligga i repot.
+   Länka den här filen först i sidan: <link rel="stylesheet" href="fonts/fonts.css">
+   Den är inte kopplad till appen än. Se README.md i den här mappen för hur typsnitten används. */
+
+/* Archivo: tavelsiffror och rubriker. Variabel tjocklek (100–900) och bredd (62–125 %). Bara latinska tecken (inkl. å, ä, ö, é). */
+@font-face {
+  font-family: "Archivo";
+  font-style: normal;
+  font-display: swap;
+  font-weight: 100 900;
+  font-stretch: 62% 125%;
+  src: url("archivo-latin-wdth-normal.woff2") format("woff2");
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+/* Atkinson Hyperlegible Next: brödtext, fält, knappar och metadata. Variabel tjocklek (200–800). */
+@font-face {
+  font-family: "Atkinson Hyperlegible Next";
+  font-style: normal;
+  font-display: swap;
+  font-weight: 200 800;
+  src: url("atkinson-hyperlegible-next-latin-wght-normal.woff2") format("woff2");
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
