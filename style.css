@@ -194,3 +194,28 @@
   .checklist li + li { margin-top: 10px; }
   .teamadmin + .teamadmin { margin-top: 12px; }
   .ordercard .error:empty { display: none; }
+
+  /* ---------- Utlämning ---------- */
+  .badges { display: flex; flex-wrap: wrap; gap: 6px; }
+  .badge.picked { background: var(--brand); color: #fff; }
+  .okline:empty { display: none; }
+  .pick { display: grid; grid-template-columns: 32px minmax(0, 1fr) auto; gap: 12px; align-items: center; min-height: 60px; margin: 0; padding: 8px 14px;
+    background: var(--card); border: 1px solid var(--line); border-radius: 16px; cursor: pointer; font-weight: 400; }
+  .pick + .pick { margin-top: 8px; }
+  .pick input { width: 28px; height: 28px; margin: 0; accent-color: var(--accent); }
+  .pick:has(input:checked) { background: var(--soft); }
+  .p-main { display: flex; flex-direction: column; min-width: 0; }
+  .p-name { font-weight: 800; overflow-wrap: anywhere; }
+  .p-sub { font-size: 13px; color: var(--muted); }
+  .printonly { display: none; }
+  @media print {
+    :root { color-scheme: light; }
+    body { background: #fff; color: #000; }
+    .topbar, .foot, .tabs, .topactions, .noprint { display: none !important; }
+    .page { max-width: none; padding: 0; }
+    h2.title { font-size: 14px; margin: 0; }
+    .printonly { display: block; font-size: 20px; font-weight: 800; margin: 0 0 12px; }
+    .pick, .pick[hidden] { display: grid !important; background: #fff !important; border: 0; border-bottom: 1px solid #888; border-radius: 0; box-shadow: none; break-inside: avoid; min-height: 0; padding: 7px 0; }
+    .pick .badge { background: transparent !important; color: #000 !important; border: 1px solid #000; }
+    .p-sub { color: #333; }
+  }

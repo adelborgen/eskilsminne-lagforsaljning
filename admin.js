@@ -1,7 +1,7 @@
 /* ==========================================================================
    Adminvy för klubbens lagförsäljning.
    Lagets kassör loggar in med lagets adminnyckel och ser bara sitt eget lag:
-   översikt, beställningar och betalningar. Klubbens administratör loggar in med
+   översikt, beställningar, betalningar och utlämning (vem som hämtat). Klubbens administratör loggar in med
    superadmin-nyckeln, ser alla lag och lägger till nya.
    All behörighet kontrolleras av servern (Server.gs). Den här filen visar bara.
    Utan KLUBB.endpoint körs demoläge med exempeldata och inget sparas.
@@ -48,6 +48,10 @@
       return r;
     });
   }
+
+  // Ändringar skickas en i taget, så att svaren kommer i samma ordning som klicken och sista svaret alltid är det nyaste.
+  var ko = Promise.resolve();
+  function iKo(fn) { ko = ko.then(fn).catch(function () {}); return ko; }
 
   /* ---------- Små hjälpare ---------- */
   function kopiera(text, btn) {
@@ -155,9 +159,13 @@
     var bPanel = h("section", { role: "tabpanel", "aria-labelledby": "tab-b", hidden: "" });
     var tabO = h("button", { role: "tab", id: "tab-o", "aria-selected": "true", text: "Översikt", onclick: function () { visaFlik("o"); } });
     var tabB = h("button", { role: "tab", id: "tab-b", "aria-selected": "false", text: "Beställningar", onclick: function () { visaFlik("b"); } });
+    var uPanel = h("section", { role: "tabpanel", "aria-labelledby": "tab-u", hidden: "" });
+    var tabU = h("button", { role: "tab", id: "tab-u", "aria-selected": "false", text: "Utlämning", onclick: function () { visaFlik("u"); } });
     function visaFlik(w) {
-      tabO.setAttribute("aria-selected", String(w === "o")); tabB.setAttribute("aria-selected", String(w === "b"));
-      oPanel.hidden = w !== "o"; bPanel.hidden = w !== "b"; window.scrollTo(0, 0);
+      [[tabO, oPanel, "o"], [tabB, bPanel, "b"], [tabU, uPanel, "u"]].forEach(function (t) {
+        t[0].setAttribute("aria-selected", String(t[2] === w)); t[1].hidden = t[2] !== w;
+      });
+      window.scrollTo(0, 0);
     }
 
     var top = h("div", { class: "topactions" },
@@ -165,8 +173,8 @@
       h("button", { type: "button", class: "linkbtn", text: "Logga ut", onclick: loggaUt }));
     app.textContent = "";
     app.appendChild(top);
-    app.appendChild(h("div", { class: "tabs", role: "tablist", "aria-label": "Admin", style: "margin-top:4px" }, tabO, tabB));
-    app.appendChild(h("div", { style: "margin-top:16px" }, oPanel, bPanel));
+    app.appendChild(h("div", { class: "tabs", role: "tablist", "aria-label": "Admin", style: "margin-top:4px" }, tabO, tabB, tabU));
+    app.appendChild(h("div", { style: "margin-top:16px" }, oPanel, bPanel, uPanel));
 
     /* Översikt */
     function ritaOversikt() {
@@ -177,7 +185,9 @@
         stat("Beställt", nf.format(o.bestallt), "av " + nf.format(l.mal) + " " + E),
         stat("Betalt", nf.format(o.betalt), kr(o.betaltKr)),
         stat("Obetalt", nf.format(o.obetalt), kr(o.obetaltKr), o.obetalt > 0),
-        stat("Avbrutet", nf.format(o.avbrutna), E)));
+        stat("Avbrutet", nf.format(o.avbrutna), E),
+        stat("Hämtat", nf.format(o.hamtat), o.hamtatObetalt > 0 ? "varav " + nf.format(o.hamtatObetalt) + " obetalt" : E, o.hamtatObetalt > 0),
+        stat("Kvar att dela ut", nf.format(o.attHamta), "betalt, ej hämtat")));
 
       var lev = h("div", { class: "card", style: "margin-top:16px" }, h("h3", { style: "margin:0 0 8px", text: "Beställning hos leverantören" }),
         kv("Minimum " + nf.format(l.minimum), o.minimumNatt ? "Nått ✓" : nf.format(o.minimumKvar) + " kvar", o.minimumNatt ? "pos" : "", true));
@@ -223,23 +233,34 @@
     }
 
     function kort(o) {
-      var s = orderStatus(o);
+      var s = orderStatus(o), hamtad = o.hamtad === "JA";
       var row = h("div", { class: "btnrow" }), err = h("p", { class: "error", role: "alert" });
       function knapp(text, varde, cls) {
         var b = h("button", { type: "button", class: "mini " + (cls || ""), text: text });
         b.addEventListener("click", function () { satt(o, varde, row, err); });
         return b;
       }
-      if (s === "obetald") { row.appendChild(knapp("✅ Betald", "JA", "go")); row.appendChild(knapp("Avbruten", "AVBRUTEN")); }
-      else row.appendChild(knapp("Ångra", ""));
+      function hamtaKnapp(text, varde, cls) {
+        var b = h("button", { type: "button", class: "mini " + (cls || ""), text: text });
+        b.addEventListener("click", function () { hamtadSatt(o, varde, row, err); });
+        return b;
+      }
+      if (s === "obetald") {
+        row.appendChild(knapp("✅ Betald", "JA", "go")); row.appendChild(knapp("Avbruten", "AVBRUTEN"));
+        if (hamtad) row.appendChild(hamtaKnapp("Ångra hämtad", ""));
+      } else if (s === "betald") {
+        row.appendChild(hamtad ? hamtaKnapp("Ångra hämtad", "") : hamtaKnapp("📦 Hämtad", "JA", "go"));
+        row.appendChild(knapp("Ångra betald", ""));
+      } else row.appendChild(knapp("Ångra", ""));
       row.appendChild(h("a", { class: "mini", href: "tel:" + o.mobil, text: "Ring" }));
       if (s === "obetald") row.appendChild(h("a", { class: "mini", href: smsLank(o), text: "SMS-påminnelse" }));
       return h("div", { class: "ordercard", role: "listitem" },
         h("div", { class: "o-head" }, h("span", { class: "o-name", text: "#" + o.id + " " + o.barn }),
           h("span", { class: "o-sum num", text: o.antal + " st · " + kr(o.belopp) })),
         h("div", { class: "o-sub num", text: visaMobil(o.mobil) + " · " + datum(o.tid) }),
-        h("div", { style: "margin-top:8px" }, h("span", { class: "badge " + (s === "betald" ? "live" : s === "obetald" ? "unpaid" : ""),
-          text: s === "betald" ? "Betald" : s === "obetald" ? "Obetald" : "Avbruten" })),
+        h("div", { class: "badges", style: "margin-top:8px" }, h("span", { class: "badge " + (s === "betald" ? "live" : s === "obetald" ? "unpaid" : ""),
+          text: s === "betald" ? "Betald" : s === "obetald" ? "Obetald" : "Avbruten" }),
+          hamtad ? h("span", { class: "badge picked", text: "Hämtad" }) : null),
         row, err);
     }
 
@@ -263,15 +284,136 @@
       var knappar = row.querySelectorAll("button");
       knappar.forEach(function (b) { b.disabled = true; });
       err.textContent = "";
-      anropa("satt", { id: o.id, varde: varde }, slug).then(function (r) {
+      iKo(function () { return anropa("satt", { id: o.id, varde: varde }, slug).then(function (r) {
         if (!r.ok) { knappar.forEach(function (b) { b.disabled = false; }); err.textContent = r.fel || "Det gick inte att spara."; return; }
         d.ordrar = d.ordrar.map(function (x) { return x.id === r.order.id ? r.order : x; });
         d.oversikt = r.oversikt;
-        ritaOversikt(); ritaLista();
+        ritaOversikt(); ritaLista(); ritaUtlamning();
+      }); });
+    }
+
+    // Hämtad från en beställning i listan: väntar på servern innan något ritas om.
+    function hamtadSatt(o, varde, row, err) {
+      var knappar = row.querySelectorAll("button");
+      knappar.forEach(function (b) { b.disabled = true; });
+      err.textContent = "";
+      iKo(function () { return anropa("hamtad", { id: o.id, varde: varde }, slug).then(function (r) {
+        if (!r.ok) { knappar.forEach(function (b) { b.disabled = false; }); err.textContent = r.fel || "Det gick inte att spara."; return; }
+        d.ordrar = d.ordrar.map(function (x) { return x.id === r.order.id ? r.order : x; });
+        d.oversikt = r.oversikt;
+        ritaOversikt(); ritaLista(); ritaUtlamning();
+      }); });
+    }
+
+    /* Utlämning: lista att bocka av när någon hämtar. Kryssrutan slår om direkt och sparas i bakgrunden. */
+    var uFilter = "kvar", uSok = "";
+    var uStats = h("div", { class: "stats noprint", style: "margin-top:16px" });
+    var uVarning = h("p", { class: "notice noprint", hidden: "", style: "margin-top:12px" });
+    var uChips = h("div", { class: "chips noprint", role: "group", "aria-label": "Visa", style: "margin-top:16px" }), uChipBtns = {};
+    [["kvar", "Kvar att hämta"], ["hamtade", "Hämtade"], ["alla", "Alla"]].forEach(function (c) {
+      var b = h("button", { type: "button", class: "chip", "aria-pressed": String(c[0] === uFilter), onclick: function () { uFilter = c[0]; ritaUtlamning(); } });
+      uChipBtns[c[0]] = { b: b, namn: c[1] }; uChips.appendChild(b);
+    });
+    var uSokInp = h("input", { type: "search", class: "noprint", placeholder: "Sök namn eller ordernummer", "aria-label": "Sök i utlämningen", autocomplete: "off", style: "margin-top:12px" });
+    uSokInp.addEventListener("input", function () { uSok = uSokInp.value.trim().toLowerCase(); ritaUtlamning(); });
+    var uList = h("div", { role: "list", style: "margin-top:12px" });
+    var uTomt = h("p", { class: "small noprint", hidden: "" });
+    var uInfo = h("p", { class: "okline noprint", role: "status", style: "margin-top:12px" });
+    var uFel = h("p", { class: "error noprint", role: "alert" });
+    var uBekrafta = h("div", { class: "notice noprint", hidden: "", style: "margin-top:12px" });
+    var allBtn = h("button", { type: "button", class: "primary noprint", style: "margin-top:16px", text: "Markera alla betalda som hämtade" });
+    var skrivBtn = h("button", { type: "button", class: "ghost noprint", style: "margin-top:12px", text: "Skriv ut listan", onclick: function () { window.print(); } });
+    uPanel.appendChild(h("h2", { class: "title", text: "Utlämning" }));
+    uPanel.appendChild(h("p", { class: "printonly", text: d.lag.namn + " · Utlämningslista " + new Date().toLocaleDateString("sv-SE") }));
+    uPanel.appendChild(h("p", { class: "lead noprint", text: "Bocka av när någon hämtat sin beställning. Det sparas direkt." }));
+    [uStats, uVarning, uChips, uSokInp, uList, uTomt, uInfo, uFel, uBekrafta, allBtn, skrivBtn].forEach(function (e) { uPanel.appendChild(e); });
+
+    function ritaUtStats() {
+      var hamtat = 0, kvar = 0, obetHamtat = 0, obetKvar = 0, nKvar = 0, nHamt = 0, nAlla = 0;
+      d.ordrar.forEach(function (o) {
+        if (o.betald === "AVBRUTEN") return;
+        nAlla++;
+        if (o.hamtad === "JA") { hamtat += o.antal; nHamt++; if (o.betald !== "JA") obetHamtat += o.antal; }
+        else { nKvar++; if (o.betald === "JA") kvar += o.antal; else obetKvar += o.antal; }
+      });
+      uStats.textContent = "";
+      uStats.appendChild(stat("Hämtat", nf.format(hamtat), produkt.enhet));
+      uStats.appendChild(stat("Kvar att dela ut", nf.format(kvar), "betalt, ej hämtat"));
+      var delar = [];
+      if (obetHamtat) delar.push(nf.format(obetHamtat) + " " + produkt.enhet + " är hämtade men inte betalda.");
+      if (obetKvar) delar.push(nf.format(obetKvar) + " " + produkt.enhet + " är obetalda och markeras inte av \"Markera alla\".");
+      uVarning.textContent = delar.join(" "); uVarning.hidden = !delar.length;
+      var n = { kvar: nKvar, hamtade: nHamt, alla: nAlla };
+      Object.keys(uChipBtns).forEach(function (k) {
+        uChipBtns[k].b.textContent = uChipBtns[k].namn + " (" + n[k] + ")";
+        uChipBtns[k].b.setAttribute("aria-pressed", String(k === uFilter));
       });
     }
 
-    ritaOversikt(); ritaLista();
+    function pickRad(o) {
+      var id = "p" + o.id, betald = o.betald === "JA";
+      var cb = h("input", { type: "checkbox", id: id });
+      cb.checked = o.hamtad === "JA";
+      cb.addEventListener("change", function () { hamtaDirekt(o, cb.checked ? "JA" : "", cb); });
+      return h("label", { class: "pick", role: "listitem", for: id }, cb,
+        h("span", { class: "p-main" }, h("span", { class: "p-name", text: "#" + o.id + " " + o.barn }), h("span", { class: "p-sub num", text: o.antal + " st · " + kr(o.belopp) })),
+        h("span", { class: "badge " + (betald ? "live" : "unpaid"), text: betald ? "Betald" : "Obetald" }));
+    }
+
+    // Slår om direkt och sparar sedan. Går något fel ställs rutan tillbaka och felet visas.
+    function hamtaDirekt(o, varde, cb) {
+      var gammal = o.hamtad;
+      o.hamtad = varde; uFel.textContent = ""; uInfo.textContent = "";
+      ritaUtStats();
+      iKo(function () { return anropa("hamtad", { id: o.id, varde: varde }, slug).then(function (r) {
+        if (!r.ok) { o.hamtad = gammal; cb.checked = gammal === "JA"; ritaUtStats(); uFel.textContent = "#" + o.id + " " + o.barn + ": " + (r.fel || "Det gick inte att spara."); return; }
+        Object.assign(o, r.order);
+        d.oversikt = r.oversikt;
+        ritaOversikt(); ritaLista(); ritaUtStats();
+      }); });
+    }
+
+    function ritaUtlamning() {
+      ritaUtStats();
+      var akt = d.ordrar.filter(function (o) { return o.betald !== "AVBRUTEN"; })
+        .sort(function (a, b) { return a.barn.localeCompare(b.barn, "sv") || a.id.localeCompare(b.id); });
+      uList.textContent = ""; var synliga = 0;
+      akt.forEach(function (o) {
+        var rad = pickRad(o);
+        var passar = (uFilter === "alla" || (uFilter === "kvar" ? o.hamtad !== "JA" : o.hamtad === "JA")) && (!uSok || (o.barn + " " + o.id).toLowerCase().indexOf(uSok) >= 0);
+        if (passar) synliga++; else rad.hidden = true;   // dolda rader finns kvar så att hela listan kan skrivas ut
+        uList.appendChild(rad);
+      });
+      uTomt.hidden = synliga > 0;
+      uTomt.textContent = !akt.length ? "Inga beställningar än." : uSok ? "Inga beställningar matchar." : uFilter === "kvar" ? "Alla är hämtade. Bra jobbat!" : "Inget är hämtat än.";
+    }
+
+    allBtn.addEventListener("click", function () {
+      uInfo.textContent = ""; uFel.textContent = "";
+      var n = d.ordrar.filter(function (o) { return o.betald === "JA" && o.hamtad !== "JA"; }).length;
+      var ob = d.ordrar.filter(function (o) { return o.betald !== "JA" && o.betald !== "AVBRUTEN" && o.hamtad !== "JA"; }).length;
+      if (!n) { uFel.textContent = "Det finns inga betalda beställningar som väntar på att hämtas."; return; }
+      var ja = h("button", { type: "button", class: "mini go", text: "Ja, markera alla" });
+      var nej = h("button", { type: "button", class: "mini", text: "Avbryt", onclick: function () { uBekrafta.hidden = true; } });
+      ja.addEventListener("click", function () {
+        ja.disabled = true; nej.disabled = true;
+        iKo(function () { return anropa("hamtadAlla", null, slug).then(function (r) {
+          uBekrafta.hidden = true;
+          if (!r.ok) { uFel.textContent = r.fel || "Det gick inte att spara."; return; }
+          d.ordrar = r.ordrar; d.oversikt = r.oversikt;
+          uInfo.textContent = (r.markerade === 1 ? "1 beställning markerades som hämtad." : r.markerade + " beställningar markerades som hämtade.") +
+            (r.obetaldaKvar ? " " + (r.obetaldaKvar === 1 ? "1 obetald lämnades som den var." : r.obetaldaKvar + " obetalda lämnades som de var.") : "");
+          ritaOversikt(); ritaLista(); ritaUtlamning();
+        }); });
+      });
+      uBekrafta.textContent = "";
+      uBekrafta.appendChild(h("p", { style: "margin:0", text: (n === 1 ? "Markera 1 betald beställning som hämtad?" : "Markera " + n + " betalda beställningar som hämtade?") +
+        (ob ? " " + (ob === 1 ? "1 obetald lämnas som den är." : ob + " obetalda lämnas som de är.") : "") }));
+      uBekrafta.appendChild(h("div", { class: "btnrow" }, ja, nej));
+      uBekrafta.hidden = false;
+    });
+
+    ritaOversikt(); ritaLista(); ritaUtlamning();
   }
 
   function csvCell(v) {
@@ -280,8 +422,8 @@
     return /[";\r\n]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s;
   }
   function exporteraCsv(d) {
-    var rader = [["Order-ID", "Tid", "Barn", "Mobil", "Antal", "Belopp", "Betald"]].concat(d.ordrar.slice().reverse().map(function (o) {
-      return [o.id, o.tid, o.barn, o.mobil, o.antal, o.belopp, o.betald === "JA" ? "JA" : o.betald === "AVBRUTEN" ? "AVBRUTEN" : "NEJ"];
+    var rader = [["Order-ID", "Tid", "Barn", "Mobil", "Antal", "Belopp", "Betald", "Hämtad"]].concat(d.ordrar.slice().reverse().map(function (o) {
+      return [o.id, o.tid, o.barn, o.mobil, o.antal, o.belopp, o.betald === "JA" ? "JA" : o.betald === "AVBRUTEN" ? "AVBRUTEN" : "NEJ", o.hamtad === "JA" ? "JA" : "NEJ"];
     }));
     var csv = "﻿" + rader.map(function (r) { return r.map(csvCell).join(";"); }).join("\r\n");
     var a = h("a", { href: URL.createObjectURL(new Blob([csv], { type: "text/csv;charset=utf-8" })), download: d.lag.slug + "-bestallningar.csv" });
@@ -404,7 +546,7 @@
           h("button", { type: "button", class: "mini", text: "Avbryt", onclick: function () { bekrafta.hidden = true; } })));
       return h("div", { class: "card teamadmin" },
         h("div", { class: "o-head" }, h("span", { class: "o-name", text: l.namn + " · " + (l.kampanj || "") }), h("span", { class: "badge", text: STATUS_TEXT[l.status] || l.status })),
-        h("div", { class: "o-sub num", text: "Beställt " + nf.format(ov.bestallt) + " av " + nf.format(l.mal) + " · Betalt " + nf.format(ov.betalt) + " · Obetalt " + nf.format(ov.obetalt) }),
+        h("div", { class: "o-sub num", text: "Beställt " + nf.format(ov.bestallt) + " av " + nf.format(l.mal) + " · Betalt " + nf.format(ov.betalt) + " · Obetalt " + nf.format(ov.obetalt) + " · Hämtat " + nf.format(ov.hamtat || 0) }),
         h("div", { class: "field", style: "margin-top:12px" }, sel),
         h("div", { class: "btnrow" },
           h("button", { type: "button", class: "mini go", text: "Öppna admin", onclick: function () { S.valt = l.slug; renderAdmin(); } }),
@@ -477,7 +619,8 @@
         maxAntal: K.standard.maxAntal, kartong: 24 }, egna);
       ordrar[l.slug] = l.status === "pagar" ? namn.slice(0, 6 + li).map(function (n, i) {
         return { id: String(i + 1).padStart(4, "0"), tid: new Date(Date.now() - (9 - i) * 3600e3 * (li + 1)).toISOString(), barn: n,
-          mobil: "07000000" + String(10 + i), antal: 5 + ((i * 3) % 11), belopp: 0, betald: i % 3 === 0 ? "JA" : i % 5 === 4 ? "AVBRUTEN" : "" };
+          mobil: "07000000" + String(10 + i), antal: 5 + ((i * 3) % 11), belopp: 0, betald: i % 3 === 0 ? "JA" : i % 5 === 4 ? "AVBRUTEN" : "",
+          hamtad: i === 3 ? "JA" : "" };
       }) : [];
       ordrar[l.slug].forEach(function (o) { o.belopp = o.antal * lag[l.slug].pris; });
     });
@@ -485,11 +628,12 @@
     return demo;
   }
   function demoOversikt(l, ordrar) {
-    var o = { bestallt: 0, betalt: 0, betaltKr: 0, obetalt: 0, obetaltKr: 0, avbrutna: 0 };
+    var o = { bestallt: 0, betalt: 0, betaltKr: 0, obetalt: 0, obetaltKr: 0, avbrutna: 0, hamtat: 0, hamtatObetalt: 0, attHamta: 0 };
     ordrar.forEach(function (x) {
       if (x.betald === "AVBRUTEN") { o.avbrutna += x.antal; return; }
       o.bestallt += x.antal;
       if (x.betald === "JA") { o.betalt += x.antal; o.betaltKr += x.belopp; } else { o.obetalt += x.antal; o.obetaltKr += x.belopp; }
+      if (x.hamtad === "JA") { o.hamtat += x.antal; if (x.betald !== "JA") o.hamtatObetalt += x.antal; } else if (x.betald === "JA") o.attHamta += x.antal;
     });
     o.minimumNatt = o.bestallt >= l.minimum; o.minimumKvar = Math.max(0, l.minimum - o.bestallt);
     o.kartonger = l.kartong > 0 ? Math.ceil(o.bestallt / l.kartong) : 0;
@@ -508,6 +652,24 @@
     switch (p.op) {
       case "oversikt": svar = lag ? { ok: true, lag: klon(lag), oversikt: demoOversikt(lag, s.ordrar[lag.slug]) } : { ok: false, fel: "Okänt lag." }; break;
       case "lista": svar = lag ? { ok: true, lag: klon(lag), ordrar: klon(s.ordrar[lag.slug]).reverse() } : { ok: false, fel: "Okänt lag." }; break;
+      case "hamtad":
+        if (!lag) { svar = { ok: false, fel: "Okänt lag." }; break; }
+        var oh = s.ordrar[lag.slug].filter(function (x) { return parseInt(x.id, 10) === parseInt(p.id, 10); })[0];
+        var vh = String(p.varde || "").toUpperCase();
+        if (!oh) { svar = { ok: false, fel: "Hittar ingen order " + p.id + "." }; break; }
+        if (["JA", ""].indexOf(vh) < 0) { svar = { ok: false, fel: "Felaktigt värde." }; break; }
+        if (vh === "JA" && oh.betald === "AVBRUTEN") { svar = { ok: false, fel: "Beställningen är avbruten och kan inte hämtas." }; break; }
+        oh.hamtad = vh;
+        svar = { ok: true, order: klon(oh), oversikt: demoOversikt(lag, s.ordrar[lag.slug]) }; break;
+      case "hamtadAlla":
+        if (!lag) { svar = { ok: false, fel: "Okänt lag." }; break; }
+        var mark = 0, kvarOb = 0;
+        s.ordrar[lag.slug].forEach(function (x) {
+          if (x.hamtad === "JA" || x.betald === "AVBRUTEN") return;
+          if (x.betald !== "JA") { kvarOb++; return; }
+          x.hamtad = "JA"; mark++;
+        });
+        svar = { ok: true, markerade: mark, obetaldaKvar: kvarOb, ordrar: klon(s.ordrar[lag.slug]).reverse(), oversikt: demoOversikt(lag, s.ordrar[lag.slug]) }; break;
       case "satt":
         if (!lag) { svar = { ok: false, fel: "Okänt lag." }; break; }
         var o = s.ordrar[lag.slug].filter(function (x) { return parseInt(x.id, 10) === parseInt(p.id, 10); })[0];
@@ -518,7 +680,7 @@
         if (!arSuper) return { ok: false, fel: "Bara klubbens administratör får göra det här." };
         if (p.op === "lagLista") svar = { ok: true, lag: Object.keys(s.lag).map(function (k) {
           var ov = demoOversikt(s.lag[k], s.ordrar[k]), ut = klon(s.lag[k]);
-          ut.oversikt = { bestallt: ov.bestallt, betalt: ov.betalt, betaltKr: ov.betaltKr, obetalt: ov.obetalt }; return ut; }) };
+          ut.oversikt = { bestallt: ov.bestallt, betalt: ov.betalt, betaltKr: ov.betaltKr, obetalt: ov.obetalt, hamtat: ov.hamtat, attHamta: ov.attHamta }; return ut; }) };
         else if (p.op === "lagUppdatera") {
           var l = s.lag[p.slug]; if (!l) { svar = { ok: false, fel: "Okänt lag." }; break; }
           var f = p.falt || {};

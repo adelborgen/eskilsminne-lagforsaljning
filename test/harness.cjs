@@ -31,9 +31,16 @@ class Range {
   setFontWeight() { return this; }
 }
 class Sheet {
-  constructor(name) { this.name = name; this.data = []; }
+  constructor(name) { this.name = name; this.data = []; this.maxCols = 26; }
+  getMaxColumns() { return this.maxCols; }
+  insertColumnsAfter(pos, antal) { this.maxCols += antal; }
   getLastRow() { let n = this.data.length; while (n > 0 && !(this.data[n - 1] || []).some((v) => v !== "" && v !== undefined)) n--; return n; }
-  getRange(r, c, nr = 1, nc = 1) { return typeof r === "string" ? new Range(this, 1, 1, 0, 0) : new Range(this, r, c, nr, nc); }
+  getRange(r, c, nr = 1, nc = 1) {
+    if (typeof r === "string") return new Range(this, 1, 1, 0, 0);
+    // Som i Google Kalkylark: en kolumn utanför bladet är ett fel
+    if (c + nc - 1 > this.maxCols) throw new Error("The coordinates of the range are outside the dimensions of the sheet.");
+    return new Range(this, r, c, nr, nc);
+  }
   appendRow(arr) { this.data.push(arr.map((v) => (typeof v === "string" && v.startsWith("'") ? v.slice(1) : v))); }
   insertRowBefore(i) { this.data.splice(i - 1, 0, []); }
   setFrozenRows() {}

@@ -193,6 +193,91 @@ test("admin: betald, avbruten och ångra uppdaterar siffrorna", () => {
   assert.deepEqual(logg.filter((x) => x.startsWith("betald")), ["betald=JA", "betald=AVBRUTEN", "betald=(ångrad)"]);
 });
 
+test("hämtad: markera och ångra per order, och bara i det egna laget", () => {
+  const { m, sk } = ny();
+  const a = skapaLag(m, sk, { namn: "Lag A" }), b = skapaLag(m, sk, { namn: "Lag B" });
+  bestall(m, "lag-a", { antal: 10, barn: "Alva" });
+  bestall(m, "lag-a", { antal: 5, barn: "Bo", mobil: "0702222222" });
+  bestall(m, "lag-b", { antal: 3, barn: "Bosse", mobil: "0703333333" });   // samma ordernummer 0001 som Alva
+  assert.equal(m.admin("lag-a", a.key, "lista").ordrar.every((o) => o.hamtad === ""), true, "inget är hämtat från början");
+  m.admin("lag-a", a.key, "satt", { id: "0001", varde: "JA" });
+  let ov = m.admin("lag-a", a.key, "oversikt").oversikt;
+  assert.deepEqual([ov.hamtat, ov.attHamta, ov.hamtatObetalt], [0, 10, 0]);
+  let r = m.admin("lag-a", a.key, "hamtad", { id: "0001", varde: "JA" });
+  assert.deepEqual([r.ok, r.order.hamtad, r.order.betald, r.oversikt.hamtat, r.oversikt.attHamta], [true, "JA", "JA", 10, 0]);
+  assert.equal(m.blad["Beställningar"].data[1][8], "JA", "sparas i kolumnen Hämtad");
+  r = m.admin("lag-a", a.key, "hamtad", { id: "1", varde: "" });   // ångra, "1" går bra
+  assert.deepEqual([r.order.hamtad, r.oversikt.hamtat, r.oversikt.attHamta], ["", 0, 10]);
+  // en obetald order kan hämtas, men syns som något att reda ut
+  r = m.admin("lag-a", a.key, "hamtad", { id: "0002", varde: "ja" });
+  assert.deepEqual([r.order.hamtad, r.oversikt.hamtat, r.oversikt.hamtatObetalt, r.oversikt.attHamta], ["JA", 5, 5, 10]);
+  // Lag B:s admin kan bara röra sitt eget 0001
+  r = m.admin("lag-b", b.key, "hamtad", { id: "0001", varde: "JA" });
+  assert.equal(r.order.barn, "Bosse");
+  assert.equal(m.admin("lag-a", a.key, "lista").ordrar.find((o) => o.id === "0001").hamtad, "", "Lag A:s order är orörd");
+  assert.match(m.admin("lag-b", b.key, "hamtad", { id: "0002", varde: "JA" }).fel, /Hittar ingen order/);
+  // felaktiga anrop
+  assert.match(m.admin("lag-a", a.key, "hamtad", { id: "0001", varde: "NEJ" }).fel, /Felaktigt värde/);
+  assert.match(m.admin("lag-a", a.key, "hamtad", { id: "x", varde: "JA" }).fel, /ordernummer/);
+  assert.match(m.admin("lag-a", a.key, "hamtad", { id: "0099", varde: "JA" }).fel, /Hittar ingen order/);
+  assert.match(m.admin("lag-a", b.key, "hamtad", { id: "0001", varde: "JA" }).fel, /Fel lag eller nyckel/);
+  assert.match(m.admin("lag-a", "", "hamtadAlla").fel, /Fel lag eller nyckel/);
+  const logg = m.blad["Logg"].data.slice(1).filter((x) => x[2].startsWith("hamtad")).map((x) => [x[1], x[2]]);
+  assert.deepEqual(logg.slice(0, 3), [["lag-a", "hamtad=JA"], ["lag-a", "hamtad=(ångrad)"], ["lag-a", "hamtad=JA"]]);
+});
+
+test("hämtad: en avbruten order kan inte hämtas, och räknas inte med", () => {
+  const { m, sk } = ny();
+  const a = skapaLag(m, sk, { namn: "Lag A" });
+  bestall(m, "lag-a", { antal: 4, barn: "Alva" });
+  m.admin("lag-a", a.key, "satt", { id: "0001", varde: "AVBRUTEN" });
+  assert.match(m.admin("lag-a", a.key, "hamtad", { id: "0001", varde: "JA" }).fel, /avbruten/);
+  assert.equal(m.admin("lag-a", a.key, "hamtad", { id: "0001", varde: "" }).ok, true, "att ångra går alltid");
+  const ov = m.admin("lag-a", a.key, "oversikt").oversikt;
+  assert.deepEqual([ov.bestallt, ov.avbrutna, ov.hamtat, ov.attHamta], [0, 4, 0, 0]);
+});
+
+test("hämtad: markera alla rör bara betalda och hämtar inte obetalda eller avbrutna", () => {
+  const { m, sk } = ny();
+  const a = skapaLag(m, sk, { namn: "Lag A" }), b = skapaLag(m, sk, { namn: "Lag B" });
+  ["Alva", "Bo", "Cia", "Dan"].forEach((barn, i) => bestall(m, "lag-a", { barn, antal: i + 1, mobil: "07000000" + (10 + i) }));
+  bestall(m, "lag-b", { barn: "Bosse", antal: 2, mobil: "0703333333" });
+  m.admin("lag-b", b.key, "satt", { id: "0001", varde: "JA" });
+  m.admin("lag-a", a.key, "satt", { id: "0001", varde: "JA" });   // Alva, 1 st
+  m.admin("lag-a", a.key, "satt", { id: "0002", varde: "JA" });   // Bo, 2 st
+  m.admin("lag-a", a.key, "satt", { id: "0004", varde: "AVBRUTEN" });   // Dan avbruten, Cia (3 st) obetald
+  m.admin("lag-a", a.key, "hamtad", { id: "0002", varde: "JA" });   // Bo är redan hämtad
+  const r = m.admin("lag-a", a.key, "hamtadAlla");
+  assert.deepEqual([r.ok, r.markerade, r.obetaldaKvar], [true, 1, 1]);
+  assert.deepEqual(r.ordrar.map((o) => [o.barn, o.hamtad]), [["Dan", ""], ["Cia", ""], ["Bo", "JA"], ["Alva", "JA"]]);
+  assert.deepEqual([r.oversikt.hamtat, r.oversikt.attHamta, r.oversikt.hamtatObetalt], [3, 0, 0]);
+  const kol = m.blad["Beställningar"].data.slice(1).map((x) => [x[3], x[8]]);
+  assert.deepEqual(kol, [["Alva", "JA"], ["Bo", "JA"], ["Cia", ""], ["Dan", ""], ["Bosse", ""]], "andra lags order är orörda");
+  assert.match(JSON.stringify(r), /^((?!Bosse).)*$/s, "svaret innehåller bara det egna lagets order");
+  const igen = m.admin("lag-a", a.key, "hamtadAlla");
+  assert.deepEqual([igen.markerade, igen.obetaldaKvar], [0, 1], "en andra körning ändrar inget");
+  const logg = m.blad["Logg"].data.slice(1).filter((x) => x[2] === "hamtad=alla betalda").map((x) => [x[1], x[4]]);
+  assert.deepEqual(logg, [["lag-a", "1 st"], ["lag-a", "0 st"]]);
+  assert.equal(m.admin("*", sk, "lagLista").lag.find((l) => l.slug === "lag-a").oversikt.hamtat, 3, "klubbens översikt visar hur mycket som är hämtat");
+});
+
+test("setup lägger till kolumnen Hämtad i en äldre beställningsflik utan att röra raderna", () => {
+  const { m, sk } = ny();
+  const a = skapaLag(m, sk, { namn: "Lag A" });
+  bestall(m, "lag-a", { barn: "Alva" });
+  const sh = m.blad["Beställningar"];
+  sh.maxCols = 8; sh.data.forEach((rad) => { rad.length = Math.min(rad.length, 8); });   // så såg fliken ut innan kolumnen fanns
+  assert.throws(() => m.ctx.lasOrdrar(), /outside the dimensions/);
+  m.setup();
+  assert.equal(sh.data[0][8], "Hämtad");
+  assert.ok(sh.maxCols >= 9);
+  assert.equal(sh.data[1][3], "Alva");
+  assert.equal(m.admin("lag-a", a.key, "hamtad", { id: "0001", varde: "JA" }).ok, true);
+  m.setup();   // en andra körning ändrar inget
+  assert.deepEqual(sh.data[0].slice(0, 9), ["Tid", "Order-ID", "Lag", "Barn", "Mobil", "Antal", "Belopp", "Betald", "Hämtad"]);
+  assert.equal(sh.data[1][8], "JA");
+});
+
 test("översikt: lag utan kartonger fakturerar det som beställts", () => {
   const { m, sk } = ny();
   const a = skapaLag(m, sk, { namn: "Bingo", pris: 50, inkopspris: 20, minimum: 100, mal: 200, kartong: 0 });

@@ -1,6 +1,6 @@
 # Lagförsäljning för Eskilsminne IF: flera lag, adminvy och ett Swish-nummer per lag (prototyp)
 
-En klubbsida där föräldern väljer lag i en lista och beställer, i samma stil som P2019-sidan. Varje lags kassör har en adminvy där de ser beställningar och markerar betalningar. Klubbens administratör lägger till lag.
+En klubbsida där föräldern väljer lag i en lista och beställer, i samma stil som P2019-sidan. Varje lags kassör har en adminvy där de ser beställningar, markerar betalningar och bockar av vem som hämtat. Klubbens administratör lägger till lag.
 
 **Det här är en prototyp, och repot är fristående från P2019-sidan ([adelborgen/eskilsminne-p2019](https://github.com/adelborgen/eskilsminne-p2019)), som inte påverkas. Inget här är kopplat till P2019:s server, kalkylark eller Swish-nummer.**
 
@@ -15,7 +15,7 @@ En klubbsida där föräldern väljer lag i en lista och beställer, i samma sti
 | Roll | Gör | Loggar in med |
 |---|---|---|
 | Förälder | Väljer lag och beställer, swishar till lagets nummer | Inget |
-| Lagets kassör | Ser översikt och beställningar för sitt lag, markerar betald/avbruten, ringer eller skickar SMS-påminnelse, exporterar CSV | Lagets adminnyckel (via en personlig länk) |
+| Lagets kassör | Ser översikt och beställningar för sitt lag, markerar betald/avbruten och hämtad (en och en, eller alla betalda på en gång), skriver ut en utlämningslista, ringer eller skickar SMS-påminnelse, exporterar CSV | Lagets adminnyckel (via en personlig länk) |
 | Klubbens administratör | Lägger till lag, öppnar/stänger/avslutar försäljning, ändrar uppgifter, byter nycklar, ser alla lag | Superadmin-nyckeln |
 
 ## Filer
@@ -77,7 +77,9 @@ Beställningarna innehåller barnets förnamn och förälderns mobilnummer.
 ## Bra att veta
 
 - **Pengarna.** Den som äger lagets Swish-nummer tar emot pengarna och betalar tillbaka vid behov, till exempel om minimum inte nås. Skriv ner vem det är för varje lag.
-- **Notiser.** Det finns ingen Telegram eller e-post i den här versionen: kassören tittar i adminvyn. Beställningar är *Obetalda* tills kassören trycker *Betald*.
+- **Notiser.** Det finns ingen Telegram eller e-post i den här versionen: den som tar emot pengarna tittar i adminvyn. Beställningar är *Obetalda* tills de markeras *Betald*.
+- **Utlämning.** Fliken *Utlämning* i adminvyn är en lista att bocka av när någon hämtar. Kryssrutan sparas direkt. *Markera alla betalda som hämtade* markerar bara betalda beställningar: obetalda och avbrutna rörs inte. Ett svar i kalkylarket syns i kolumnen *Hämtad* (JA eller tomt). *Skriv ut listan* skriver ut alla beställningar utom de avbrutna, i namnordning.
+- **Uppdaterar du en redan körd server?** Kör `setup` igen efter att du bytt in den nya `Server.gs`. Den lägger till kolumnen *Hämtad* i fliken *Beställningar* utan att röra befintliga rader.
 - **Betalningar matchas för hand.** Föräldern skriver ordernumret i Swish-meddelandet, kassören matchar det mot Swish-historiken och trycker *Betald*. Automatisk matchning kräver Swish Handel med API eller en betalleverantör och finns inte här.
 - **Inloggning med nyckel** är enkel och passar volontärer, men en vidarebefordrad länk ger åtkomst. Byt nyckel om den kan ha hamnat fel.
 - **Skalning.** Apps Script och ett kalkylark räcker för en klubb med några lag och några hundra beställningar. Blir det betydligt mer (många lag, tusentals beställningar) bör servern bytas mot en riktig databas. Sidorna pratar med servern via ett litet JSON-API, så servern kan bytas ut senare.

@@ -29,8 +29,8 @@ var LAG_RUBRIKER = ["Slug", "Namn", "Kampanj", "Status", "Swish-nummer", "Mottag
                     "Minimum", "Mål", "Max antal", "Per kartong", "Nyckel (hash)", "Nästa order"];
 var LAG_COL = { SLUG: 1, NAMN: 2, KAMPANJ: 3, STATUS: 4, SWISH: 5, MOTTAGARE: 6, MEDDELANDE: 7, PRIS: 8, INKOP: 9,
                 MINIMUM: 10, MAL: 11, MAXANTAL: 12, KARTONG: 13, HASH: 14, NASTA: 15 };
-var ORDER_RUBRIKER = ["Tid", "Order-ID", "Lag", "Barn", "Mobil", "Antal", "Belopp", "Betald"];
-var OCOL = { ID: 2, LAG: 3, BARN: 4, MOBIL: 5, ANTAL: 6, BELOPP: 7, BETALD: 8 };
+var ORDER_RUBRIKER = ["Tid", "Order-ID", "Lag", "Barn", "Mobil", "Antal", "Belopp", "Betald", "Hämtad"];
+var OCOL = { ID: 2, LAG: 3, BARN: 4, MOBIL: 5, ANTAL: 6, BELOPP: 7, BETALD: 8, HAMTAD: 9 };
 var LOGG_RUBRIKER = ["Tid", "Lag", "Åtgärd", "Order-ID", "Värde"];
 var STATUSAR = ["pagar", "snart", "avslutad"];
 
@@ -64,6 +64,10 @@ function sakraFlik(namn, rubriker) {
     if (sh.getLastRow() > 0) sh.insertRowBefore(1);
     sh.getRange(1, 1, 1, rubriker.length).setValues([rubriker]);
   }
+  // En flik som skapades med färre kolumner (före en uppdatering) får de nya kolumnerna och rubrikerna.
+  if (sh.getMaxColumns() < rubriker.length) sh.insertColumnsAfter(sh.getMaxColumns(), rubriker.length - sh.getMaxColumns());
+  var rubrikRad = sh.getRange(1, 1, 1, rubriker.length).getValues()[0];
+  rubriker.forEach(function (r, i) { if (!rubrikRad[i]) sh.getRange(1, i + 1).setValue(r); });
   sh.setFrozenRows(1);
   sh.getRange(1, 1, 1, rubriker.length).setFontWeight("bold");
   return sh;
@@ -144,7 +148,7 @@ function hanteraAdmin(d) {
   var a = autentisera(slug, d.key);
   if (a.fel) return json({ ok: false, fel: a.fel });
   var op = String(d.op || "");
-  var lagOps = { oversikt: opOversikt, lista: opLista, satt: opSatt };
+  var lagOps = { oversikt: opOversikt, lista: opLista, satt: opSatt, hamtad: opHamtad, hamtadAlla: opHamtadAlla };
   var superOps = { lagLista: opLagLista, lagNy: opLagNy, lagUppdatera: opLagUppdatera, nyNyckel: opNyNyckel };
   var har = function (o, k) { return Object.prototype.hasOwnProperty.call(o, k); };
   var svar;
@@ -204,11 +208,46 @@ function opSatt(lag, d) {
   });
 }
 
+// Sätter Hämtad för en order: JA eller tomt (ångra). En avbruten order kan inte hämtas.
+function opHamtad(lag, d) {
+  var varde = String(d.varde === undefined || d.varde === null ? "" : d.varde).toUpperCase();
+  if (["JA", ""].indexOf(varde) < 0) return { ok: false, fel: "Felaktigt värde." };
+  var nr = parseInt(d.id, 10);
+  if (isNaN(nr)) return { ok: false, fel: "Felaktigt ordernummer." };
+  return medLasObj(function () {
+    var ordrar = lasOrdrar();
+    var o = ordrar.filter(function (x) { return x.lag === lag.slug && parseInt(x.id, 10) === nr; })[0];
+    if (!o) return { ok: false, fel: "Hittar ingen order " + d.id + "." };
+    if (varde === "JA" && o.betald === "AVBRUTEN") return { ok: false, fel: "Beställningen är avbruten och kan inte hämtas." };
+    flik(ORDER_FLIK).getRange(o.rad, OCOL.HAMTAD).setValue(varde);
+    o.hamtad = varde;
+    logga(lag.slug, "hamtad=" + (varde || "(ångrad)"), o.id, varde);
+    return { ok: true, order: utOrder(o), oversikt: oversikt(lag, ordrar) };
+  });
+}
+
+// Markerar alla betalda beställningar som inte redan är hämtade. Obetalda och avbrutna rörs inte.
+function opHamtadAlla(lag) {
+  return medLasObj(function () {
+    var ordrar = lasOrdrar();
+    var markerade = 0, obetaldaKvar = 0;
+    ordrar.forEach(function (o) {
+      if (o.lag !== lag.slug || o.hamtad === "JA" || o.betald === "AVBRUTEN") return;
+      if (o.betald !== "JA") { obetaldaKvar++; return; }
+      o.hamtad = "JA"; markerade++;
+    });
+    if (markerade > 0) flik(ORDER_FLIK).getRange(2, OCOL.HAMTAD, ordrar.length, 1).setValues(ordrar.map(function (o) { return [o.hamtad]; }));
+    logga(lag.slug, "hamtad=alla betalda", "", markerade + " st");
+    var egna = ordrar.filter(function (o) { return o.lag === lag.slug; }).reverse().map(utOrder);
+    return { ok: true, markerade: markerade, obetaldaKvar: obetaldaKvar, ordrar: egna, oversikt: oversikt(lag, ordrar) };
+  });
+}
+
 function opLagLista() {
   var ordrar = lasOrdrar();
   return { ok: true, lag: lasLag().map(function (l) {
     var ov = oversikt(l, ordrar), ut = offentlig(l);
-    ut.oversikt = { bestallt: ov.bestallt, betalt: ov.betalt, betaltKr: ov.betaltKr, obetalt: ov.obetalt };
+    ut.oversikt = { bestallt: ov.bestallt, betalt: ov.betalt, betaltKr: ov.betaltKr, obetalt: ov.obetalt, hamtat: ov.hamtat, attHamta: ov.attHamta };
     return ut;
   }) };
 }
@@ -374,13 +413,14 @@ function lasOrdrar() {
       mobil: mobil,
       antal: Number(r[OCOL.ANTAL - 1]) || 0,
       belopp: Number(r[OCOL.BELOPP - 1]) || 0,
-      betald: String(r[OCOL.BETALD - 1] || "").toUpperCase()
+      betald: String(r[OCOL.BETALD - 1] || "").toUpperCase(),
+      hamtad: String(r[OCOL.HAMTAD - 1] || "").toUpperCase()
     };
   });
 }
 
 function utOrder(o) {
-  return { id: o.id, tid: o.tid, barn: o.barn, mobil: o.mobil, antal: o.antal, belopp: o.belopp, betald: o.betald };
+  return { id: o.id, tid: o.tid, barn: o.barn, mobil: o.mobil, antal: o.antal, belopp: o.belopp, betald: o.betald, hamtad: o.hamtad };
 }
 
 function avrunda(n) { return Math.round(n * 100) / 100; }
@@ -388,17 +428,21 @@ function avrunda(n) { return Math.round(n * 100) / 100; }
 // Siffrorna som kassören behöver: samma som Översikt-fliken i det gamla skriptet.
 function oversikt(lag, ordrar) {
   var bestallt = 0, betalt = 0, betaltKr = 0, obetalt = 0, obetaltKr = 0, avbrutna = 0;
+  var hamtat = 0, hamtatObetalt = 0, attHamta = 0;   // hamtatObetalt: hämtat men inte betalt, att reda ut
   ordrar.forEach(function (o) {
     if (o.lag !== lag.slug) return;
     if (o.betald === "AVBRUTEN") { avbrutna += o.antal; return; }
     bestallt += o.antal;
     if (o.betald === "JA") { betalt += o.antal; betaltKr += o.belopp; } else { obetalt += o.antal; obetaltKr += o.belopp; }
+    if (o.hamtad === "JA") { hamtat += o.antal; if (o.betald !== "JA") hamtatObetalt += o.antal; }
+    else if (o.betald === "JA") attHamta += o.antal;
   });
   var kartonger = lag.kartong > 0 ? Math.ceil(bestallt / lag.kartong) : 0;
   var levereras = lag.kartong > 0 ? kartonger * lag.kartong : bestallt;
   var faktura = avrunda(levereras * lag.inkopspris);
   return {
     bestallt: bestallt, betalt: betalt, betaltKr: avrunda(betaltKr), obetalt: obetalt, obetaltKr: avrunda(obetaltKr), avbrutna: avbrutna,
+    hamtat: hamtat, hamtatObetalt: hamtatObetalt, attHamta: attHamta,
     minimumNatt: bestallt >= lag.minimum, minimumKvar: Math.max(0, lag.minimum - bestallt),
     kartonger: kartonger, levereras: levereras, faktura: faktura, betaltMinusFaktura: avrunda(betaltKr - faktura)
   };
