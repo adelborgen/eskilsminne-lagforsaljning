@@ -118,3 +118,19 @@ var DEMO_LAG = [
     pris: 40, inkopspris: 18, minimum: 100, mal: 200, maxAntal: 20, kartong: 0,
     swish: { nummer: "123 456 78 90", namnPaKonto: "Eskilsminne IF P2016", meddelande: "" } }
 ];
+
+/* Fler exempellag, så att demon visar hur det ser ut när många lag säljer samtidigt: 23 som föräldrar kan välja bland. */
+(function () {
+  var finns = {}, i = 0;
+  DEMO_LAG.forEach(function (x) { finns[x.slug] = 1; });
+  [2007, 2008, 2009, 2010, 2011, 2012, 2013, 2014, 2015, 2016, 2017, 2018, 2019].forEach(function (ar) {
+    ["P", "F"].forEach(function (k) {
+      var slug = (k + ar).toLowerCase();
+      if (finns[slug] || slug === "f2007") return;
+      var status = i % 7 === 6 ? "avslutad" : i % 5 === 4 ? "snart" : "pagar";
+      DEMO_LAG.push({ slug: slug, namn: k + ar, kampanj: "Chokladförsäljning", status: status, demoBestallt: 30 + (i * 37) % 190,
+        swish: { nummer: "", namnPaKonto: "Eskilsminne IF " + k + ar, meddelande: "" } });
+      i++;
+    });
+  });
+})();

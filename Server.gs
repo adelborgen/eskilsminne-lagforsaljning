@@ -154,7 +154,7 @@ function hanteraAdmin(d) {
   if (a.fel) return json({ ok: false, fel: a.fel });
   var op = String(d.op || "");
   var lagOps = { oversikt: opOversikt, lista: opLista, satt: opSatt, hamtad: opHamtad, hamtadAlla: opHamtadAlla,
-    lagSpara: opLagSpara, skickaGodkannande: opSkickaGodkannande, dragTillbaka: opDragTillbaka };
+    lagSpara: opLagSpara, skickaGodkannande: opSkickaGodkannande, dragTillbaka: opDragTillbaka, taBort: opTaBort };
   var superOps = { lagLista: opLagLista, lagNy: opLagNy, lagUppdatera: opLagUppdatera, nyNyckel: opNyNyckel,
     godkann: opGodkann, skickaTillbaka: opSkickaTillbaka };
   var har = function (o, k) { return Object.prototype.hasOwnProperty.call(o, k); };
@@ -230,6 +230,25 @@ function opHamtad(lag, d) {
     o.hamtad = varde;
     logga(lag.slug, "hamtad=" + (varde || "(ångrad)"), o.id, varde);
     return { ok: true, order: utOrder(o), oversikt: oversikt(lag, ordrar) };
+  });
+}
+
+// Tar bort en beställning, till exempel en testbeställning eller en dubblett. Betalda och hämtade beställningar kan inte tas bort:
+// ångra betalningen eller hämtningen först. Raden försvinner helt, med barnets namn och mobilnummer. I loggen sparas bara
+// ordernummer, antal och belopp, aldrig några personuppgifter. Ordernumret används inte igen.
+function opTaBort(lag, d) {
+  var nr = parseInt(d.id, 10);
+  if (isNaN(nr)) return { ok: false, fel: "Felaktigt ordernummer." };
+  return medLasObj(function () {
+    var ordrar = lasOrdrar();
+    var o = ordrar.filter(function (x) { return x.lag === lag.slug && parseInt(x.id, 10) === nr; })[0];
+    if (!o) return { ok: false, fel: "Hittar ingen order " + d.id + "." };
+    if (o.betald === "JA") return { ok: false, fel: "En betald beställning kan inte tas bort. Ångra betalningen först om den är fel." };
+    if (o.hamtad === "JA") return { ok: false, fel: "En hämtad beställning kan inte tas bort. Ångra hämtningen först." };
+    flik(ORDER_FLIK).deleteRow(o.rad);
+    logga(lag.slug, "order borttagen", o.id, o.antal + " st, " + o.belopp + " kr");
+    var kvar = ordrar.filter(function (x) { return x !== o; });
+    return { ok: true, borttagen: o.id, oversikt: oversikt(lag, kvar) };
   });
 }
 

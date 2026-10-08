@@ -412,6 +412,59 @@ test("setup lägger till kolumnen Klubbens kommentar i en äldre lagflik", () =>
   assert.equal(m.admin("lag-a", m.admin("*", sk, "nyNyckel", { slug: "lag-a" }).key, "oversikt").lag.kommentar, "");
 });
 
+test("ta bort en beställning: bara om den inte är betald eller hämtad, och bara i det egna laget", () => {
+  const { m, sk } = ny();
+  const a = skapaLag(m, sk, { namn: "Lag A" }), b = skapaLag(m, sk, { namn: "Lag B" });
+  bestall(m, "lag-a", { antal: 10, barn: "Alva", mobil: "0701111111" });
+  bestall(m, "lag-a", { antal: 5, barn: "Bosse", mobil: "0702222222" });
+  bestall(m, "lag-a", { antal: 2, barn: "Cia", mobil: "0703333333" });
+  bestall(m, "lag-b", { antal: 3, barn: "Dan", mobil: "0704444444" });   // också 0001
+  m.admin("lag-a", a.key, "satt", { id: "0001", varde: "JA" });
+  const namn = () => m.blad["Beställningar"].data.slice(1).map((x) => x[3]);
+  // Lag B:s admin kan bara röra sitt eget lag: 0002 finns bara hos A, och B:s egen 0001 är Dan, inte A:s betalda Alva
+  assert.match(m.admin("lag-b", b.key, "taBort", { id: "0002" }).fel, /Hittar ingen order/);
+  assert.ok(namn().includes("Bosse"), "Lag A:s Bosse finns kvar");
+  assert.match(m.admin("lag-a", b.key, "taBort", { id: "0001" }).fel, /Fel lag eller nyckel/);
+  assert.match(m.admin("lag-a", "", "taBort", { id: "0001" }).fel, /Fel lag eller nyckel/);
+  assert.equal(m.admin("lag-b", b.key, "taBort", { id: "0001" }).borttagen, "0001");
+  assert.deepEqual(namn(), ["Alva", "Bosse", "Cia"], "Dan försvann, inte Alva");
+  // betald: skyddad
+  assert.match(m.admin("lag-a", a.key, "taBort", { id: "0001" }).fel, /betald beställning kan inte tas bort/);
+  assert.equal(m.blad["Beställningar"].getLastRow(), 4, "inget togs bort");
+  // hämtad men inte betald: skyddad
+  m.admin("lag-a", a.key, "hamtad", { id: "0002", varde: "JA" });
+  assert.match(m.admin("lag-a", a.key, "taBort", { id: "0002" }).fel, /hämtad beställning kan inte tas bort/);
+  m.admin("lag-a", a.key, "hamtad", { id: "0002", varde: "" });
+  // obetald: tas bort, och siffrorna uppdateras
+  const r = m.admin("lag-a", a.key, "taBort", { id: "0002" });
+  assert.deepEqual([r.ok, r.borttagen, r.oversikt.bestallt, r.oversikt.betalt, r.oversikt.obetalt], [true, "0002", 12, 10, 2]);
+  assert.deepEqual(namn(), ["Alva", "Cia"]);
+  assert.deepEqual(m.get({ action: "status", lag: "lag-a" }), { ok: true, bestallt: 12 });
+  assert.deepEqual(m.admin("lag-a", a.key, "lista").ordrar.map((o) => o.id), ["0003", "0001"]);
+  // en avbruten beställning kan också tas bort
+  m.admin("lag-a", a.key, "satt", { id: "0003", varde: "AVBRUTEN" });
+  assert.equal(m.admin("lag-a", a.key, "taBort", { id: "3" }).ok, true, "'3' går bra");
+  // en betalning som ångras kan sedan tas bort
+  m.admin("lag-a", a.key, "satt", { id: "0001", varde: "" });
+  assert.equal(m.admin("lag-a", a.key, "taBort", { id: "0001" }).ok, true);
+  assert.equal(m.admin("lag-a", a.key, "lista").ordrar.length, 0);
+  assert.match(m.admin("lag-a", a.key, "taBort", { id: "x" }).fel, /ordernummer/);
+  assert.match(m.admin("lag-a", a.key, "taBort", { id: "0099" }).fel, /Hittar ingen order/);
+  assert.match(m.admin("lag-a", a.key, "taBort", {}).fel, /ordernummer/);
+});
+
+test("ta bort: ordernumret används inte igen, och loggen innehåller inga personuppgifter", () => {
+  const { m, sk } = ny();
+  const a = skapaLag(m, sk, { namn: "Lag A" });
+  bestall(m, "lag-a", { antal: 4, barn: "Hemligsson", mobil: "0705551234" });
+  assert.equal(m.admin("lag-a", sk, "taBort", { id: "0001" }).ok, true, "klubbens administratör får ta bort");
+  assert.equal(bestall(m, "lag-a", { barn: "Ny", mobil: "0706666666" }).id, "0002", "0001 används inte igen");
+  const logg = JSON.stringify(m.blad["Logg"].data);
+  assert.ok(logg.includes("order borttagen") && logg.includes("4 st, 120 kr"));
+  assert.ok(!logg.includes("Hemligsson") && !logg.includes("0705551234"), "inga personuppgifter i loggen");
+  assert.ok(!JSON.stringify(m.blad["Beställningar"].data).includes("Hemligsson"), "uppgifterna är borta ur beställningarna");
+});
+
 test("översikt: lag utan kartonger fakturerar det som beställts", () => {
   const { m, sk } = ny();
   const a = skapaLag(m, sk, { namn: "Bullar", pris: 50, inkopspris: 20, minimum: 100, mal: 200, kartong: 0 });

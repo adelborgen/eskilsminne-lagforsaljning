@@ -43,6 +43,7 @@ class Sheet {
   }
   appendRow(arr) { this.data.push(arr.map((v) => (typeof v === "string" && v.startsWith("'") ? v.slice(1) : v))); }
   insertRowBefore(i) { this.data.splice(i - 1, 0, []); }
+  deleteRow(i) { this.data.splice(i - 1, 1); }
   setFrozenRows() {}
 }
 

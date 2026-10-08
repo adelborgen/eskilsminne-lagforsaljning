@@ -75,7 +75,6 @@
     var tillstand = open ? ["Pågår", IK_PRICK] : slut ? ["Avslutad", IK_STRECK] : ["Startar snart", IK_RING];
     var state = h("span", { class: "t-state" }, U.ikon(tillstand[1]), tillstand[0]);
     var badges = h("span", { class: "badges", style: "margin-top:10px" }, state);
-    if (!K.endpoint) badges.appendChild(h("span", { class: "badge demo", text: "Exempel" }));
     var body = h("span", { class: "t-body" }, h("span", { class: "t-title", text: titel }), sub ? h("span", { class: "t-sub", text: sub }) : null, badges);
     var card = open
       ? navLank(l.slug, { class: "tile teamcard", "aria-label": l.namn + ", " + titel + (sub ? ", " + sub : "") + ", pågår" })
@@ -86,18 +85,30 @@
     return card;
   }
 
-  function tileList(lista, start) {
-    var ul = h("ul", { class: "teams", "aria-label": "Lag" });
+  function tileList(lista, start, kompakt) {
+    var ul = h("ul", { class: "teams" + (kompakt ? " kompakt" : ""), "aria-label": "Lag" });
     lista.forEach(function (l, i) { ul.appendChild(h("li", { style: "--i:" + (start + i) }, teamCard(l))); });
     return ul;
+  }
+
+  var MANGA_LAG = 6;   // fler lag än så: sökruta och kompakta rader, så att listan går att överblicka
+
+  function artal(namn) { var m = /(\d{4})/.exec(namn); return m ? Number(m[1]) : 0; }
+  // Pågående först, sedan kommande, sedan avslutade. Inom varje grupp yngst först (högst födelseår), sedan på namn.
+  function sorteraLag(lista) {
+    var rang = { pagar: 0, snart: 1, avslutad: 2 };
+    var r = function (l) { return rang[l.status] !== undefined ? rang[l.status] : 1; };
+    return lista.slice().sort(function (x, y) {
+      return (r(x) - r(y)) || (artal(y.namn) - artal(x.namn)) || x.namn.localeCompare(y.namn, "sv", { numeric: true });
+    });
   }
 
   function renderList(LAG) {
     setTopbar("", K.titel);
     document.title = K.namn + " – " + K.titel;
     // Utkast och försäljningar som väntar på klubbens godkännande visas inte för föräldrar.
-    LAG = LAG.filter(function (l) { return l.status !== "utkast" && l.status !== "granskas"; });
-    var pagande = LAG.filter(function (l) { return l.status !== "avslutad"; }), avslutade = LAG.filter(function (l) { return l.status === "avslutad"; });
+    LAG = sorteraLag(LAG.filter(function (l) { return l.status !== "utkast" && l.status !== "granskas"; }));
+    var manga = LAG.length > MANGA_LAG;
     app.textContent = "";
     app.appendChild(h("header", { class: "hero" },
       h("div", { class: "deco", "aria-hidden": "true" }, U.ikon(IK_CIRKEL)),
@@ -105,10 +116,35 @@
       h("p", { class: "lead", text: K.valjLagText }),
       h("ol", { class: "hero-steps" }, h("li", null, h("b", { text: "1" }), "Välj lag"), h("li", null, h("b", { text: "2" }), "Beställ"), h("li", null, h("b", { text: "3" }), "Swisha till laget")),
       h("p", { class: "fast", text: "Klart på under en minut." })));
+    if (!K.endpoint) app.appendChild(h("p", { class: "notice", style: "margin-top:22px", text: "Demoläge: lagen och siffrorna är exempel. Inget skickas eller sparas." }));
     app.appendChild(h("div", { class: "mittlinje", "aria-hidden": "true" }, h("i")));
-    if (pagande.length) app.appendChild(tileList(pagande, 0));
-    if (avslutade.length) app.appendChild(h("details", { class: "avslutade" }, h("summary", { text: "Avslutade (" + avslutade.length + ")" }), tileList(avslutade, 0)));
-    if (!LAG.length) app.appendChild(h("p", { class: "notice", style: "margin-top:22px", text: "Inga lag är tillagda ännu." }));
+
+    var sok = null, info = null;
+    if (manga) {
+      sok = h("input", { type: "search", id: "lagsok", placeholder: "Sök ditt lag, till exempel 2017", "aria-label": "Sök lag", autocomplete: "off", autocapitalize: "none", spellcheck: "false" });
+      info = h("p", { class: "small", role: "status", style: "margin:10px 0 0" });
+      app.appendChild(h("div", { class: "lagsok" }, sok, info));
+    }
+    var host = h("div");
+    app.appendChild(host);
+
+    function rita() {
+      var q = sok ? sok.value.toLowerCase().replace(/\s+/g, "") : "";
+      var vis = LAG.filter(function (l) { return !q || (l.namn + (l.kampanj || "")).toLowerCase().replace(/\s+/g, "").indexOf(q) >= 0; });
+      var pagande = vis.filter(function (l) { return l.status !== "avslutad"; }), avslutade = vis.filter(function (l) { return l.status === "avslutad"; });
+      host.textContent = "";
+      if (pagande.length) host.appendChild(tileList(pagande, 0, manga));
+      if (avslutade.length) {
+        var det = h("details", { class: "avslutade" }, h("summary", { text: "Avslutade (" + avslutade.length + ")" }), tileList(avslutade, 0, manga));
+        if (q) det.open = true;   // en sökträff på ett avslutat lag ska synas direkt
+        host.appendChild(det);
+      }
+      if (info) info.textContent = q ? (vis.length ? vis.length + (vis.length === 1 ? " lag" : " lag") + " matchar" : "") : "";
+      if (!vis.length) host.appendChild(h("p", { class: "notice", style: "margin-top:22px", text: LAG.length
+        ? "Inget lag matchar. Kontrollera stavningen, eller be om länken i lagets WhatsApp-grupp." : "Inga lag är tillagda ännu." }));
+    }
+    if (sok) sok.addEventListener("input", rita);
+    rita();
   }
 
   function renderIngetLag() {

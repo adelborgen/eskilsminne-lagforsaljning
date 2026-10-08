@@ -268,6 +268,19 @@
       } else row.appendChild(knapp("Ångra", ""));
       row.appendChild(h("a", { class: "mini", href: "tel:" + o.mobil, text: "Ring" }));
       if (s === "obetald") row.appendChild(h("a", { class: "mini", href: smsLank(o), text: "SMS-påminnelse" }));
+      // Betalda och hämtade beställningar kan inte tas bort (servern kontrollerar det också). Kräver ett andra tryck.
+      if (s !== "betald" && !hamtad) {
+        var tb = h("button", { type: "button", class: "mini", text: "Ta bort" }), redo = false, timer = null;
+        tb.addEventListener("click", function () {
+          if (!redo) {
+            redo = true; tb.textContent = "Säker? Ta bort"; tb.classList.add("danger");
+            timer = setTimeout(function () { redo = false; tb.textContent = "Ta bort"; tb.classList.remove("danger"); }, 4000);
+            return;
+          }
+          clearTimeout(timer); taBort(o, row, err);
+        });
+        row.appendChild(tb);
+      }
       return h("div", { class: "ordercard", role: "listitem" },
         h("div", { class: "o-head" }, h("span", { class: "o-name", text: "#" + o.id + " " + o.barn }),
           h("span", { class: "o-sum num", text: o.antal + " st · " + kr(o.belopp) })),
@@ -301,6 +314,19 @@
       iKo(function () { return anropa("satt", { id: o.id, varde: varde }, slug).then(function (r) {
         if (!r.ok) { knappar.forEach(function (b) { b.disabled = false; }); err.textContent = r.fel || "Det gick inte att spara."; return; }
         d.ordrar = d.ordrar.map(function (x) { return x.id === r.order.id ? r.order : x; });
+        d.oversikt = r.oversikt;
+        ritaOversikt(); ritaLista(); ritaUtlamning();
+      }); });
+    }
+
+    // Tar bort en beställning som inte är betald eller hämtad. Raden försvinner helt, även barnets namn och mobilnummer.
+    function taBort(o, row, err) {
+      var knappar = row.querySelectorAll("button");
+      knappar.forEach(function (b) { b.disabled = true; });
+      err.textContent = "";
+      iKo(function () { return anropa("taBort", { id: o.id }, slug).then(function (r) {
+        if (!r.ok) { knappar.forEach(function (b) { b.disabled = false; }); err.textContent = r.fel || "Det gick inte att ta bort."; return; }
+        d.ordrar = d.ordrar.filter(function (x) { return x.id !== r.borttagen; });
         d.oversikt = r.oversikt;
         ritaOversikt(); ritaLista(); ritaUtlamning();
       }); });
@@ -578,11 +604,17 @@
 
   function byggSuper(lista) {
     var nyckelPlats = h("div"), kogEl = h("div", { style: "margin-bottom:24px" }), listEl = h("div"), fel = h("p", { class: "error", role: "alert" });
+    // Många lag: sökruta och filter på status. Visas först när det finns fler än så att korten ryms på en skärm.
+    var MANGA = 6, sokTxt = "", statusFilter = "alla";
+    var sokInp = h("input", { type: "search", id: "lagsok-admin", placeholder: "Sök lag", "aria-label": "Sök lag", autocomplete: "off" });
+    var chipsEl = h("div", { class: "chips", role: "group", "aria-label": "Visa", style: "margin-top:12px" });
+    var verktyg = h("div", { hidden: "", style: "margin-bottom:16px" }, sokInp, chipsEl);
+    sokInp.addEventListener("input", function () { sokTxt = sokInp.value.trim().toLowerCase().replace(/\s+/g, ""); ritaLag(); });
     app.textContent = "";
     app.appendChild(h("div", { class: "topactions" }, h("h2", { class: "title", text: "Alla lag" }),
       h("button", { type: "button", class: "linkbtn", text: "Logga ut", onclick: loggaUt })));
     app.appendChild(nyckelPlats);
-    app.appendChild(h("div", { style: "margin-top:16px" }, fel, kogEl, listEl));
+    app.appendChild(h("div", { style: "margin-top:16px" }, fel, kogEl, verktyg, listEl));
     if (DEMO) app.insertBefore(h("p", { class: "notice", text: "Demoläge med exempeldata. Inget sparas." }), nyckelPlats);
 
     function ladda() { anropa("lagLista").then(function (r) { if (r.ok) { lista = r.lag; ritaLag(); } else fel.textContent = r.fel; }); }
@@ -607,7 +639,7 @@
       nyckelPlats.scrollIntoView({ block: "start", behavior: "smooth" });
     }
 
-    function lagKort(l) {
+    function lagKort(l, oppen) {
       var sel = h("select", { "aria-label": "Status för " + l.namn });
       Object.keys(STATUS_TEXT).forEach(function (k) { sel.appendChild(h("option", { value: k, text: STATUS_TEXT[k] })); });
       sel.value = l.status;
@@ -638,8 +670,8 @@
             anropa("nyNyckel", { slug: l.slug }).then(function (r) { if (r.ok) visaNyckel("Ny nyckel för " + l.namn, l.slug, r.key); else fel.textContent = r.fel; });
           } }),
           h("button", { type: "button", class: "mini", text: "Avbryt", onclick: function () { bekrafta.hidden = true; } })));
-      return h("div", { class: "card teamadmin" },
-        h("div", { class: "o-head" }, h("span", { class: "o-name", text: l.namn + " · " + (l.kampanj || "") }), h("span", { class: "badge", text: STATUS_TEXT[l.status] || l.status })),
+      var kort = h("details", { class: "card teamadmin" },
+        h("summary", null, h("span", { class: "o-name", text: l.namn + (l.kampanj ? " · " + l.kampanj : "") }), h("span", { class: "badge", text: STATUS_TEXT[l.status] || l.status })),
         h("div", { class: "o-sub num", text: l.status === "utkast" ? "Laget fyller i uppgifterna." + (l.kommentar ? " Tillbakaskickad: " + l.kommentar : "")
           : "Beställt " + nf.format(ov.bestallt) + " av " + nf.format(l.mal) + " · Betalt " + nf.format(ov.betalt) + " · Obetalt " + nf.format(ov.obetalt) + " · Hämtat " + nf.format(ov.hamtat || 0) }),
         h("div", { class: "field", style: "margin-top:12px" }, sel),
@@ -648,6 +680,8 @@
           h("button", { type: "button", class: "mini", text: "Ny nyckel", onclick: function () { bekrafta.hidden = false; } })),
         bekrafta,
         andra);
+      if (oppen) kort.open = true;
+      return kort;
     }
 
     // En försäljning som väntar på klubbens godkännande: granska uppgifterna, godkänn eller skicka tillbaka med en kommentar.
@@ -680,8 +714,23 @@
         kogEl.appendChild(h("h3", { style: "margin:0 0 12px", text: "Väntar på godkännande (" + vantar.length + ")" }));
         vantar.forEach(function (l) { kogEl.appendChild(kogKort(l)); });
       }
+      var ovriga = lista.filter(function (l) { return l.status !== "granskas"; });
+      var manga = ovriga.length > MANGA;
+      verktyg.hidden = !manga;
+      if (manga) {
+        chipsEl.textContent = "";
+        [["alla", "Alla"], ["pagar", "Pågår"], ["snart", "Snart"], ["utkast", "Utkast"], ["avslutad", "Avslutade"]].forEach(function (c) {
+          var n = c[0] === "alla" ? ovriga.length : ovriga.filter(function (l) { return l.status === c[0]; }).length;
+          chipsEl.appendChild(h("button", { type: "button", class: "chip", "aria-pressed": String(c[0] === statusFilter), text: c[1] + " (" + n + ")",
+            onclick: function () { statusFilter = c[0]; ritaLag(); } }));
+        });
+      }
+      var vis = ovriga.filter(function (l) {
+        return (!manga || statusFilter === "alla" || l.status === statusFilter) && (!sokTxt || (l.namn + (l.kampanj || "")).toLowerCase().replace(/\s+/g, "").indexOf(sokTxt) >= 0);
+      });
       if (!lista.length) listEl.appendChild(h("p", { class: "notice", text: "Inga lag är tillagda ännu. Lägg till det första nedan." }));
-      lista.filter(function (l) { return l.status !== "granskas"; }).forEach(function (l) { listEl.appendChild(lagKort(l)); });
+      else if (!vis.length && ovriga.length) listEl.appendChild(h("p", { class: "notice", text: "Inget lag matchar." }));
+      vis.forEach(function (l) { listEl.appendChild(lagKort(l, !manga)); });
     }
 
     /* Lägg till lag */
@@ -812,6 +861,15 @@
         if (lag.status !== "granskas") { svar = { ok: false, fel: "Försäljningen väntar inte på godkännande." }; break; }
         lag.status = "utkast";
         svar = { ok: true, lag: klon(lag) }; break;
+      case "taBort":
+        if (!lag) { svar = { ok: false, fel: "Okänt lag." }; break; }
+        var li = -1;
+        s.ordrar[lag.slug].forEach(function (x, ix) { if (parseInt(x.id, 10) === parseInt(p.id, 10)) li = ix; });
+        if (li < 0) { svar = { ok: false, fel: "Hittar ingen order " + p.id + "." }; break; }
+        if (s.ordrar[lag.slug][li].betald === "JA") { svar = { ok: false, fel: "En betald beställning kan inte tas bort. Ångra betalningen först om den är fel." }; break; }
+        if (s.ordrar[lag.slug][li].hamtad === "JA") { svar = { ok: false, fel: "En hämtad beställning kan inte tas bort. Ångra hämtningen först." }; break; }
+        var borttagen = s.ordrar[lag.slug].splice(li, 1)[0].id;
+        svar = { ok: true, borttagen: borttagen, oversikt: demoOversikt(lag, s.ordrar[lag.slug]) }; break;
       case "hamtad":
         if (!lag) { svar = { ok: false, fel: "Okänt lag." }; break; }
         var oh = s.ordrar[lag.slug].filter(function (x) { return parseInt(x.id, 10) === parseInt(p.id, 10); })[0];

@@ -15,7 +15,7 @@ En klubbsida där föräldern väljer lag i en lista och beställer, i samma sti
 | Roll | Gör | Loggar in med |
 |---|---|---|
 | Förälder | Väljer lag och beställer, swishar till lagets nummer | Inget |
-| Lagförälder | Fyller i försäljningen (vad som säljs, priser, Swish-nummer, mål) och skickar den till klubben för godkännande. När den är godkänd: ser översikt och beställningar för sitt lag, markerar betald/avbruten och hämtad (en och en, eller alla betalda på en gång), skriver ut en utlämningslista, ringer eller skickar SMS-påminnelse, exporterar CSV | Lagets adminnyckel (via en personlig länk) |
+| Lagförälder | Fyller i försäljningen (vad som säljs, priser, Swish-nummer, mål) och skickar den till klubben för godkännande. När den är godkänd: ser översikt och beställningar för sitt lag, markerar betald/avbruten och hämtad (en och en, eller alla betalda på en gång), tar bort obetalda beställningar, skriver ut en utlämningslista, ringer eller skickar SMS-påminnelse, exporterar CSV | Lagets adminnyckel (via en personlig länk) |
 | Klubbens administratör | Lägger till lag, godkänner eller skickar tillbaka försäljningar, öppnar/stänger/avslutar, ändrar uppgifter, byter nycklar, ser alla lag | Superadmin-nyckeln |
 
 ## Filer
@@ -86,7 +86,9 @@ Beställningarna innehåller barnets förnamn och förälderns mobilnummer.
 - **Uppdaterar du en redan körd server?** Kör `setup` igen efter att du bytt in den nya `Server.gs`. Den lägger till kolumnen *Hämtad* i fliken *Beställningar* och kolumnen *Klubbens kommentar* i fliken *Lag* utan att röra befintliga rader. Lag som redan finns behåller sin status.
 - **Betalningar matchas för hand.** Föräldern skriver ordernumret i Swish-meddelandet, den som tar emot pengarna matchar det mot Swish-historiken och trycker *Betald*. Automatisk matchning kräver Swish Handel med API eller en betalleverantör och finns inte här.
 - **Inloggning med nyckel** är enkel och passar volontärer, men en vidarebefordrad länk ger åtkomst. Byt nyckel om den kan ha hamnat fel.
-- **Skalning.** Apps Script och ett kalkylark räcker för en klubb med några lag och några hundra beställningar. Blir det betydligt mer (många lag, tusentals beställningar) bör servern bytas mot en riktig databas. Sidorna pratar med servern via ett litet JSON-API, så servern kan bytas ut senare.
+- **Ta bort en beställning.** Obetalda och avbrutna beställningar kan tas bort i fliken *Beställningar* (två tryck). Betalda och hämtade kan inte det: ångra betalningen eller hämtningen först. Raden försvinner helt, även barnets namn och mobilnummer. I fliken *Logg* sparas bara ordernummer, antal och belopp. Ordernumret används inte igen.
+- **Många lag.** Klubbsidan visar kompakta rader och en sökruta när fler än sex lag säljer. Adminvyn *Alla lag* får sökruta, filter på status och hopfällbara kort. De flesta föräldrar kommer ändå direkt till sitt lag via länken (`?lag=…`) som lagföräldern delar i lagets WhatsApp-grupp, så listan är mest en reservväg. Demon visar 23 lag.
+- **Skalning.** Apps Script och ett kalkylark räcker för en klubb med några lag och några hundra beställningar. Beställningarna skrivs en i taget (ett lås), och Apps Script tillåter 30 samtidiga körningar per användare. Hur det beter sig med 23 lag samtidigt är inte provat mot riktiga Google: kör ett lasttest innan många lag öppnar på samma gång. Blir det betydligt mer (många lag, tusentals beställningar) bör servern bytas mot en riktig databas. Sidorna pratar med servern via ett litet JSON-API, så servern kan bytas ut senare.
 
 ## Flytta P2019 hit
 
