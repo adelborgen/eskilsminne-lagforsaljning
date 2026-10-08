@@ -10,13 +10,14 @@ En klubbsida där föräldern väljer lag i en lista och beställer, i samma sti
 - **Ett skript och ett kalkylark för hela klubben** (`Server.gs`). Alla beställningar ligger i klubbens kalkylark. Lagens lagföräldrar använder adminvyn, inte kalkylarket, och ser bara sitt eget lag.
 - **Priset räknas alltid på servern.** Sidan skickar bara antal.
 
-## Tre roller
+## Tre roller (och en begränsad länk för utlämning)
 
 | Roll | Gör | Loggar in med |
 |---|---|---|
 | Förälder | Väljer lag och beställer, swishar till lagets nummer | Inget |
 | Lagförälder | Fyller i försäljningen (vad som säljs, priser, Swish-nummer, mål) och skickar den till klubben för godkännande. När den är godkänd: ser översikt och beställningar för sitt lag, markerar betald/avbruten och hämtad (en och en, eller alla betalda på en gång), tar bort obetalda beställningar, skriver ut en utlämningslista, ringer eller skickar SMS-påminnelse, exporterar CSV | Lagets adminnyckel (via en personlig länk) |
 | Klubbens administratör | Lägger till lag, godkänner eller skickar tillbaka försäljningar, öppnar/stänger/avslutar, ändrar uppgifter, byter nycklar, ser alla lag | Superadmin-nyckeln |
+| Den som delar ut (valfri) | Ser en lista med namn och antal och bockar av *Hämtad*. Ser inga mobilnummer och inga belopp, och kan inte ändra betalningar eller ta bort något | Lagets utlämningslänk, som lagföräldern skapar (och kan byta eller stänga av) |
 
 ## Filer
 
@@ -34,7 +35,7 @@ En klubbsida där föräldern väljer lag i en lista och beställer, i samma sti
 
 Så länge `endpoint` i `lag.js` är tom visar sidorna exempellag och exempeldata, och inget sparas eller skickas. Öppna `index.html` och `admin.html` i webbläsaren, eller kör `python3 -m http.server` i repots rot och gå till `http://localhost:8000/`.
 
-I adminvyn i demoläge är nyckeln `demo` för ett lags admin och `super` för klubbens administratör.
+I adminvyn i demoläge är nyckeln `demo` för ett lags admin, `super` för klubbens administratör och `utlamning` för den som delar ut (lag F2017, när lagföräldern har skapat en utlämningslänk). Förälderns sida och adminsidan har varsitt demotillstånd som nollställs när sidan laddas om: en beställning som läggs på ena sidan syns inte på den andra.
 
 ## Sätt upp servern (en gång, ca 30 minuter)
 
@@ -45,13 +46,13 @@ Görs av klubbens administratör.
 3. **Kör `setup`.** Välj funktionen `setup` och tryck **Kör**. Godkänn behörigheterna. Flikarna *Lag*, *Beställningar* och *Logg* skapas. Öppna **Körningar** (eller *Exekveringslogg*): där står **superadmin-nyckeln**. Den visas bara nu. Spara den i en lösenordshanterare. Tappas den: kör `nySuperNyckel` (den gamla slutar fungera).
 4. **Publicera som webbapp.** **Implementera → Ny implementering → Webbapp**. *Kör som:* **Jag**. *Vem har åtkomst:* **Alla** (inte "Alla med Google-konto", då stoppas beställningarna). Kopiera webbappens URL (slutar på `/exec`).
 5. **Koppla sidan.** Klistra in URL:en som `endpoint` i `lag.js`.
-6. **Lägg till lag.** Öppna `admin.html`, välj *Klubbadministratör*, logga in med superadmin-nyckeln och öppna **Lägg till lag**. Du får en adminlänk per lag att skicka till lagföräldern.
+6. **Lägg till lag.** Öppna `admin.html`, välj *Klubbadministratör*, logga in med superadmin-nyckeln och öppna **Lägg till lag**. Skriv lagets namn. Du får en adminlänk per lag att skicka till lagföräldern, som sedan fyller i vad laget säljer.
 7. **Efter varje ändring i `Server.gs`:** Implementera → Hantera implementeringar → pennan → Version: Ny version → Implementera.
 
 ## Så går en försäljning till (alla försäljningar godkänns av klubben)
 
-1. **Klubbens administratör lägger till laget** (kryssrutorna i formuläret påminner om vad som ska kontrolleras). Försäljningen börjar som **Utkast**. Laget får en nyckel och en adminlänk som visas **en enda gång**. Skicka länken till lagföräldern på ett säkert sätt, inte i en öppen grupp.
-2. **Lagföräldern fyller i försäljningen** i adminvyn: vad som säljs, pris, inköpspris, minimum, mål, Swish-nummer och mottagarens namn. Två punkter ska bekräftas innan den kan skickas: att den som äger Swish-numret vet om det, och att inget som kräver tillstånd (till exempel lotter) säljs. Servern kontrollerar att allt är ifyllt. Status blir **Väntar på godkännande** och uppgifterna låses. Lagföräldern kan dra tillbaka den och ändra.
+1. **Klubbens administratör lägger till laget**: det räcker med ett namn, resten fyller lagföräldern i. Försäljningen börjar alltid som **Utkast**. Laget får en nyckel och en adminlänk som visas **en enda gång**. Skicka länken till lagföräldern på ett säkert sätt, inte i en öppen grupp.
+2. **Lagföräldern fyller i försäljningen** i adminvyn: **vad som säljs** (produktens namn, en kort beskrivning, enhet i ental och flertal, till exempel *kaka* och *kakor*, en text om försäljningen, hur och när varorna delas ut och en belöningstext), pris, inköpspris, minimum, mål, Swish-nummer och mottagarens namn. Det finns inga färdiga produkter: varje lag skriver in sin egen, en produkt per försäljning. Två punkter ska bekräftas innan den kan skickas: att den som äger Swish-numret vet om det, och att inget som kräver tillstånd (till exempel lotter) säljs. Servern kontrollerar att allt är ifyllt. Status blir **Väntar på godkännande** och uppgifterna låses. Lagföräldern kan dra tillbaka den och ändra.
 3. **Klubbens administratör granskar** under *Väntar på godkännande* på sidan Alla lag. Administratören kan **godkänna och öppna nu**, **godkänna och öppna senare** (status *Godkänd, öppnar snart*) eller **skicka tillbaka med en kommentar** som lagföräldern ser. Servern kontrollerar uppgifterna en gång till vid godkännandet.
 4. **Först när försäljningen är öppen** syns den för föräldrar och går att beställa från. Utkast och väntande försäljningar visas inte i listan och inte på lagets egen länk. Efter godkännandet kan lagföräldern inte ändra pris eller Swish-nummer: bara klubben kan det.
 5. Gör en testbeställning på lagets sida och markera den som avbruten.
@@ -83,7 +84,9 @@ Beställningarna innehåller barnets förnamn och förälderns mobilnummer.
 - **Pengarna.** Den som äger lagets Swish-nummer tar emot pengarna och betalar tillbaka vid behov, till exempel om minimum inte nås. Skriv ner vem det är för varje lag.
 - **Notiser.** Det finns ingen Telegram eller e-post i den här versionen: den som tar emot pengarna tittar i adminvyn. Beställningar är *Obetalda* tills de markeras *Betald*.
 - **Utlämning.** Fliken *Utlämning* i adminvyn är en lista att bocka av när någon hämtar. Kryssrutan sparas direkt. *Markera alla betalda som hämtade* markerar bara betalda beställningar: obetalda och avbrutna rörs inte. Ett svar i kalkylarket syns i kolumnen *Hämtad* (JA eller tomt). *Skriv ut listan* skriver ut alla beställningar utom de avbrutna, i namnordning.
-- **Uppdaterar du en redan körd server?** Kör `setup` igen efter att du bytt in den nya `Server.gs`. Den lägger till kolumnen *Hämtad* i fliken *Beställningar* och kolumnen *Klubbens kommentar* i fliken *Lag* utan att röra befintliga rader. Lag som redan finns behåller sin status.
+- **Utlämningslänk.** Under *Översikt* kan lagföräldern skapa en länk för den som delar ut varorna (en tränare eller en annan förälder). Den ger en egen nyckel med bara en lista över namn och antal, där man bockar av *Hämtad*. Länken visas bara när den skapas. *Skapa ny länk* ersätter den gamla, *Stäng av* tar bort den.
+- **Länk till beställningssidan.** Lagföräldern delar lagets egen länk (`?lag=…`) i lagets grupp. Föräldrar som saknar den väljer sitt lag i listan på klubbsidan.
+- **Uppdaterar du en redan körd server?** Kör `setup` igen efter att du bytt in den nya `Server.gs`. Den lägger till kolumnen *Hämtad* i fliken *Beställningar* och kolumnerna *Klubbens kommentar*, produktfälten och *Utlämningsnyckel (hash)* i fliken *Lag* utan att röra befintliga rader. Lag som redan finns behåller sin status. Ett lag som saknar produkt kan inte öppnas igen förrän lagföräldern har fyllt i den.
 - **Betalningar matchas för hand.** Föräldern skriver ordernumret i Swish-meddelandet, den som tar emot pengarna matchar det mot Swish-historiken och trycker *Betald*. Automatisk matchning kräver Swish Handel med API eller en betalleverantör och finns inte här.
 - **Inloggning med nyckel** är enkel och passar volontärer, men en vidarebefordrad länk ger åtkomst. Byt nyckel om den kan ha hamnat fel.
 - **Ta bort en beställning.** Obetalda och avbrutna beställningar kan tas bort i fliken *Beställningar* (två tryck). Betalda och hämtade kan inte det: ångra betalningen eller hämtningen först. Raden försvinner helt, även barnets namn och mobilnummer. I fliken *Logg* sparas bara ordernummer, antal och belopp. Ordernumret används inte igen.
@@ -94,7 +97,7 @@ Beställningarna innehåller barnets förnamn och förälderns mobilnummer.
 
 P2019-sidan och dess skript (`Code.gs` i [P2019-repot](https://github.com/adelborgen/eskilsminne-p2019)) fortsätter som idag tills försäljningen är klar. Därefter:
 
-1. Lägg till P2019 i adminvyn med samma uppgifter. Belöningstexterna för P2019 finns redan i `LAG_EXTRA.p2019` i `lag.js`.
+1. Lägg till P2019 i adminvyn med samma uppgifter. Produkten, enheten och belöningstexten skrivs in av lagföräldern i försäljningens uppgifter. Det finns inga färdiga produkter i `lag.js`.
 2. Exportera de gamla beställningarna om de ska sparas (Order-ID och belopp följer inte med automatiskt).
 3. Ersätt `index.html` i P2019-repot med en omdirigering till den här sidan (`?lag=p2019`), så att gamla länkar fortsätter fungera.
 
@@ -111,11 +114,12 @@ Tagna efter genomgången av designbriefen:
 1. **Bara Eskilsminne IF.** Designen delas i lager (plattform, förening, grupp, försäljning) så att den går att bygga ut, men vi bygger inte plattformsadmin, temaeditor eller fler föreningstyper. En dialekt: Matchdag.
 2. **Ingen förifylld Swish.** Föräldern kopierar nummer, belopp och meddelande. Appen försöker inte öppna Swish. (Redan så i prototypen.)
 3. **Swish-meddelandet innehåller bara ordernumret**, inte barnets namn. (Redan så i prototypen.) Lagföräldern slår upp namnet i adminvyn.
-4. **Mätarens "till lagkassan" märks "beräknat"**, eftersom pengarna inte är inne förrän de är swishade. Ännu inte ändrat i prototypen.
+4. **Mätarens "till lagkassan" märks "beräknat"**, eftersom pengarna inte är inne förrän de är swishade. Gjort i prototypen.
 5. **Typsnitten ligger i repot** (`fonts/`: Archivo och Atkinson Hyperlegible Next) och laddas inte från Google. De används nu i hela appen.
 6. **Namnet är inte bestämt.** "Lagförsäljning" är ett arbetsnamn. Kontrollera domän och varumärke innan lansering.
 
-Det som designbriefen beskriver och som ännu inte finns i prototypen: försäljning som egen nivå (flera per grupp, status på försäljningen), kvittosida som tål omladdning, ordernummer med lagkod (P14-037), ångra-fönster på 8 sekunder, rensa-knapp per lag, 
+Det som designbriefen beskriver och som ännu inte finns i prototypen: flera försäljningar per grupp (idag en produkt per försäljning och en försäljning per lag), start- och slutdatum, kvittosida som tål omladdning, ordernummer med lagkod (P14-037), ångra-fönster på 8 sekunder och rensa-knapp per lag.
+
 Utseendet (Matchdag) är byggt: blå bakgrund med ränder, vimplar, klubbmärket med gul kant, krämfärgade kort (aldrig vitt), gula lagbrickor och Archivo/Atkinson. Alla text- och färgpar har minst 5,8:1 i kontrast. Färger, bilder och typsnitt är desamma för alla lag, eftersom klubben äger utseendet. Inga bilder på barn.
 
 ## Att bestämma innan ni går live

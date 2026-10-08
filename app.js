@@ -12,7 +12,15 @@
 
   // Standardvärden, lagets texter (LAG_EXTRA) och lagets egna uppgifter från servern, i den ordningen.
   function bygg(lag) {
-    var c = merge(merge(K.standard, (window.LAG_EXTRA || {})[lag.slug] || {}), lag);
+    // Tomma texter från laget ska inte skriva över reservtexterna. Lagets text om utlämning heter utlamning på sidan.
+    var egna = {};
+    Object.keys(lag).forEach(function (k) { egna[k] = lag[k]; });
+    ["intro", "belonning"].forEach(function (k) { if (!egna[k]) delete egna[k]; });
+    if (egna.utlamningsText) egna.utlamning = egna.utlamningsText;
+    var c = merge(merge(K.standard, (window.LAG_EXTRA || {})[lag.slug] || {}), egna);
+    c.titel = lag.titel || lag.kampanj || c.produkt.namn || K.titel;
+    // Knapparna under antalet: efter största antal, om laget inte har egna
+    if (!c.snabbval) c.snabbval = c.maxAntal >= 20 ? [5, 10, 15, 20] : [1, 2, 3, 5].filter(function (n) { return n <= c.maxAntal; });
     c.endpoint = K.endpoint;   // tom i demoläge
     if (!c.swish.meddelande) c.swish.meddelande = lag.namn + " försäljning";
     return c;
@@ -70,7 +78,7 @@
 
   function teamCard(l) {
     var c = bygg(l), open = l.status === "pagar", slut = l.status === "avslutad";
-    var titel = l.kampanj || K.titel;
+    var titel = c.titel;
     var sub = c.pris > 0 ? kr(c.pris) + " per " + (c.produkt.enhetEn || "styck") : "";
     var tillstand = open ? ["Pågår", IK_PRICK] : slut ? ["Avslutad", IK_STRECK] : ["Startar snart", IK_RING];
     var state = h("span", { class: "t-state" }, U.ikon(tillstand[1]), tillstand[0]);
@@ -130,7 +138,7 @@
 
     function rita() {
       var q = sok ? sok.value.toLowerCase().replace(/\s+/g, "") : "";
-      var vis = LAG.filter(function (l) { return !q || (l.namn + (l.kampanj || "")).toLowerCase().replace(/\s+/g, "").indexOf(q) >= 0; });
+      var vis = LAG.filter(function (l) { return !q || (l.namn + (l.titel || l.kampanj || "")).toLowerCase().replace(/\s+/g, "").indexOf(q) >= 0; });
       var pagande = vis.filter(function (l) { return l.status !== "avslutad"; }), avslutade = vis.filter(function (l) { return l.status === "avslutad"; });
       host.textContent = "";
       if (pagande.length) host.appendChild(tileList(pagande, 0, manga));
@@ -162,19 +170,21 @@
     var state = { bestallt: null, antal: 0, barn: "", mobil: "" };
     var demo = !cfg.endpoint;
     var marginal = cfg.pris - cfg.inkopspris;
-    var E = cfg.produkt.enhet, En = cfg.produkt.enhetEn || "styck";
+    var E = cfg.produkt.enhet || "st", En = cfg.produkt.enhetEn || "st";
 
-    setTopbar(cfg.namn, cfg.kampanj || K.titel);
-    document.title = (cfg.kampanj || K.titel) + " – " + cfg.namn;
+    setTopbar(cfg.namn, cfg.titel);
+    document.title = cfg.titel + " – " + cfg.namn;
 
     function fill(s) {
       return String(s).replace(/\{belonning\}/g, fill2(cfg.belonning)).replace(/\{lag\}/g, cfg.namn)
         .replace(/\{mal\}/g, nf.format(cfg.mal)).replace(/\{minimum\}/g, nf.format(cfg.minimum))
-        .replace(/\{pris\}/g, cfg.pris + " kr");
+        .replace(/\{pris\}/g, cfg.pris + " kr").replace(/\{produkt\}/g, cfg.produkt.namn)
+        .replace(/\{enhetEn\}/g, En).replace(/\{enhet\}/g, E);
     }
     function fill2(s) { // utan {belonning}, så att texten inte kan referera till sig själv
       return String(s).replace(/\{lag\}/g, cfg.namn).replace(/\{mal\}/g, nf.format(cfg.mal))
-        .replace(/\{minimum\}/g, nf.format(cfg.minimum)).replace(/\{pris\}/g, cfg.pris + " kr");
+        .replace(/\{minimum\}/g, nf.format(cfg.minimum)).replace(/\{pris\}/g, cfg.pris + " kr")
+        .replace(/\{produkt\}/g, cfg.produkt.namn).replace(/\{enhetEn\}/g, En).replace(/\{enhet\}/g, E);
     }
 
     var content = h("section");
@@ -292,8 +302,8 @@
 
       form.appendChild(h("div", { class: "field" },
         h("span", { class: "label", text: "Hur många " + E + "?" }),
-        h("div", { class: "product" }, h("div", { class: "ico", "aria-hidden": "true", text: P.emoji }),
-          h("div", null, h("div", { class: "name", text: P.namn }), h("div", { class: "meta", text: P.detalj + " · " + kr(cfg.pris) + "/st" }))),
+        h("div", { class: "product" }, h("div", { class: "ico", "aria-hidden": "true", text: (P.namn || "?").charAt(0).toUpperCase() }),
+          h("div", null, h("div", { class: "name", text: P.namn }), h("div", { class: "meta", text: [P.detalj, kr(cfg.pris) + " per " + En].filter(Boolean).join(" · ") }))),
         h("div", { class: "stepper" },
           h("button", { type: "button", "aria-label": "Minska antal", text: "−", onclick: function () { setAntal(state.antal - 1); } }), antalInp,
           h("button", { type: "button", "aria-label": "Öka antal", text: "+", onclick: function () { setAntal(state.antal + 1); } })),
@@ -440,8 +450,8 @@
   }
 
   function renderInteOppen(cfg) {
-    setTopbar(cfg.namn, cfg.kampanj || K.titel);
-    document.title = (cfg.kampanj || K.titel) + " – " + cfg.namn;
+    setTopbar(cfg.namn, cfg.titel || K.titel);
+    document.title = (cfg.titel || K.titel) + " – " + cfg.namn;
     app.textContent = "";
     app.appendChild(navLank(null, { class: "back" }, "← Alla lag"));
     app.appendChild(h("h2", { class: "title", text: cfg.status === "avslutad" ? "Försäljningen är avslutad" : "Försäljningen har inte startat än" }));

@@ -116,7 +116,7 @@ textarea { min-height: 0; resize: vertical; }
 .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
 
 .product { display: flex; align-items: center; gap: 12px; margin-bottom: 14px; }
-.ico { flex: 0 0 52px; height: 52px; border-radius: 14px; background: var(--yellow); display: grid; place-items: center; font-size: 28px; transform: rotate(-4deg); }
+.ico { flex: 0 0 52px; height: 52px; border-radius: 14px; background: var(--ink); color: var(--yellow); display: grid; place-items: center; font: 900 28px var(--display); transform: rotate(-4deg); }
 .product .name { font-weight: 800; }
 .product .meta { font-size: 13px; color: var(--sub); }
 .stepper { display: flex; align-items: center; justify-content: center; gap: 10px; }

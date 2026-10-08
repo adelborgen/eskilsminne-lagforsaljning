@@ -26,18 +26,24 @@ var LAG_FLIK = "Lag";
 var ORDER_FLIK = "Beställningar";
 var LOGG_FLIK = "Logg";
 var LAG_RUBRIKER = ["Slug", "Namn", "Kampanj", "Status", "Swish-nummer", "Mottagare", "Meddelande", "Pris", "Inköpspris",
-                    "Minimum", "Mål", "Max antal", "Per kartong", "Nyckel (hash)", "Nästa order", "Klubbens kommentar"];
+                    "Minimum", "Mål", "Max antal", "Per kartong", "Nyckel (hash)", "Nästa order", "Klubbens kommentar",
+                    "Produkt", "Produktbeskrivning", "Enhet (ental)", "Enhet (flertal)", "Om försäljningen", "Utlämning (text)", "Belöning",
+                    "Utlämningsnyckel (hash)"];
 var LAG_COL = { SLUG: 1, NAMN: 2, KAMPANJ: 3, STATUS: 4, SWISH: 5, MOTTAGARE: 6, MEDDELANDE: 7, PRIS: 8, INKOP: 9,
-                MINIMUM: 10, MAL: 11, MAXANTAL: 12, KARTONG: 13, HASH: 14, NASTA: 15, KOMMENTAR: 16 };
+                MINIMUM: 10, MAL: 11, MAXANTAL: 12, KARTONG: 13, HASH: 14, NASTA: 15, KOMMENTAR: 16,
+                PRODUKT: 17, DETALJ: 18, ENHETEN: 19, ENHETFLERA: 20, INTRO: 21, UTLTEXT: 22, BELONNING: 23, UTLHASH: 24 };
 var ORDER_RUBRIKER = ["Tid", "Order-ID", "Lag", "Barn", "Mobil", "Antal", "Belopp", "Betald", "Hämtad"];
 var OCOL = { ID: 2, LAG: 3, BARN: 4, MOBIL: 5, ANTAL: 6, BELOPP: 7, BETALD: 8, HAMTAD: 9 };
 var LOGG_RUBRIKER = ["Tid", "Lag", "Åtgärd", "Order-ID", "Värde"];
 // utkast: laget fyller i. granskas: väntar på klubbens godkännande. snart: godkänd men inte öppen. pagar: öppen. avslutad: stängd.
 var STATUSAR = ["utkast", "granskas", "snart", "pagar", "avslutad"];
-var LAG_EGNA_FALT = ["kampanj", "swishNummer", "mottagare", "meddelande", "pris", "inkopspris", "minimum", "mal", "maxAntal", "kartong"];
+var LAG_EGNA_FALT = ["kampanj", "produkt", "detalj", "enhetEn", "enhet", "intro", "utlamningsText", "belonning",
+                     "swishNummer", "mottagare", "meddelande", "pris", "inkopspris", "minimum", "mal", "maxAntal", "kartong"];
 var LAG_KOL = { namn: LAG_COL.NAMN, kampanj: LAG_COL.KAMPANJ, status: LAG_COL.STATUS, swishNummer: LAG_COL.SWISH,
   mottagare: LAG_COL.MOTTAGARE, meddelande: LAG_COL.MEDDELANDE, pris: LAG_COL.PRIS, inkopspris: LAG_COL.INKOP,
-  minimum: LAG_COL.MINIMUM, mal: LAG_COL.MAL, maxAntal: LAG_COL.MAXANTAL, kartong: LAG_COL.KARTONG };
+  minimum: LAG_COL.MINIMUM, mal: LAG_COL.MAL, maxAntal: LAG_COL.MAXANTAL, kartong: LAG_COL.KARTONG,
+  produkt: LAG_COL.PRODUKT, detalj: LAG_COL.DETALJ, enhetEn: LAG_COL.ENHETEN, enhet: LAG_COL.ENHETFLERA, intro: LAG_COL.INTRO,
+  utlamningsText: LAG_COL.UTLTEXT, belonning: LAG_COL.BELONNING };
 
 var NAMN_RE = /^[\p{L}\p{N}][\p{L}\p{N} .\-]{1,19}$/u;
 var SLUG_RE = /^[a-z0-9][a-z0-9-]{1,29}$/;
@@ -154,12 +160,18 @@ function hanteraAdmin(d) {
   if (a.fel) return json({ ok: false, fel: a.fel });
   var op = String(d.op || "");
   var lagOps = { oversikt: opOversikt, lista: opLista, satt: opSatt, hamtad: opHamtad, hamtadAlla: opHamtadAlla,
-    lagSpara: opLagSpara, skickaGodkannande: opSkickaGodkannande, dragTillbaka: opDragTillbaka, taBort: opTaBort };
+    lagSpara: opLagSpara, skickaGodkannande: opSkickaGodkannande, dragTillbaka: opDragTillbaka, taBort: opTaBort,
+    nyUtlamningslank: opNyUtlamningslank, stangUtlamningslank: opStangUtlamningslank };
+  // Utlämningslänken får bara bocka av utlämning: namn och antal, aldrig mobilnummer, belopp eller betalningar.
+  var utlamningsOps = { oversikt: opUtlOversikt, lista: opUtlLista, hamtad: opHamtad };
   var superOps = { lagLista: opLagLista, lagNy: opLagNy, lagUppdatera: opLagUppdatera, nyNyckel: opNyNyckel,
     godkann: opGodkann, skickaTillbaka: opSkickaTillbaka };
   var har = function (o, k) { return Object.prototype.hasOwnProperty.call(o, k); };
   var svar;
-  if (har(lagOps, op)) {
+  if (a.roll === "utlamning") {
+    if (!har(utlamningsOps, op)) return json({ ok: false, fel: "Den här länken får bara bocka av utlämningen." });
+    svar = utlamningsOps[op](a.lag, d, a.roll);
+  } else if (har(lagOps, op)) {
     if (!a.lag) return json({ ok: false, fel: "Okänt lag." });
     svar = lagOps[op](a.lag, d, a.roll);
   } else if (har(superOps, op)) {
@@ -184,6 +196,7 @@ function autentisera(slug, key) {
   var lag = slug && slug !== "*" ? hittaLag(slug) : null;
   if (hk && superHash && hk === superHash) return { roll: "super", lag: lag };
   if (hk && lag && lag._hash && hk === lag._hash) return { roll: "lag", lag: lag };
+  if (hk && lag && lag._hashUtl && hk === lag._hashUtl) return { roll: "utlamning", lag: lag };
   cache.put(kLag, String(Number(cache.get(kLag) || 0) + 1), CFG.FEL_MINUTER * 60);
   cache.put(kAlla, String(Number(cache.get(kAlla) || 0) + 1), CFG.FEL_MINUTER * 60);
   return { fel: "Fel lag eller nyckel." };
@@ -216,7 +229,7 @@ function opSatt(lag, d) {
 }
 
 // Sätter Hämtad för en order: JA eller tomt (ångra). En avbruten order kan inte hämtas.
-function opHamtad(lag, d) {
+function opHamtad(lag, d, roll) {
   var varde = String(d.varde === undefined || d.varde === null ? "" : d.varde).toUpperCase();
   if (["JA", ""].indexOf(varde) < 0) return { ok: false, fel: "Felaktigt värde." };
   var nr = parseInt(d.id, 10);
@@ -229,8 +242,49 @@ function opHamtad(lag, d) {
     flik(ORDER_FLIK).getRange(o.rad, OCOL.HAMTAD).setValue(varde);
     o.hamtad = varde;
     logga(lag.slug, "hamtad=" + (varde || "(ångrad)"), o.id, varde);
+    if (roll === "utlamning") return { ok: true, order: utOrderUtl(o), sammanfattning: utlSammanfattning(lag, ordrar) };
     return { ok: true, order: utOrder(o), oversikt: oversikt(lag, ordrar) };
   });
+}
+
+/* ---------- Utlämningslänk: en egen nyckel som bara får bocka av utlämningen ---------- */
+// Skapar eller byter lagets utlämningsnyckel. Den visas bara nu. Lagföräldern delar den med den som delar ut.
+function opNyUtlamningslank(lag) {
+  return medLasObj(function () {
+    var l = hittaLag(lag.slug);
+    if (!l) return { ok: false, fel: "Okänt lag." };
+    var key = nyNyckelText();
+    flik(LAG_FLIK).getRange(l._rad, LAG_COL.UTLHASH).setValue(hash(key));
+    logga(l.slug, l._hashUtl ? "ny utlämningslänk" : "utlämningslänk skapad", "", "");
+    return { ok: true, slug: l.slug, key: key };
+  });
+}
+
+function opStangUtlamningslank(lag) {
+  return medLasObj(function () {
+    var l = hittaLag(lag.slug);
+    if (!l) return { ok: false, fel: "Okänt lag." };
+    flik(LAG_FLIK).getRange(l._rad, LAG_COL.UTLHASH).setValue("");
+    logga(l.slug, "utlämningslänk avstängd", "", "");
+    return { ok: true, lag: adminLag(hittaLag(l.slug)) };
+  });
+}
+
+// Det den som delar ut ser: lagets namn, produkten och vilka som ska hämta. Inga mobilnummer, belopp eller tider.
+function utlLag(l) { return { slug: l.slug, namn: l.namn, titel: l.kampanj || l.produkt.namn, status: l.status, produkt: l.produkt }; }
+function utOrderUtl(o) { return { id: o.id, barn: o.barn, antal: o.antal, betald: o.betald === "JA", hamtad: o.hamtad === "JA" }; }
+function utlSammanfattning(lag, ordrar) {
+  var hamtat = 0, kvar = 0;
+  ordrar.forEach(function (o) {
+    if (o.lag !== lag.slug || o.betald === "AVBRUTEN") return;
+    if (o.hamtad === "JA") hamtat += o.antal; else kvar += o.antal;
+  });
+  return { hamtat: hamtat, kvar: kvar };
+}
+function opUtlOversikt(lag) { return { ok: true, lag: utlLag(lag), sammanfattning: utlSammanfattning(lag, lasOrdrar()) }; }
+function opUtlLista(lag) {
+  var ordrar = lasOrdrar().filter(function (o) { return o.lag === lag.slug && o.betald !== "AVBRUTEN"; });
+  return { ok: true, lag: utlLag(lag), ordrar: ordrar.map(utOrderUtl) };
 }
 
 // Tar bort en beställning, till exempel en testbeställning eller en dubblett. Betalda och hämtade beställningar kan inte tas bort:
@@ -281,14 +335,15 @@ function opLagLista() {
 function opLagNy(d) {
   var r = rensaLag(d.data || {}, true);
   if (r.fel) return { ok: false, fel: r.fel };
-  var oppen = kanInteOppnas({ kampanj: r.kampanj, swish: { nummer: r.swishNummer, namnPaKonto: r.mottagare }, pris: r.pris, inkopspris: r.inkopspris,
-    minimum: r.minimum, mal: r.mal }, r.status);
+  var oppen = kanInteOppnas({ produkt: { namn: r.produkt, enhetEn: r.enhetEn, enhet: r.enhet }, swish: { nummer: r.swishNummer, namnPaKonto: r.mottagare },
+    pris: r.pris, inkopspris: r.inkopspris, minimum: r.minimum, mal: r.mal }, r.status);
   if (oppen) return { ok: false, fel: oppen };
   return medLasObj(function () {
     if (hittaLag(r.slug)) return { ok: false, fel: "Det finns redan ett lag med adressen " + r.slug + "." };
     var key = nyNyckelText();
     sakraFlik(LAG_FLIK, LAG_RUBRIKER).appendRow([r.slug, r.namn, r.kampanj, r.status, r.swishNummer, r.mottagare, r.meddelande,
-      r.pris, r.inkopspris, r.minimum, r.mal, r.maxAntal, r.kartong, hash(key), 1, ""]);
+      r.pris, r.inkopspris, r.minimum, r.mal, r.maxAntal, r.kartong, hash(key), 1, "",
+      r.produkt, r.detalj, r.enhetEn, r.enhet, r.intro, r.utlamningsText, r.belonning, ""]);
     logga(r.slug, "lag skapat", "", r.status);
     return { ok: true, slug: r.slug, key: key, lag: adminLag(hittaLag(r.slug)) };
   });
@@ -303,7 +358,8 @@ function opLagUppdatera(d) {
     var fel = kontrolleraNya(lag, r);
     if (fel) return { ok: false, fel: fel };
     // Hur laget ser ut efter ändringen: får det öppnas (snart eller pagar) måste allt föräldrarna behöver vara ifyllt
-    var efter = { kampanj: r.kampanj !== undefined ? r.kampanj : lag.kampanj,
+    var vp = function (k, nuvarande) { return r[k] !== undefined ? r[k] : nuvarande; };
+    var efter = { produkt: { namn: vp("produkt", lag.produkt.namn), enhetEn: vp("enhetEn", lag.produkt.enhetEn), enhet: vp("enhet", lag.produkt.enhet) },
       swish: { nummer: r.swishNummer !== undefined ? r.swishNummer : lag.swish.nummer, namnPaKonto: r.mottagare !== undefined ? r.mottagare : lag.swish.namnPaKonto },
       pris: r.pris !== undefined ? r.pris : lag.pris, inkopspris: r.inkopspris !== undefined ? r.inkopspris : lag.inkopspris,
       minimum: r.minimum !== undefined ? r.minimum : lag.minimum, mal: r.mal !== undefined ? r.mal : lag.mal };
@@ -354,7 +410,8 @@ function opLagSpara(lag, d, roll) {
 // Det som måste vara ifyllt innan klubben kan godkänna. Ger en text om något saknas, annars null.
 function saknas(l) {
   var s = [];
-  if (!l.kampanj) s.push("Vad ni säljer");
+  if (!l.produkt || !l.produkt.namn) s.push("Produkt");
+  if (!l.produkt || !l.produkt.enhetEn || !l.produkt.enhet) s.push("Enhet (ental och flertal)");
   if (!l.swish.nummer) s.push("Swish-nummer");
   if (!l.swish.namnPaKonto) s.push("Mottagarens namn i Swish");
   if (!(l.pris > 0)) s.push("Pris");
@@ -457,7 +514,10 @@ function lasLag() {
       pris: Number(r[7]) || 0, inkopspris: Number(r[8]) || 0, minimum: Number(r[9]) || 0, mal: Number(r[10]) || 0,
       maxAntal: Number(r[11]) || 50, kartong: Number(r[12]) || 0,
       kommentar: String(r[LAG_COL.KOMMENTAR - 1] || ""),
-      _rad: i + 2, _hash: String(r[13] || "")
+      produkt: { namn: String(r[LAG_COL.PRODUKT - 1] || ""), detalj: String(r[LAG_COL.DETALJ - 1] || ""),
+        enhetEn: String(r[LAG_COL.ENHETEN - 1] || ""), enhet: String(r[LAG_COL.ENHETFLERA - 1] || "") },
+      intro: String(r[LAG_COL.INTRO - 1] || ""), utlamningsText: String(r[LAG_COL.UTLTEXT - 1] || ""), belonning: String(r[LAG_COL.BELONNING - 1] || ""),
+      _rad: i + 2, _hash: String(r[13] || ""), _hashUtl: String(r[LAG_COL.UTLHASH - 1] || "")
     });
   });
   return ut;
@@ -469,7 +529,8 @@ function hittaLag(slug) {
 
 // Det som får visas för alla: aldrig nyckelns hash eller radnummer.
 function offentlig(l) {
-  return { slug: l.slug, namn: l.namn, kampanj: l.kampanj, status: l.status, swish: l.swish,
+  return { slug: l.slug, namn: l.namn, kampanj: l.kampanj, titel: l.kampanj || l.produkt.namn, status: l.status, swish: l.swish,
+    produkt: l.produkt, intro: l.intro, utlamningsText: l.utlamningsText, belonning: l.belonning,
     pris: l.pris, inkopspris: l.inkopspris, minimum: l.minimum, mal: l.mal, maxAntal: l.maxAntal, kartong: l.kartong };
 }
 
@@ -482,6 +543,7 @@ function publik(l) {
 function adminLag(l) {
   var u = offentlig(l);
   u.kommentar = l.kommentar;
+  u.harUtlamningslank = !!l._hashUtl;   // bara om det finns en länk, aldrig själva nyckeln eller dess hash
   return u;
 }
 
@@ -515,7 +577,11 @@ function rensaLag(d, krav) {
     if (!SLUG_RE.test(slug)) return { fel: "Adressen får bara innehålla små bokstäver, siffror och bindestreck (2–30 tecken)." };
     ut.slug = slug;
   }
-  if (finns("kampanj")) text("kampanj", 40); else if (krav) ut.kampanj = "Lagförsäljning";
+  if (finns("kampanj")) text("kampanj", 40); else if (krav) ut.kampanj = "";   // tomt = produktens namn används som rubrik
+  // Produkten skrivs in av laget själv: inga färdiga produkter finns i koden
+  [["produkt", 40], ["detalj", 80], ["enhetEn", 15], ["enhet", 15], ["intro", 400], ["utlamningsText", 200], ["belonning", 160]].forEach(function (f) {
+    if (finns(f[0])) text(f[0], f[1]); else if (krav) ut[f[0]] = "";
+  });
   if (finns("status") || krav) {
     var st = finns("status") ? String(d.status) : "utkast";
     if (STATUSAR.indexOf(st) < 0) return { fel: "Felaktig status." };
@@ -540,8 +606,10 @@ function rensaLag(d, krav) {
     if (isNaN(n) || n < min || n > max || (heltal && n % 1 !== 0)) return namnTxt + " är felaktigt.";
     ut[k] = n; return null;
   };
-  var fel = siffra("pris", 0.01, 10000, false, "Priset") || siffra("inkopspris", 0, 10000, false, "Inköpspriset") ||
-    siffra("minimum", 1, 100000, true, "Minimum") || siffra("mal", 1, 100000, true, "Målet") ||
+  // Ett nytt utkast behöver bara ett namn: lagföräldern fyller i priser och mål, och servern kräver dem först när försäljningen ska godkännas
+  var utk = krav && ut.status === "utkast" ? 0 : undefined;
+  var fel = siffra("pris", 0.01, 10000, false, "Priset", utk) || siffra("inkopspris", 0, 10000, false, "Inköpspriset", utk) ||
+    siffra("minimum", 1, 100000, true, "Minimum", utk) || siffra("mal", 1, 100000, true, "Målet", utk) ||
     siffra("maxAntal", 1, 1000, true, "Max antal", 50) || siffra("kartong", 0, 1000, true, "Antal per kartong", 0);
   if (fel) return { fel: fel };
   if (krav) { fel = kontrolleraSiffror(ut); if (fel) return { fel: fel }; }

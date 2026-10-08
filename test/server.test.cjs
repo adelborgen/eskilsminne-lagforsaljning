@@ -9,8 +9,8 @@ function ny() {
   m.setup();
   return { m, sk: m.superNyckel() };
 }
-const lagData = (o = {}) => ({ namn: "F2017", kampanj: "Chokladförsäljning", swishNummer: "123 456 78 90", mottagare: "Eskilsminne IF F2017",
-  pris: 30, inkopspris: 14.5, minimum: 240, mal: 300, kartong: 24, status: "pagar", ...o });
+const lagData = (o = {}) => ({ namn: "F2017", kampanj: "Chokladförsäljning", produkt: "Klubbkaka", enhetEn: "kaka", enhet: "kakor",
+  swishNummer: "123 456 78 90", mottagare: "Eskilsminne IF F2017", pris: 30, inkopspris: 14.5, minimum: 240, mal: 300, kartong: 24, status: "pagar", ...o });
 function skapaLag(m, sk, o) {
   const r = m.admin("*", sk, "lagNy", { data: lagData(o) });
   assert.equal(r.ok, true, JSON.stringify(r));
@@ -57,8 +57,9 @@ test("nytt lag: kontroller, standardvärden och slug", () => {
   const r = m.admin("*", sk, "lagNy", { data: { namn: "Flickor Å-Ö", pris: "35,5", inkopspris: 10, minimum: 100, mal: 150 } });
   assert.equal(r.ok, true, JSON.stringify(r));
   assert.equal(r.slug, "flickor-a-o");
-  assert.deepEqual(r.lag, { slug: "flickor-a-o", namn: "Flickor Å-Ö", kampanj: "Lagförsäljning", status: "utkast",
-    swish: { nummer: "", namnPaKonto: "", meddelande: "Flickor Å-Ö försäljning" }, pris: 35.5, inkopspris: 10, minimum: 100, mal: 150, maxAntal: 50, kartong: 0, kommentar: "" });
+  assert.deepEqual(r.lag, { slug: "flickor-a-o", namn: "Flickor Å-Ö", kampanj: "", titel: "", status: "utkast",
+    swish: { nummer: "", namnPaKonto: "", meddelande: "Flickor Å-Ö försäljning" }, produkt: { namn: "", detalj: "", enhetEn: "", enhet: "" },
+    intro: "", utlamningsText: "", belonning: "", pris: 35.5, inkopspris: 10, minimum: 100, mal: 150, maxAntal: 50, kartong: 0, kommentar: "", harUtlamningslank: false });
   assert.match(m.admin("*", sk, "lagNy", { data: { namn: "Flickor Å-Ö", pris: 1, inkopspris: 0, minimum: 1, mal: 1 } }).fel, /finns redan/);
 });
 
@@ -280,10 +281,10 @@ test("setup lägger till kolumnen Hämtad i en äldre beställningsflik utan att
 
 // Ett lag som klubben skapat som utkast, så som lagföräldern får det.
 function utkast(m, sk, o = {}) {
-  const r = skapaLag(m, sk, { namn: "Lag A", status: "utkast", swishNummer: "", mottagare: "", kampanj: "", pris: 30, inkopspris: 14.5, minimum: 10, mal: 20, ...o });
+  const r = skapaLag(m, sk, { namn: "Lag A", status: "utkast", swishNummer: "", mottagare: "", kampanj: "", produkt: "", enhetEn: "", enhet: "", pris: 30, inkopspris: 14.5, minimum: 10, mal: 20, ...o });
   return { ...r, slug: r.slug };
 }
-const komplett = { kampanj: "Chokladförsäljning", swishNummer: "070 123 45 67", mottagare: "Eskilsminne IF Lag A", pris: 30, inkopspris: 14.5, minimum: 10, mal: 20 };
+const komplett = { kampanj: "Chokladförsäljning", produkt: "Klubbkaka", enhetEn: "kaka", enhet: "kakor", swishNummer: "070 123 45 67", mottagare: "Eskilsminne IF Lag A", pris: 30, inkopspris: 14.5, minimum: 10, mal: 20 };
 
 test("utkast och väntande försäljningar syns bara med namn för allmänheten, och går inte att beställa från", () => {
   const { m, sk } = ny();
@@ -323,7 +324,7 @@ test("lagförälderns uppsättning: bara försäljningens uppgifter, bara som ut
 test("skicka för godkännande: kräver bekräftelse och ifyllda uppgifter, och låser uppgifterna", () => {
   const { m, sk } = ny();
   const a = utkast(m, sk);
-  assert.match(m.admin("lag-a", a.key, "skickaGodkannande", { bekraftat: true }).fel, /Fyll i först: Vad ni säljer, Swish-nummer, Mottagarens namn i Swish/);
+  assert.match(m.admin("lag-a", a.key, "skickaGodkannande", { bekraftat: true }).fel, /Fyll i först: Produkt, Enhet \(ental och flertal\), Swish-nummer, Mottagarens namn i Swish/);
   m.admin("lag-a", a.key, "lagSpara", { falt: komplett });
   assert.match(m.admin("lag-a", a.key, "skickaGodkannande", {}).fel, /Bekräfta/);
   assert.match(m.admin("lag-a", a.key, "skickaGodkannande", { bekraftat: "ja" }).fel, /Bekräfta/);
@@ -404,23 +405,120 @@ test("klubben kan inte öppna eller godkänna en försäljning utan Swish-nummer
   const { m, sk } = ny();
   const tomt = { namn: "Lag X", pris: 30, inkopspris: 10, minimum: 10, mal: 20 };
   // direkt vid skapandet
-  assert.match(m.admin("*", sk, "lagNy", { data: { ...tomt, status: "pagar" } }).fel, /kan inte vara öppen än\. Fyll i först: Swish-nummer, Mottagarens namn i Swish/);
+  assert.match(m.admin("*", sk, "lagNy", { data: { ...tomt, status: "pagar" } }).fel, /kan inte vara öppen än\. Fyll i först: Produkt, Enhet \(ental och flertal\), Swish-nummer, Mottagarens namn i Swish/);
   assert.match(m.admin("*", sk, "lagNy", { data: { ...tomt, status: "snart" } }).fel, /kan inte vara godkänd än/);
   assert.equal(m.blad["Lag"].getLastRow(), 1, "inget lag skapades");
   assert.equal(m.admin("*", sk, "lagNy", { data: { ...tomt, status: "utkast" } }).ok, true, "ett utkast får vara tomt");
   assert.equal(m.admin("*", sk, "lagNy", { data: { ...tomt, namn: "Lag Z", status: "avslutad" } }).ok, true, "ett avslutat lag kräver inget");
   // vid ändring av status
   assert.match(m.admin("*", sk, "lagUppdatera", { slug: "lag-x", falt: { status: "pagar" } }).fel, /Fyll i först: .*Swish-nummer/);
-  assert.match(m.admin("*", sk, "lagUppdatera", { slug: "lag-x", falt: { status: "snart", swishNummer: "070 123 45 67" } }).fel, /Mottagarens namn/, "en av tre uppgifter räcker inte");
+  assert.match(m.admin("*", sk, "lagUppdatera", { slug: "lag-x", falt: { status: "snart", swishNummer: "070 123 45 67", produkt: "Bulle", enhetEn: "bulle", enhet: "bullar" } }).fel, /Mottagarens namn/, "några av uppgifterna räcker inte");
   assert.equal(m.blad["Lag"].data[1][3], "utkast", "statusen är oförändrad");
   assert.match(bestall(m, "lag-x").fel, /inte öppen/);
-  const ok = m.admin("*", sk, "lagUppdatera", { slug: "lag-x", falt: { status: "pagar", kampanj: "Bullar", swishNummer: "070 123 45 67", mottagare: "Eskilsminne IF Lag X" } });
+  const ok = m.admin("*", sk, "lagUppdatera", { slug: "lag-x", falt: { status: "pagar", kampanj: "Bullar", produkt: "Bulle", enhetEn: "bulle", enhet: "bullar", swishNummer: "070 123 45 67", mottagare: "Eskilsminne IF Lag X" } });
   assert.deepEqual([ok.ok, ok.lag.status], [true, "pagar"]);
   assert.equal(bestall(m, "lag-x").ok, true);
   // ett öppet lag kan inte göras ofullständigt
   assert.match(m.admin("*", sk, "lagUppdatera", { slug: "lag-x", falt: { swishNummer: "" } }).fel, /Swish-nummer/);
   assert.equal(m.admin("*", sk, "lagUppdatera", { slug: "lag-x", falt: { swishNummer: "070 999 99 99" } }).ok, true, "men ett nytt nummer går bra");
   assert.equal(m.admin("*", sk, "lagUppdatera", { slug: "lag-x", falt: { swishNummer: "", status: "avslutad" } }).ok, true, "och ett avslutat lag får sakna det");
+});
+
+test("ett nytt lag kan skapas med bara ett namn: allt annat fyller laget i själv", () => {
+  const { m, sk } = ny();
+  const r = m.admin("*", sk, "lagNy", { data: { namn: "Lag Y" } });
+  assert.equal(r.ok, true, JSON.stringify(r));
+  assert.equal(r.lag.status, "utkast", "alltid ett utkast till att börja med");
+  assert.equal(r.lag.produkt.namn, "", "ingen färdig produkt");
+  assert.equal(typeof r.key, "string");
+  assert.equal(m.get({ action: "lag" }).lag.filter(l => l.slug === "lag-y")[0].status, "utkast");
+  assert.match(m.admin("*", sk, "lagUppdatera", { slug: "lag-y", falt: { status: "pagar" } }).fel, /Fyll i först: Produkt/);
+});
+
+test("produkten skrivs in av laget själv: fälten rensas, rubriken följer produkten, och inget finns färdigt", () => {
+  const { m, sk } = ny();
+  const a = utkast(m, sk);
+  assert.deepEqual(m.admin("lag-a", a.key, "oversikt").lag.produkt, { namn: "", detalj: "", enhetEn: "", enhet: "" }, "inga färdiga produkter");
+  const r = m.admin("lag-a", a.key, "lagSpara", { falt: { ...komplett, kampanj: "", produkt: "  =Kanelbullar", detalj: "Påse med sex bullar", enhetEn: "påse", enhet: "påsar",
+    intro: "Bullarna bakas av föräldrarna.", utlamningsText: "På träningen.", belonning: "Fika för hela laget." } });
+  assert.equal(r.ok, true, JSON.stringify(r));
+  assert.deepEqual(r.lag.produkt, { namn: "Kanelbullar", detalj: "Påse med sex bullar", enhetEn: "påse", enhet: "påsar" }, "formeltecken och blanksteg rensas");
+  assert.deepEqual([r.lag.intro, r.lag.utlamningsText, r.lag.belonning], ["Bullarna bakas av föräldrarna.", "På träningen.", "Fika för hela laget."]);
+  assert.equal(r.lag.titel, "Kanelbullar", "utan egen rubrik används produktens namn");
+  assert.equal(m.admin("lag-a", a.key, "lagSpara", { falt: { kampanj: "Julbullar" } }).lag.titel, "Julbullar", "en egen rubrik går före");
+  // längder begränsas
+  const lang = m.admin("lag-a", a.key, "lagSpara", { falt: { produkt: "x".repeat(100), intro: "y".repeat(900) } }).lag;
+  assert.deepEqual([lang.produkt.namn.length, lang.intro.length], [40, 400]);
+  // produkt och enheter krävs för att få vara godkänd
+  m.admin("lag-a", a.key, "lagSpara", { falt: { produkt: "Bulle", enhetEn: "", enhet: "" } });
+  assert.match(m.admin("lag-a", a.key, "skickaGodkannande", { bekraftat: true }).fel, /Enhet \(ental och flertal\)/);
+  m.admin("lag-a", a.key, "lagSpara", { falt: { enhetEn: "bulle", enhet: "bullar" } });
+  m.admin("*", sk, "lagUppdatera", { slug: "lag-a", falt: { status: "pagar" } });
+  const publikt = m.get({ action: "lag" }).lag[0];
+  assert.deepEqual([publikt.produkt.namn, publikt.produkt.enhet, publikt.titel], ["Bulle", "bullar", "Julbullar"], "föräldrarna får produkten från laget");
+});
+
+test("utlämningslänk: skapas av laget, ger en begränsad vy och kan bytas och stängas av", () => {
+  const { m, sk } = ny();
+  const a = skapaLag(m, sk, { namn: "Lag A" }), b = skapaLag(m, sk, { namn: "Lag B" });
+  bestall(m, "lag-a", { antal: 10, barn: "Alva", mobil: "0701111111" });
+  bestall(m, "lag-a", { antal: 5, barn: "Bosse", mobil: "0702222222" });
+  bestall(m, "lag-a", { antal: 2, barn: "Cia", mobil: "0703333333" });
+  bestall(m, "lag-b", { antal: 3, barn: "Dan", mobil: "0704444444" });
+  m.admin("lag-a", a.key, "satt", { id: "0001", varde: "JA" });
+  m.admin("lag-a", a.key, "satt", { id: "0003", varde: "AVBRUTEN" });
+  assert.equal(m.admin("lag-a", a.key, "oversikt").lag.harUtlamningslank, false);
+  // bara laget (och klubben) skapar den
+  const n = m.admin("lag-a", a.key, "nyUtlamningslank");
+  assert.deepEqual([n.ok, n.slug], [true, "lag-a"]);
+  assert.match(n.key, /^([0-9a-f]{4}-){7}[0-9a-f]{4}$/);
+  const u = n.key;
+  assert.equal(m.admin("lag-a", a.key, "oversikt").lag.harUtlamningslank, true);
+  assert.equal(m.admin("lag-a", sk, "nyUtlamningslank").ok, true, "klubben får också skapa den");
+  const u2 = m.admin("lag-a", a.key, "nyUtlamningslank").key;
+  assert.match(m.admin("lag-a", u, "lista").fel, /Fel lag eller nyckel/, "en ny länk gör den gamla ogiltig");
+  // vyn: namn och antal, inga mobilnummer, belopp, tider eller avbrutna
+  const ov = m.admin("lag-a", u2, "oversikt");
+  assert.deepEqual([ov.ok, ov.roll, Object.keys(ov.lag).sort(), ov.sammanfattning], [true, "utlamning", ["namn", "produkt", "slug", "status", "titel"], { hamtat: 0, kvar: 15 }]);
+  const li = m.admin("lag-a", u2, "lista");
+  assert.deepEqual(li.ordrar, [{ id: "0001", barn: "Alva", antal: 10, betald: true, hamtad: false }, { id: "0002", barn: "Bosse", antal: 5, betald: false, hamtad: false }]);
+  assert.ok(!/0701111111|0702222222|belopp|"tid"|Cia/.test(JSON.stringify([ov, li])), "inga mobilnummer, belopp, tider eller avbrutna");
+  // bocka av hämtat
+  const h = m.admin("lag-a", u2, "hamtad", { id: "0001", varde: "JA" });
+  assert.deepEqual([h.ok, h.order, h.sammanfattning], [true, { id: "0001", barn: "Alva", antal: 10, betald: true, hamtad: true }, { hamtat: 10, kvar: 5 }]);
+  assert.ok(!/mobil|belopp|oversikt/.test(JSON.stringify(h)), "svaret har inga pengar eller mobilnummer");
+  assert.equal(m.admin("lag-a", u2, "hamtad", { id: "0001", varde: "" }).ok, true, "går att ångra");
+  assert.match(m.admin("lag-a", u2, "hamtad", { id: "0003", varde: "JA" }).fel, /avbruten/);
+  // allt annat är stängt för länken
+  const stangt = /bara bocka av utlämningen/;
+  for (const [op, extra] of [["satt", { id: "0002", varde: "JA" }], ["taBort", { id: "0002" }], ["hamtadAlla", {}], ["lagSpara", { falt: { pris: 1 } }], ["nyUtlamningslank", {}],
+    ["stangUtlamningslank", {}], ["skickaGodkannande", { bekraftat: true }], ["dragTillbaka", {}], ["lagLista", {}], ["lagNy", { data: lagData() }], ["godkann", { slug: "lag-a", till: "pagar" }], ["nyNyckel", { slug: "lag-a" }]])
+    assert.match(m.admin("lag-a", u2, op, extra).fel, stangt, op);
+  assert.equal(m.blad["Beställningar"].data.slice(1).find((x) => x[3] === "Bosse")[7], "", "inget ändrades");
+  // bara för det egna laget, och inte som lagets eller klubbens nyckel
+  assert.match(m.admin("lag-b", u2, "lista").fel, /Fel lag eller nyckel/);
+  assert.match(m.admin("*", u2, "lagLista").fel, /Fel lag eller nyckel/);
+  assert.equal(m.admin("lag-a", a.key, "lista").roll, "lag");
+  // stäng av
+  const s = m.admin("lag-a", a.key, "stangUtlamningslank");
+  assert.deepEqual([s.ok, s.lag.harUtlamningslank], [true, false]);
+  assert.match(m.admin("lag-a", u2, "lista").fel, /Fel lag eller nyckel/);
+  // nycklarna och deras hashar syns aldrig, och alla steg loggas utan nycklar
+  const alla = JSON.stringify([m.get({ action: "lag" }), m.admin("lag-a", a.key, "oversikt"), m.admin("*", sk, "lagLista")]);
+  for (const hemlig of [u, u2, u2.replace(/-/g, ""), m.ctx.hash(u2)]) assert.ok(!alla.includes(hemlig) && !JSON.stringify(m.blad["Logg"].data).includes(hemlig), "läcker: " + hemlig);
+  const logg = m.blad["Logg"].data.slice(1).map((x) => x[2]).filter((x) => /utlämningslänk/.test(x));
+  assert.deepEqual(logg, ["utlämningslänk skapad", "ny utlämningslänk", "ny utlämningslänk", "utlämningslänk avstängd"]);
+});
+
+test("setup lägger till produkt- och utlämningskolumnerna i en äldre lagflik", () => {
+  const { m, sk } = ny();
+  utkast(m, sk);
+  const sh = m.blad["Lag"];
+  sh.data.forEach((rad) => { rad.length = Math.min(rad.length, 16); });
+  m.setup();
+  assert.deepEqual(sh.data[0].slice(16), ["Produkt", "Produktbeskrivning", "Enhet (ental)", "Enhet (flertal)", "Om försäljningen", "Utlämning (text)", "Belöning", "Utlämningsnyckel (hash)"]);
+  assert.equal(sh.data[1][0], "lag-a");
+  assert.deepEqual(m.admin("lag-a", m.admin("*", sk, "nyNyckel", { slug: "lag-a" }).key, "oversikt").lag.produkt, { namn: "", detalj: "", enhetEn: "", enhet: "" });
 });
 
 test("setup lägger till kolumnen Klubbens kommentar i en äldre lagflik", () => {
