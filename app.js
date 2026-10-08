@@ -149,7 +149,7 @@
       }
       if (info) info.textContent = q ? (vis.length ? vis.length + (vis.length === 1 ? " lag" : " lag") + " matchar" : "") : "";
       if (!vis.length) host.appendChild(h("p", { class: "notice", style: "margin-top:22px", text: LAG.length
-        ? "Inget lag matchar. Kontrollera stavningen, eller be lagföräldern om länken." : "Inga lag är tillagda ännu." }));
+        ? "Inget lag matchar. Kolla stavningen, eller be om länken där du brukar prata med laget." : "Inga lag är tillagda ännu." }));
     }
     if (sok) sok.addEventListener("input", rita);
     rita();
@@ -359,7 +359,7 @@
             if (d && d.ok) success(payload, d.id, typeof d.belopp === "number" ? d.belopp : payload.antal * cfg.pris);
             else fail((d && d.fel) || "Något gick fel. Försök igen.");
           })
-          .catch(function () { fail("Det gick inte att skicka just nu. Kontrollera uppkopplingen och försök igen, eller hör av dig till lagföräldern."); });
+          .catch(function () { fail("Det gick inte att skicka just nu. Kolla uppkopplingen och försök igen, eller hör av dig där du brukar prata med laget."); });
       });
     }
 
@@ -400,7 +400,7 @@
           h("li", { text: "Behåll meddelandet. Det är så vi hittar din betalning." }),
           h("li", { text: "Klart! Du behöver inte göra något mer." })));
       } else {
-        swish.appendChild(h("p", { text: "Swish-uppgifter kommer inom kort. Lagföräldern hör av sig." }));
+        swish.appendChild(h("p", { text: "Swish-uppgifterna kommer snart. Vi hör av oss där du brukar prata med laget." }));
       }
 
       content.appendChild(h("div", { class: "card done", style: "margin-top:16px" },
@@ -457,7 +457,7 @@
     app.appendChild(h("h2", { class: "title", text: cfg.status === "avslutad" ? "Försäljningen är avslutad" : "Försäljningen har inte startat än" }));
     app.appendChild(h("p", { class: "lead", text: cfg.status === "avslutad"
       ? "Tack till alla som har beställt! Det går inte att beställa längre för " + cfg.namn + "."
-      : "Försäljningen för " + cfg.namn + " öppnar snart. Lagföräldern meddelar när den öppnar." }));
+      : "Försäljningen för " + cfg.namn + " öppnar snart. Vi säger till där du brukar få besked från laget när den öppnar." }));
     app.appendChild(h("p", { class: "small", text: K.kontakt }));
   }
 
