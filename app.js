@@ -229,9 +229,9 @@
       metersBox.appendChild(h("div", { class: "card meters" }, h("p", { class: "kicker", text: "Hela laget just nu" }),
         meter({ label: "Beställt", big: nf.format(n), small: "av " + nf.format(mal) + " " + E, value: n, max: mal,
           aria: "Beställda " + E, cap: cap1 }),
-        meter({ label: "Direkt till lagkassan", big: kr(n * marginal), small: "hittills", value: n * marginal, max: mal * marginal,
+        meter({ label: "Beräknat till lagkassan", big: kr(n * marginal), small: "av beställningarna hittills", value: n * marginal, max: mal * marginal,
           aria: "Pengar till lagkassan",
-          cap: [{ b: kr(marginal) }, " av varje " + En + " går direkt till lagkassan. Vid " + nf.format(mal) + " " + E + " blir det " + kr(mal * marginal) + "."] })));
+          cap: [{ b: kr(marginal) }, " av varje " + En + " går till lagkassan. Vid " + nf.format(mal) + " " + E + " blir det " + kr(mal * marginal) + "."] })));
     }
 
     function loadStatus() {
@@ -249,7 +249,7 @@
     /* ---------- Formulär ---------- */
     function renderForm() {
       content.textContent = "";
-      if (demo) content.appendChild(h("p", { class: "notice", text: "Förhandsvisning med exempeldata. Beställningar skickas inte förrän laget är kopplat till ett Apps Script." }));
+      if (demo) content.appendChild(h("p", { class: "notice", text: "Förhandsvisning med exempeldata. Inget skickas eller sparas." }));
       content.appendChild(h("div", { style: "margin-top:16px" }, h("h2", { class: "title", text: "Beställ" }), h("p", { class: "lead", text: fill(cfg.intro) })));
 
       var errBox = h("p", { class: "formerror", role: "alert", hidden: "" });
@@ -279,7 +279,7 @@
         else {
           payBig.textContent = "Du swishar " + kr(state.antal * cfg.pris);
           paySub.textContent = "";
-          paySub.appendChild(h("strong", { text: kr(state.antal * marginal) })); paySub.appendChild(document.createTextNode(" av det går direkt till lagkassan."));
+          paySub.appendChild(h("strong", { text: kr(state.antal * marginal) })); paySub.appendChild(document.createTextNode(" av det går till lagkassan."));
         }
       }
       antalInp.addEventListener("change", function () { setAntal(parseInt(antalInp.value, 10) || 0); });

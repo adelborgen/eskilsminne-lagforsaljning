@@ -400,6 +400,29 @@ test("godkännande kontrollerar uppgifterna en gång till om klubben ändrat dem
   assert.equal(m.blad["Lag"].data[1][3], "granskas");
 });
 
+test("klubben kan inte öppna eller godkänna en försäljning utan Swish-nummer och de andra uppgifterna", () => {
+  const { m, sk } = ny();
+  const tomt = { namn: "Lag X", pris: 30, inkopspris: 10, minimum: 10, mal: 20 };
+  // direkt vid skapandet
+  assert.match(m.admin("*", sk, "lagNy", { data: { ...tomt, status: "pagar" } }).fel, /kan inte vara öppen än\. Fyll i först: Swish-nummer, Mottagarens namn i Swish/);
+  assert.match(m.admin("*", sk, "lagNy", { data: { ...tomt, status: "snart" } }).fel, /kan inte vara godkänd än/);
+  assert.equal(m.blad["Lag"].getLastRow(), 1, "inget lag skapades");
+  assert.equal(m.admin("*", sk, "lagNy", { data: { ...tomt, status: "utkast" } }).ok, true, "ett utkast får vara tomt");
+  assert.equal(m.admin("*", sk, "lagNy", { data: { ...tomt, namn: "Lag Z", status: "avslutad" } }).ok, true, "ett avslutat lag kräver inget");
+  // vid ändring av status
+  assert.match(m.admin("*", sk, "lagUppdatera", { slug: "lag-x", falt: { status: "pagar" } }).fel, /Fyll i först: .*Swish-nummer/);
+  assert.match(m.admin("*", sk, "lagUppdatera", { slug: "lag-x", falt: { status: "snart", swishNummer: "070 123 45 67" } }).fel, /Mottagarens namn/, "en av tre uppgifter räcker inte");
+  assert.equal(m.blad["Lag"].data[1][3], "utkast", "statusen är oförändrad");
+  assert.match(bestall(m, "lag-x").fel, /inte öppen/);
+  const ok = m.admin("*", sk, "lagUppdatera", { slug: "lag-x", falt: { status: "pagar", kampanj: "Bullar", swishNummer: "070 123 45 67", mottagare: "Eskilsminne IF Lag X" } });
+  assert.deepEqual([ok.ok, ok.lag.status], [true, "pagar"]);
+  assert.equal(bestall(m, "lag-x").ok, true);
+  // ett öppet lag kan inte göras ofullständigt
+  assert.match(m.admin("*", sk, "lagUppdatera", { slug: "lag-x", falt: { swishNummer: "" } }).fel, /Swish-nummer/);
+  assert.equal(m.admin("*", sk, "lagUppdatera", { slug: "lag-x", falt: { swishNummer: "070 999 99 99" } }).ok, true, "men ett nytt nummer går bra");
+  assert.equal(m.admin("*", sk, "lagUppdatera", { slug: "lag-x", falt: { swishNummer: "", status: "avslutad" } }).ok, true, "och ett avslutat lag får sakna det");
+});
+
 test("setup lägger till kolumnen Klubbens kommentar i en äldre lagflik", () => {
   const { m, sk } = ny();
   utkast(m, sk);

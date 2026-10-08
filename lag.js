@@ -18,7 +18,7 @@ var KLUBB = {
   titel: "Lagförsäljning",              // platshållare, se README
   motto: "Respekt – Kamratskap – Jämlikhet",
   logo: "assets/klubbmarke.png",         // klubbmärket. Klubben har gett tillåtelse att använda det.
-  valjLagText: "Pengarna går direkt till lagets egen lagkassa.",
+  valjLagText: "Du swishar direkt till laget, och pengarna går till lagets kassa.",
   kontakt: "Hittar du inte svaret? Skriv i lagets WhatsApp-grupp.",
 
   // Adressen till klubbens Apps Script (webbappens URL, slutar på /exec). Se README, steg "Sätt upp servern".

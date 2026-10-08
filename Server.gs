@@ -281,6 +281,9 @@ function opLagLista() {
 function opLagNy(d) {
   var r = rensaLag(d.data || {}, true);
   if (r.fel) return { ok: false, fel: r.fel };
+  var oppen = kanInteOppnas({ kampanj: r.kampanj, swish: { nummer: r.swishNummer, namnPaKonto: r.mottagare }, pris: r.pris, inkopspris: r.inkopspris,
+    minimum: r.minimum, mal: r.mal }, r.status);
+  if (oppen) return { ok: false, fel: oppen };
   return medLasObj(function () {
     if (hittaLag(r.slug)) return { ok: false, fel: "Det finns redan ett lag med adressen " + r.slug + "." };
     var key = nyNyckelText();
@@ -299,6 +302,13 @@ function opLagUppdatera(d) {
     if (!lag) return { ok: false, fel: "Okänt lag." };
     var fel = kontrolleraNya(lag, r);
     if (fel) return { ok: false, fel: fel };
+    // Hur laget ser ut efter ändringen: får det öppnas (snart eller pagar) måste allt föräldrarna behöver vara ifyllt
+    var efter = { kampanj: r.kampanj !== undefined ? r.kampanj : lag.kampanj,
+      swish: { nummer: r.swishNummer !== undefined ? r.swishNummer : lag.swish.nummer, namnPaKonto: r.mottagare !== undefined ? r.mottagare : lag.swish.namnPaKonto },
+      pris: r.pris !== undefined ? r.pris : lag.pris, inkopspris: r.inkopspris !== undefined ? r.inkopspris : lag.inkopspris,
+      minimum: r.minimum !== undefined ? r.minimum : lag.minimum, mal: r.mal !== undefined ? r.mal : lag.mal };
+    var oppen = kanInteOppnas(efter, r.status !== undefined ? r.status : lag.status);
+    if (oppen) return { ok: false, fel: oppen };
     var andrade = skrivLagFalt(lag, r);
     logga(lag.slug, "lag ändrat: " + andrade.join(", "), "", "");
     return { ok: true, lag: adminLag(hittaLag(lag.slug)) };
@@ -351,6 +361,14 @@ function saknas(l) {
   if (!(l.minimum > 0) || !(l.mal > 0)) s.push("Minimum och mål");
   if (s.length) return "Fyll i först: " + s.join(", ") + ".";
   return kontrolleraSiffror(l);
+}
+
+// En försäljning som är godkänd eller öppen (snart, pagar) måste ha allt som föräldrarna behöver, till exempel Swish-numret.
+// Ger en text om något saknas, annars null. Gäller även när klubben sätter status direkt.
+function kanInteOppnas(l, status) {
+  if (status !== "snart" && status !== "pagar") return null;
+  var s = saknas(l);
+  return s ? "Försäljningen kan inte vara " + (status === "pagar" ? "öppen" : "godkänd") + " än. " + s : null;
 }
 
 function sattStatus(l, status, kommentar) {

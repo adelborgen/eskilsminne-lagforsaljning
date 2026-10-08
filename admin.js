@@ -219,7 +219,7 @@
         lev.appendChild(kv(E.charAt(0).toUpperCase() + E.slice(1) + " i kartongerna", nf.format(o.levereras)));
       }
       lev.appendChild(kv("Beräknad faktura", kr(o.faktura)));
-      lev.appendChild(kv("Betalt minus faktura", kr(o.betaltMinusFaktura), o.betaltMinusFaktura >= 0 ? "pos" : "neg"));
+      lev.appendChild(kv("Betalt hittills minus faktura", kr(o.betaltMinusFaktura), o.betaltMinusFaktura >= 0 ? "pos" : "neg"));
       oPanel.appendChild(lev);
 
       oPanel.appendChild(h("div", { class: "card", style: "margin-top:16px" }, h("h3", { style: "margin:0 0 8px", text: "Lagets uppgifter" }),
@@ -790,7 +790,10 @@
     var namn = ["Alva", "Bo", "Cleo", "Dante", "Elsa", "Folke", "Greta", "Hugo"];
     (window.DEMO_LAG || []).forEach(function (l, li) {
       // Bara de värden som exempellaget faktiskt anger skriver över standardvärdena (undefined får inte göra det).
-      var egna = { slug: l.slug, namn: l.namn, kampanj: l.kampanj, status: l.status, swish: l.swish, kommentar: l.kommentar || "" };
+      // Pågående, kommande och avslutade lag har ett exempelnummer (utkast saknar det med flit, för att visa kontrollen)
+      var sw = merge({ nummer: "", namnPaKonto: "", meddelande: "" }, l.swish || {});
+      if (!sw.nummer && ["pagar", "snart", "avslutad"].indexOf(l.status) >= 0) sw.nummer = K.standard.demoSwish;
+      var egna = { slug: l.slug, namn: l.namn, kampanj: l.kampanj, status: l.status, swish: sw, kommentar: l.kommentar || "" };
       ["pris", "inkopspris", "minimum", "mal", "maxAntal", "kartong"].forEach(function (k) { if (l[k] !== undefined) egna[k] = l[k]; });
       lag[l.slug] = merge({ pris: K.standard.pris, inkopspris: K.standard.inkopspris, minimum: K.standard.minimum, mal: K.standard.mal,
         maxAntal: K.standard.maxAntal, kartong: 24 }, egna);
