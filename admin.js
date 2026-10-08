@@ -115,7 +115,7 @@
     setTopbar("", "Admin"); document.title = K.namn + " – Admin";
     app.textContent = "";
     app.appendChild(h("h2", { class: "title", text: "Logga in" }));
-    app.appendChild(h("p", { class: "lead", text: "Välj ditt lag och skriv in lagets adminnyckel. Klubbens administratör väljer \"Klubbadministratör\"." }));
+    app.appendChild(h("p", { class: "lead", text: "Har du din länk räcker det att öppna den. Annars väljer du ditt lag och skriver in nyckeln. Klubbens administratör väljer \"Klubbadministratör\"." }));
     if (DEMO) app.appendChild(h("p", { class: "notice", style: "margin-top:12px", text: "Demoläge med exempeldata, inget sparas. Prova nyckeln demo (lagets admin) eller super (klubbadministratör)." }));
     var fel = h("p", { class: "formerror", role: "alert", hidden: "" });
     var sel = h("select", { id: "lag" }, h("option", { value: "", text: "Hämtar lag…" }));
@@ -213,9 +213,9 @@
     app.appendChild(h("h2", { class: "title", text: "Försäljningen är startad" }));
     app.appendChild(h("div", { class: "card", style: "margin-top:16px; border: 2px solid var(--yellow)" },
       h("h3", { style: "margin:0 0 6px", text: "Spara din länk" }),
-      h("p", { style: "margin:0", text: "Länken är din inloggning till " + r.lag.namn + ". Spara den, till exempel som bokmärke eller i en lösenordshanterare. Den visas bara nu. Dela den bara med dem som hjälper till med betalningar och utlämning." }),
+      h("p", { style: "margin:0", text: "Länken är din inloggning till " + r.lag.namn + ", och den innehåller ditt lösenord: den långa koden efter k=. Den som har länken kommer in, så spara den som bokmärke eller i en lösenordshanterare. Den visas bara nu." }),
       h("div", { class: "keybox" }, h("code", { text: lank }), kb),
-      h("p", { class: "small", style: "margin:10px 0 0", text: "Tappar du länken kan klubben ge dig en ny." }),
+      h("p", { class: "small", style: "margin:10px 0 0", text: "Dela den aldrig i en gruppchatt. Hjälper någon dig med betalningar eller utlämning, skicka länken direkt till hen. Tappar du länken, eller tror att den hamnat fel, kan klubben ge dig en ny. Då slutar den gamla fungera." }),
       h("button", { type: "button", class: "primary", style: "margin-top:12px", text: "Fortsätt och fyll i försäljningen", onclick: function () {
         S = { lag: r.slug, key: r.key, roll: "lag", valt: r.slug }; sparaSession(); renderAdmin();
       } })));
@@ -707,7 +707,8 @@
     function ladda() { anropa("lagLista").then(function (r) { if (r.ok) { lista = r.lag; ritaLag(); } else fel.textContent = r.fel; }); }
 
     function visaNyckel(rubrik, slug, key) {
-      var lank = new URL("admin.html", location.href).href + "#lag=" + encodeURIComponent(slug) + "&k=" + encodeURIComponent(key);
+      var lank = DEMO ? "[sidans adress]/admin.html#lag=" + slug + "&k=" + key
+        : new URL("admin.html", location.href).href + "#lag=" + encodeURIComponent(slug) + "&k=" + encodeURIComponent(key);
       function rad(etikett, text) {
         var b = h("button", { type: "button", class: "mini", text: "Kopiera" });
         b.addEventListener("click", function () { kopiera(text, b); });
@@ -716,7 +717,7 @@
       nyckelPlats.textContent = "";
       nyckelPlats.appendChild(h("div", { class: "card", style: "margin-top:16px; border: 2px solid var(--yellow)" },
         h("h3", { style: "margin:0 0 6px", text: rubrik }),
-        h("p", { style: "margin:0", text: "Nyckeln visas bara nu. Skicka adminlänken till lagföräldern på ett säkert sätt, inte i en öppen grupp." }),
+        h("p", { style: "margin:0", text: "Adminlänken innehåller lagets lösenord, koden efter k=, och visas bara nu. Skicka den direkt till lagföräldern, aldrig i en öppen grupp." }),
         rad("Adminlänk (loggar in direkt)", lank), rad("Adminnyckel", key), rad("Beställningssida för föräldrar", bestallningsLank(slug)),
         h("ol", { class: "steps small" },
           h("li", { text: "Skicka adminlänken till lagföräldern. Lagföräldern fyller i försäljningen och skickar den till klubben." }),
@@ -882,6 +883,13 @@
      Nycklar: "demo" för ett lags admin, "super" för klubbadministratören.
      ========================================================================== */
   var demo = null;
+  // En påhittad nyckel i samma form som de riktiga (32 tecken), så att demon visar hur en länk ser ut. Nyckeln demo fungerar också.
+  function demoNyckel() {
+    var b = new Uint8Array(16);
+    try { crypto.getRandomValues(b); } catch (e) { for (var i = 0; i < 16; i++) b[i] = Math.floor(Math.random() * 256); }
+    var hex = Array.prototype.map.call(b, function (x) { return (x + 256).toString(16).slice(1); }).join("");
+    return hex.match(/.{4}/g).join("-");
+  }
   function demoState() {
     if (demo) return demo;
     var lag = {}, ordrar = {};
@@ -899,7 +907,7 @@
       }) : [];
       ordrar[l.slug].forEach(function (o) { o.belopp = o.antal * lag[l.slug].pris; });
     });
-    demo = { lag: lag, ordrar: ordrar };
+    demo = { lag: lag, ordrar: ordrar, nycklar: {} };
     return demo;
   }
   function demoOversikt(l, ordrar) {
@@ -955,7 +963,8 @@
   function demoApi(p) {
     var s = demoState(), lag = p.lag !== "*" ? s.lag[p.lag] : null;
     var arSuper = p.key === "super";
-    if (!(arSuper || (p.key === "demo" && lag))) return { ok: false, fel: "Fel lag eller nyckel." };
+    var lagNyckel = lag && (p.key === "demo" || (s.nycklar[lag.slug] && p.key === s.nycklar[lag.slug]));
+    if (!(arSuper || lagNyckel)) return { ok: false, fel: "Fel lag eller nyckel." };
     var roll = arSuper ? "super" : "lag";
     var klon = function (x) { return JSON.parse(JSON.stringify(x)); };
     var svar;
@@ -1051,8 +1060,12 @@
           var nyFel = demoKanInteOppnas(nytt, nytt.status);
           if (nyFel) { svar = { ok: false, fel: nyFel }; break; }
           s.lag[slug] = nytt; s.ordrar[slug] = [];
-          svar = { ok: true, slug: slug, key: "demo", lag: klon(nytt) };
-        } else if (p.op === "nyNyckel") svar = s.lag[p.slug] ? { ok: true, slug: p.slug, key: "demo" } : { ok: false, fel: "Okänt lag." };
+          s.nycklar[slug] = demoNyckel();
+          svar = { ok: true, slug: slug, key: s.nycklar[slug], lag: klon(nytt) };
+        } else if (p.op === "nyNyckel") {
+          if (s.lag[p.slug]) { s.nycklar[p.slug] = demoNyckel(); svar = { ok: true, slug: p.slug, key: s.nycklar[p.slug] }; }
+          else svar = { ok: false, fel: "Okänt lag." };
+        }
         else if (p.op === "lagTaBort") {
           var tl = s.lag[p.slug];
           if (!tl) svar = { ok: false, fel: "Okänt lag." };
@@ -1066,7 +1079,7 @@
     return svar;
   }
 
-  // Samma som servern: lagföräldern startar ett tomt utkast med lagets namn. Alla demolag har nyckeln demo.
+  // Samma som servern: lagföräldern startar ett tomt utkast med lagets namn och får en egen nyckel.
   function demoStart(p) {
     var s = demoState(), namn = String(p.namn || "").trim();
     if (p.website) return { ok: false, fel: "Det gick inte att starta just nu. Försök igen om en stund." };
@@ -1076,8 +1089,8 @@
     var nytt = { slug: slug, namn: namn, status: "utkast", kommentar: "", kampanj: "", titel: "", intro: "", belonning: "", utlamningsText: "",
       produkt: { namn: "", detalj: "", enhetEn: "", enhet: "" }, swish: { nummer: "", namnPaKonto: "", meddelande: namn + " försäljning" },
       pris: 0, inkopspris: 0, minimum: 0, mal: 0, lager: 0, maxAntal: 50, kartong: 0 };
-    s.lag[slug] = nytt; s.ordrar[slug] = [];
-    return { ok: true, slug: slug, key: "demo", lag: JSON.parse(JSON.stringify(nytt)) };
+    s.lag[slug] = nytt; s.ordrar[slug] = []; s.nycklar[slug] = demoNyckel();
+    return { ok: true, slug: slug, key: s.nycklar[slug], lag: JSON.parse(JSON.stringify(nytt)) };
   }
 
   /* ---------- Start ---------- */

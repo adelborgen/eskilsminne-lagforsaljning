@@ -34,7 +34,7 @@ En klubbsida där föräldern väljer lag i en lista och beställer, i samma sti
 
 Så länge `endpoint` i `lag.js` är tom visar sidorna exempellag och exempeldata, och inget sparas eller skickas. Öppna `index.html` och `admin.html` i webbläsaren, eller kör `python3 -m http.server` i repots rot och gå till `http://localhost:8000/`.
 
-I adminvyn i demoläge är nyckeln `demo` för ett lags admin och `super` för klubbens administratör. *Starta en försäljning* fungerar också i demon. Förälderns sida och adminsidan har varsitt demotillstånd som nollställs när sidan laddas om: en beställning som läggs på ena sidan syns inte på den andra.
+I adminvyn i demoläge är nyckeln `demo` för ett lags admin och `super` för klubbens administratör. *Starta en försäljning* fungerar också i demon och visar en påhittad nyckel i samma form som de riktiga (32 tecken), som fungerar för just det laget så länge sidan inte laddas om. Förälderns sida och adminsidan har varsitt demotillstånd som nollställs när sidan laddas om: en beställning som läggs på ena sidan syns inte på den andra.
 
 ## Sätt upp servern (en gång, ca 30 minuter)
 
