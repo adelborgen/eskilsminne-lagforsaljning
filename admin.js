@@ -634,7 +634,7 @@
     }
 
     var fb = faltBlock(fyllVarden(l), false);
-    var kryss = ["Den som äger Swish-numret vet om att numret används för försäljningen.", "Vi säljer inget som kräver tillstånd, till exempel lotter."];
+    var kryss = ["Den som äger Swish-numret vet om att numret används för försäljningen.", "Vi säljer bara sådant som klubben har godkänt att laget får sälja."];
     var kryssEl = [], lista = h("ul", { class: "checklist" });
     kryss.forEach(function (t) {
       var id = "u" + (++uid), cb = h("input", { type: "checkbox", id: id });
@@ -837,7 +837,7 @@
       return h("div", { class: "card teamadmin", style: "border: 2px solid var(--yellow)" },
         h("div", { class: "o-head" }, h("span", { class: "o-name", text: l.namn }), h("span", { class: "badge unpaid", text: STATUS_TEXT.granskas })),
         villkorKort(l),
-        h("p", { class: "small", style: "margin:12px 0 0", text: "Kontrollera att Swish-numret ägs av någon som vet om det, att priserna stämmer och att inget som kräver tillstånd (till exempel lotter) säljs." }),
+        h("p", { class: "small", style: "margin:12px 0 0", text: "Kontrollera att Swish-numret ägs av någon som vet om det, att priserna stämmer och att laget bara säljer sådant som klubben har godkänt att laget får sälja." }),
         h("div", { class: "btnrow" },
           h("button", { type: "button", class: "mini go", text: "Godkänn och öppna nu", onclick: function () { godkann("pagar"); } }),
           h("button", { type: "button", class: "mini", text: "Godkänn, öppna senare", onclick: function () { godkann("snart"); } }),
