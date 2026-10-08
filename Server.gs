@@ -32,20 +32,20 @@ var LOGG_FLIK = "Logg";
 var LAG_RUBRIKER = ["Slug", "Namn", "Kampanj", "Status", "Swish-nummer", "Mottagare", "Meddelande", "Pris", "Inköpspris",
                     "Minimum", "Mål", "Max antal", "Per kartong", "Nyckel (hash)", "Nästa order", "Klubbens kommentar",
                     "Produkt", "Produktbeskrivning", "Enhet (ental)", "Enhet (flertal)", "Om försäljningen", "Utlämning (text)", "Belöning",
-                    "Utlämningsnyckel (hash)"];
+                    "Utlämningsnyckel (hash)", "Antal i lager"];
 var LAG_COL = { SLUG: 1, NAMN: 2, KAMPANJ: 3, STATUS: 4, SWISH: 5, MOTTAGARE: 6, MEDDELANDE: 7, PRIS: 8, INKOP: 9,
                 MINIMUM: 10, MAL: 11, MAXANTAL: 12, KARTONG: 13, HASH: 14, NASTA: 15, KOMMENTAR: 16,
-                PRODUKT: 17, DETALJ: 18, ENHETEN: 19, ENHETFLERA: 20, INTRO: 21, UTLTEXT: 22, BELONNING: 23, UTLHASH: 24 };
+                PRODUKT: 17, DETALJ: 18, ENHETEN: 19, ENHETFLERA: 20, INTRO: 21, UTLTEXT: 22, BELONNING: 23, UTLHASH: 24, LAGER: 25 };
 var ORDER_RUBRIKER = ["Tid", "Order-ID", "Lag", "Barn", "Mobil", "Antal", "Belopp", "Betald", "Hämtad"];
 var OCOL = { ID: 2, LAG: 3, BARN: 4, MOBIL: 5, ANTAL: 6, BELOPP: 7, BETALD: 8, HAMTAD: 9 };
 var LOGG_RUBRIKER = ["Tid", "Lag", "Åtgärd", "Order-ID", "Värde"];
 // utkast: laget fyller i. granskas: väntar på klubbens godkännande. snart: godkänd men inte öppen. pagar: öppen. avslutad: stängd.
 var STATUSAR = ["utkast", "granskas", "snart", "pagar", "avslutad"];
 var LAG_EGNA_FALT = ["kampanj", "produkt", "detalj", "enhetEn", "enhet", "intro", "utlamningsText", "belonning",
-                     "swishNummer", "mottagare", "meddelande", "pris", "inkopspris", "minimum", "mal", "maxAntal", "kartong"];
+                     "swishNummer", "mottagare", "meddelande", "pris", "inkopspris", "minimum", "mal", "lager", "maxAntal", "kartong"];
 var LAG_KOL = { namn: LAG_COL.NAMN, kampanj: LAG_COL.KAMPANJ, status: LAG_COL.STATUS, swishNummer: LAG_COL.SWISH,
   mottagare: LAG_COL.MOTTAGARE, meddelande: LAG_COL.MEDDELANDE, pris: LAG_COL.PRIS, inkopspris: LAG_COL.INKOP,
-  minimum: LAG_COL.MINIMUM, mal: LAG_COL.MAL, maxAntal: LAG_COL.MAXANTAL, kartong: LAG_COL.KARTONG,
+  minimum: LAG_COL.MINIMUM, mal: LAG_COL.MAL, lager: LAG_COL.LAGER, maxAntal: LAG_COL.MAXANTAL, kartong: LAG_COL.KARTONG,
   produkt: LAG_COL.PRODUKT, detalj: LAG_COL.DETALJ, enhetEn: LAG_COL.ENHETEN, enhet: LAG_COL.ENHETFLERA, intro: LAG_COL.INTRO,
   utlamningsText: LAG_COL.UTLTEXT, belonning: LAG_COL.BELONNING };
 
@@ -153,6 +153,11 @@ function hanteraBestallning(d) {
     if (klar) return json(klar);
     // Läs om laget inne i låset: radnumret kan ha ändrats och numreringen ska inte kunna dubbleras.
     var l = hittaLag(lag.slug);
+    // Har laget ett lager får det inte beställas mer än det finns. Räknas inne i låset, så att två beställningar inte kan ta samma sista.
+    if (l.lager > 0) {
+      var kvar = l.lager - bestalldaAntal(l.slug, lasOrdrar());
+      if (antal > kvar) return json({ ok: false, kvar: Math.max(0, kvar), fel: kvar > 0 ? "Det finns bara " + kvar + " kvar. Välj högst " + kvar + "." : "Det är slutsålt just nu." });
+    }
     var cell = flik(LAG_FLIK).getRange(l._rad, LAG_COL.NASTA);
     var nr = Number(cell.getValue()) || 1;
     cell.setValue(nr + 1);
@@ -366,14 +371,14 @@ function opLagNy(d) {
   var r = rensaLag(d.data || {}, true);
   if (r.fel) return { ok: false, fel: r.fel };
   var oppen = kanInteOppnas({ produkt: { namn: r.produkt, enhetEn: r.enhetEn, enhet: r.enhet }, swish: { nummer: r.swishNummer, namnPaKonto: r.mottagare },
-    pris: r.pris, inkopspris: r.inkopspris, minimum: r.minimum, mal: r.mal }, r.status);
+    pris: r.pris, inkopspris: r.inkopspris, minimum: r.minimum, mal: r.mal, lager: r.lager }, r.status);
   if (oppen) return { ok: false, fel: oppen };
   return medLasObj(function () {
     if (hittaLag(r.slug)) return { ok: false, fel: "Det finns redan ett lag med adressen " + r.slug + "." };
     var key = nyNyckelText();
     sakraFlik(LAG_FLIK, LAG_RUBRIKER).appendRow([r.slug, r.namn, r.kampanj, r.status, r.swishNummer, r.mottagare, r.meddelande,
       r.pris, r.inkopspris, r.minimum, r.mal, r.maxAntal, r.kartong, hash(key), 1, "",
-      r.produkt, r.detalj, r.enhetEn, r.enhet, r.intro, r.utlamningsText, r.belonning, ""]);
+      r.produkt, r.detalj, r.enhetEn, r.enhet, r.intro, r.utlamningsText, r.belonning, "", r.lager]);
     logga(r.slug, "lag skapat", "", r.status);
     return { ok: true, slug: r.slug, key: key, lag: adminLag(hittaLag(r.slug)) };
   });
@@ -392,7 +397,7 @@ function opLagUppdatera(d) {
     var efter = { produkt: { namn: vp("produkt", lag.produkt.namn), enhetEn: vp("enhetEn", lag.produkt.enhetEn), enhet: vp("enhet", lag.produkt.enhet) },
       swish: { nummer: r.swishNummer !== undefined ? r.swishNummer : lag.swish.nummer, namnPaKonto: r.mottagare !== undefined ? r.mottagare : lag.swish.namnPaKonto },
       pris: r.pris !== undefined ? r.pris : lag.pris, inkopspris: r.inkopspris !== undefined ? r.inkopspris : lag.inkopspris,
-      minimum: r.minimum !== undefined ? r.minimum : lag.minimum, mal: r.mal !== undefined ? r.mal : lag.mal };
+      minimum: r.minimum !== undefined ? r.minimum : lag.minimum, mal: r.mal !== undefined ? r.mal : lag.mal, lager: vp("lager", lag.lager) };
     var oppen = kanInteOppnas(efter, r.status !== undefined ? r.status : lag.status);
     if (oppen) return { ok: false, fel: oppen };
     var andrade = skrivLagFalt(lag, r);
@@ -445,7 +450,9 @@ function saknas(l) {
   if (!l.swish.nummer) s.push("Swish-nummer");
   if (!l.swish.namnPaKonto) s.push("Mottagarens namn i Swish");
   if (!(l.pris > 0)) s.push("Pris");
-  if (!(l.minimum > 0) || !(l.mal > 0)) s.push("Minimum och mål");
+  // Har laget ett lager (till exempel bingolotter laget fått) finns inget minimum att nå, bara ett mål
+  if (l.lager > 0) { if (!(l.mal > 0)) s.push("Mål"); }
+  else if (!(l.minimum > 0) || !(l.mal > 0)) s.push("Minimum och mål");
   if (s.length) return "Fyll i först: " + s.join(", ") + ".";
   return kontrolleraSiffror(l);
 }
@@ -546,6 +553,7 @@ function lasLag() {
       kommentar: String(r[LAG_COL.KOMMENTAR - 1] || ""),
       produkt: { namn: String(r[LAG_COL.PRODUKT - 1] || ""), detalj: String(r[LAG_COL.DETALJ - 1] || ""),
         enhetEn: String(r[LAG_COL.ENHETEN - 1] || ""), enhet: String(r[LAG_COL.ENHETFLERA - 1] || "") },
+      lager: Number(r[LAG_COL.LAGER - 1]) || 0,
       intro: String(r[LAG_COL.INTRO - 1] || ""), utlamningsText: String(r[LAG_COL.UTLTEXT - 1] || ""), belonning: String(r[LAG_COL.BELONNING - 1] || ""),
       _rad: i + 2, _hash: String(r[13] || ""), _hashUtl: String(r[LAG_COL.UTLHASH - 1] || "")
     });
@@ -561,7 +569,7 @@ function hittaLag(slug) {
 function offentlig(l) {
   return { slug: l.slug, namn: l.namn, kampanj: l.kampanj, titel: l.kampanj || l.produkt.namn, status: l.status, swish: l.swish,
     produkt: l.produkt, intro: l.intro, utlamningsText: l.utlamningsText, belonning: l.belonning,
-    pris: l.pris, inkopspris: l.inkopspris, minimum: l.minimum, mal: l.mal, maxAntal: l.maxAntal, kartong: l.kartong };
+    pris: l.pris, inkopspris: l.inkopspris, minimum: l.minimum, mal: l.mal, lager: l.lager, maxAntal: l.maxAntal, kartong: l.kartong };
 }
 
 // Utkast och försäljningar som väntar på godkännande visas bara med namn: inga uppgifter, och ingen kan beställa.
@@ -675,8 +683,8 @@ function rensaLag(d, krav) {
   // Ett nytt utkast behöver bara ett namn: lagföräldern fyller i priser och mål, och servern kräver dem först när försäljningen ska godkännas
   var utk = krav && ut.status === "utkast" ? 0 : undefined;
   var fel = siffra("pris", 0.01, 10000, false, "Priset", utk) || siffra("inkopspris", 0, 10000, false, "Inköpspriset", utk) ||
-    siffra("minimum", 1, 100000, true, "Minimum", utk) || siffra("mal", 1, 100000, true, "Målet", utk) ||
-    siffra("maxAntal", 1, 1000, true, "Max antal", 50) || siffra("kartong", 0, 1000, true, "Antal per kartong", 0);
+    siffra("minimum", 0, 100000, true, "Minimum", utk) || siffra("mal", 1, 100000, true, "Målet", utk) ||
+    siffra("lager", 0, 100000, true, "Antal i lager", 0) || siffra("maxAntal", 1, 1000, true, "Max antal", 50) || siffra("kartong", 0, 1000, true, "Antal per kartong", 0);
   if (fel) return { fel: fel };
   if (krav) { fel = kontrolleraSiffror(ut); if (fel) return { fel: fel }; }
   return ut;
@@ -717,6 +725,13 @@ function utOrder(o) {
 function avrunda(n) { return Math.round(n * 100) / 100; }
 
 // Siffrorna som lagföräldern behöver: samma som Översikt-fliken i det gamla skriptet.
+// Antal beställda för ett lag. Avbrutna beställningar räknas inte, så de ger tillbaka det som fanns i lagret.
+function bestalldaAntal(slug, ordrar) {
+  var n = 0;
+  ordrar.forEach(function (o) { if (o.lag === slug && o.betald !== "AVBRUTEN") n += o.antal; });
+  return n;
+}
+
 function oversikt(lag, ordrar) {
   var bestallt = 0, betalt = 0, betaltKr = 0, obetalt = 0, obetaltKr = 0, avbrutna = 0;
   var hamtat = 0, hamtatObetalt = 0, attHamta = 0;   // hamtatObetalt: hämtat men inte betalt, att reda ut
@@ -735,6 +750,7 @@ function oversikt(lag, ordrar) {
     bestallt: bestallt, betalt: betalt, betaltKr: avrunda(betaltKr), obetalt: obetalt, obetaltKr: avrunda(obetaltKr), avbrutna: avbrutna,
     hamtat: hamtat, hamtatObetalt: hamtatObetalt, attHamta: attHamta,
     minimumNatt: bestallt >= lag.minimum, minimumKvar: Math.max(0, lag.minimum - bestallt),
+    lager: lag.lager, kvarILager: lag.lager > 0 ? Math.max(0, lag.lager - bestallt) : 0,
     kartonger: kartonger, levereras: levereras, faktura: faktura, betaltMinusFaktura: avrunda(betaltKr - faktura)
   };
 }

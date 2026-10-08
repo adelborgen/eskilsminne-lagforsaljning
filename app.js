@@ -76,16 +76,20 @@
     return h("span", { class: "plate lang" }, h("b", { text: namn }));
   }
 
+  // Antal beställda enligt laglistan (i demoläget exempelsiffran). Har laget ett lager och det är beställt är försäljningen slutsåld.
+  function bestalltEnligtLista(l) { return typeof l.bestallt === "number" ? l.bestallt : l.demoBestallt; }
+  function arSlutsald(l) { var n = bestalltEnligtLista(l); return l.lager > 0 && typeof n === "number" && n >= l.lager; }
+
   function teamCard(l) {
     var c = bygg(l), open = l.status === "pagar", slut = l.status === "avslutad";
     var titel = c.titel;
     var sub = c.pris > 0 ? kr(c.pris) + " per " + (c.produkt.enhetEn || "styck") : "";
-    var tillstand = open ? ["Pågår", IK_PRICK] : slut ? ["Avslutad", IK_STRECK] : ["Startar snart", IK_RING];
+    var tillstand = open ? (arSlutsald(l) ? ["Slutsåld", IK_STRECK] : ["Pågår", IK_PRICK]) : slut ? ["Avslutad", IK_STRECK] : ["Startar snart", IK_RING];
     var state = h("span", { class: "t-state" }, U.ikon(tillstand[1]), tillstand[0]);
     var badges = h("span", { class: "badges", style: "margin-top:10px" }, state);
     var body = h("span", { class: "t-body" }, h("span", { class: "t-title", text: titel }), sub ? h("span", { class: "t-sub", text: sub }) : null, badges);
     var card = open
-      ? navLank(l.slug, { class: "tile teamcard", "aria-label": l.namn + ", " + titel + (sub ? ", " + sub : "") + ", pågår" })
+      ? navLank(l.slug, { class: "tile teamcard", "aria-label": l.namn + ", " + titel + (sub ? ", " + sub : "") + (arSlutsald(l) ? ", slutsåld" : ", pågår") })
       : h("div", { class: "tile teamcard off " + (slut ? "slut" : "snart") });
     card.appendChild(platta(l.namn));
     card.appendChild(body);
@@ -182,6 +186,14 @@
     var state = { bestallt: null, antal: 0, barn: "", mobil: "" };
     var demo = !cfg.endpoint;
     var kodBas = slumpKod();
+
+    // Har laget ett lager: hur många som finns kvar att beställa (null om det inte finns något lager). Servern kontrollerar alltid på nytt.
+    function kvarNu() {
+      if (!(cfg.lager > 0)) return null;
+      var n = typeof state.bestallt === "number" ? state.bestallt : bestalltEnligtLista(cfg);
+      return typeof n === "number" ? Math.max(0, cfg.lager - n) : null;
+    }
+    function maxNu() { var kv = kvarNu(); return kv === null ? cfg.maxAntal : Math.min(cfg.maxAntal, kv); }
 
     // Kvittot (ordernummer, belopp, antal) sparas i webbläsaren så att det finns kvar om sidan laddas om medan föräldern är i Swish.
     // Varken barnets namn eller mobilnummer sparas.
@@ -292,6 +304,12 @@
       content.textContent = "";
       if (demo) content.appendChild(h("p", { class: "notice", text: "Förhandsvisning med exempeldata. Inget skickas eller sparas." }));
       content.appendChild(h("div", { style: "margin-top:16px" }, h("h2", { class: "title", text: "Beställ" }), h("p", { class: "lead", text: fill(cfg.intro) })));
+      if (kvarNu() === 0) {
+        content.appendChild(h("div", { class: "card", style: "margin-top:16px" }, h("h3", { style: "margin:0 0 6px", text: "Slutsåld" }),
+          h("p", { text: "Alla " + nf.format(cfg.lager) + " " + E + " är beställda." }),
+          h("p", { class: "small", text: "Har du frågor? Hör av dig där du brukar prata med laget." })));
+        return;
+      }
 
       var errBox = h("p", { class: "formerror", role: "alert", hidden: "" });
       var form = h("form", { class: "card", novalidate: "", autocomplete: "off", style: "margin-top:16px" }, errBox);
@@ -309,11 +327,11 @@
         mobil, h("p", { class: "error", id: "err-mobil" })));
 
       var P = cfg.produkt;
-      var antalInp = h("input", { type: "number", inputmode: "numeric", id: "antal", min: "0", max: String(cfg.maxAntal), value: String(state.antal), "aria-label": "Antal " + E });
+      var antalInp = h("input", { type: "number", inputmode: "numeric", id: "antal", min: "0", max: String(maxNu()), value: String(state.antal), "aria-label": "Antal " + E });
       var payBig = h("p", { class: "big num" }), paySub = h("p", { class: "sub" });
       var presetBtns = [];
       function setAntal(v) {
-        state.antal = Math.max(0, Math.min(cfg.maxAntal, v | 0));
+        state.antal = Math.max(0, Math.min(maxNu(), v | 0));
         antalInp.value = String(state.antal);
         presetBtns.forEach(function (b) { b.btn.setAttribute("aria-pressed", String(b.n === state.antal)); });
         if (state.antal === 0) { payBig.textContent = "Välj antal " + E; paySub.textContent = ""; }
@@ -327,6 +345,7 @@
 
       var presets = h("div", { class: "presets", role: "group", "aria-label": "Snabbval" });
       cfg.snabbval.forEach(function (n) {
+        if (n > maxNu()) return;   // fler än det som finns kvar kan inte väljas
         var btn = h("button", { type: "button", class: "preset num", text: String(n), "aria-pressed": "false", onclick: function () { setAntal(n); } });
         presetBtns.push({ n: n, btn: btn }); presets.appendChild(btn);
       });
@@ -339,6 +358,7 @@
           h("button", { type: "button", "aria-label": "Minska antal", text: "−", onclick: function () { setAntal(state.antal - 1); } }), antalInp,
           h("button", { type: "button", "aria-label": "Öka antal", text: "+", onclick: function () { setAntal(state.antal + 1); } })),
         presets,
+        kvarNu() !== null ? h("p", { class: "small", style: "margin:8px 0 0", text: "Det finns " + nf.format(kvarNu()) + " " + E + " kvar." }) : null,
         h("div", { class: "pay", "aria-live": "polite" }, payBig, paySub),
         h("p", { class: "error", id: "err-antal" })));
       setAntal(state.antal);
@@ -347,6 +367,8 @@
       form.appendChild(h("div", { class: "hp", "aria-hidden": "true" }, h("label", { text: "Lämna tomt" }), hp));
 
       var samtycke = h("input", { type: "checkbox", id: "samtycke" });
+      samtycke.checked = !!state.samtycke;
+      samtycke.addEventListener("change", function () { state.samtycke = samtycke.checked; });
       form.appendChild(h("div", { class: "field" },
         h("label", { class: "check", for: "samtycke" }, samtycke,
           h("span", { text: "Jag godkänner att barnets förnamn och mitt mobilnummer sparas av laget för att hantera beställningen." })),
@@ -374,6 +396,7 @@
         var tel = normalizeMobil(mobil.value);
         if (!/^07\d{8}$/.test(tel)) { setErr("err-mobil", "Skriv ett svenskt mobilnummer, till exempel 070 123 45 67."); ok = false; }
         if (state.antal < 1) { setErr("err-antal", "Välj hur många " + E + " du vill beställa."); ok = false; }
+        else if (kvarNu() !== null && state.antal > kvarNu()) { setErr("err-antal", "Det finns bara " + nf.format(kvarNu()) + " kvar."); ok = false; }
         if (!samtycke.checked) { setErr("err-samtycke", "Du behöver godkänna för att kunna beställa."); ok = false; }
         if (!ok) { var f = form.querySelector(".error:not(:empty)"); if (f) f.scrollIntoView({ block: "center", behavior: "smooth" }); return; }
 
@@ -392,7 +415,13 @@
             .then(function (r) { return r.json(); })
             .then(function (d) {
               if (d && d.ok) success(payload, d.id, typeof d.belopp === "number" ? d.belopp : payload.antal * cfg.pris);
-              else fail((d && d.fel) || "Något gick fel. Försök igen.");
+              else if (d && typeof d.kvar === "number" && cfg.lager > 0) {
+                // Någon annan hann före: visa hur många som verkligen finns kvar, och behåll det föräldern skrivit
+                state.bestallt = Math.max(0, cfg.lager - d.kvar); state.antal = Math.min(state.antal, d.kvar);
+                renderMeters(); renderForm();
+                var eb = content.querySelector(".formerror");
+                if (eb) { eb.textContent = d.fel; eb.hidden = false; eb.scrollIntoView({ block: "center", behavior: "smooth" }); }
+              } else fail((d && d.fel) || "Något gick fel. Försök igen.");
             })
             .catch(function () { fail("Det gick inte att skicka just nu. Kolla uppkopplingen och försök igen, eller hör av dig där du brukar prata med laget."); });
         }, Math.max(0, MIN_VANTA_MS - (Date.now() - loadedAt)));
@@ -475,6 +504,7 @@
       var c = h("div", { class: "card", style: "margin-top:16px" });
       cfg.faq.forEach(function (it) {
         if (it.kraver && !cfg[it.kraver]) return;
+        if (it.kraverInte && cfg[it.kraverInte]) return;   // frågor som bara gäller utan lager
         c.appendChild(h("details", null, h("summary", { text: fill(it.f) }), h("p", { text: fill(it.s) })));
       });
       viewF.appendChild(c);

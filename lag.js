@@ -49,7 +49,7 @@ var KLUBB = {
         s: "{pris} per {enhetEn}. Du swishar direkt när du har beställt. Efter beställningen visas Swish-nummer, belopp och ett meddelande att skriva, så att din betalning hittas." },
       { f: "Vad händer om vi når {mal} {enhet}?", kraver: "belonning",
         s: "{belonning} Allt över {mal} är bonus till lagkassan." },
-      { f: "Vad händer om det inte blir tillräckligt många beställningar?",
+      { f: "Vad händer om det inte blir tillräckligt många beställningar?", kraverInte: "lager",
         s: "Vi lägger beställningen hos leverantören först när minst {minimum} {enhet} är beställda. Om vi inte når dit betalar vi tillbaka din Swish." },
       { f: "När och var hämtar jag min beställning?",
         s: "Vi säger till där du brukar få besked från laget, så fort allt är på plats." },
@@ -82,11 +82,11 @@ var DEMO_LAG = [
     utlamningsText: "Bullarna delas ut på träningen.", belonning: "Når vi {mal} påsar åker hela laget på en gemensam fika.",
     pris: 60, inkopspris: 25, minimum: 50, mal: 120, maxAntal: 10, kartong: 0 },
   { slug: "f2016", namn: "F2016", status: "snart" },
-  { slug: "p2017", namn: "P2017", status: "pagar", demoBestallt: 48,
+  { slug: "p2017", namn: "P2017", status: "pagar",
     produkt: { namn: "Bingolotter", detalj: "Fysisk lott som hämtas på träningen", enhetEn: "lott", enhet: "lotter" },
     intro: "Köp bingolotter och stötta laget. Lotterna får du när du hämtar din beställning.",
     utlamningsText: "Lotterna delas ut på träningen.", belonning: "",
-    pris: 50, inkopspris: 40, minimum: 100, mal: 300, maxAntal: 20, kartong: 0 },
+    pris: 50, inkopspris: 40, minimum: 0, mal: 120, lager: 120, maxAntal: 20, kartong: 0, demoBestallt: 74 },
   // Exempel på försäljningar som ännu inte är godkända. De syns inte för föräldrarna, bara i adminvyn.
   { slug: "f2015", namn: "F2015", status: "utkast" },   // helt tomt, som när klubben just har lagt till laget
   { slug: "p2016", namn: "P2016", status: "granskas",
@@ -117,7 +117,7 @@ var DEMO_LAG = [
     l.swish.nummer = l.swish.nummer || "";
     l.swish.namnPaKonto = l.swish.namnPaKonto || (tomt ? "" : "Eskilsminne IF " + l.namn);
     l.swish.meddelande = l.swish.meddelande || "";
-    l.kommentar = ""; l.harUtlamningslank = false;
+    l.kommentar = ""; l.harUtlamningslank = false; l.lager = l.lager || 0;
     if (tomt) {
       l.kampanj = ""; l.produkt = { namn: "", detalj: "", enhetEn: "", enhet: "" }; l.intro = ""; l.utlamningsText = ""; l.belonning = "";
       l.pris = 0; l.inkopspris = 0; l.minimum = 0; l.mal = 0; l.maxAntal = 50; l.kartong = 0; l.titel = "";

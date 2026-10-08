@@ -76,7 +76,7 @@
     var p = l.produkt || {}, harPris = l.pris > 0;
     return { produkt: p.namn, detalj: p.detalj, enhetEn: p.enhetEn, enhet: p.enhet, intro: l.intro, belonning: l.belonning, utlamningsText: l.utlamningsText, kampanj: l.kampanj,
       swishNummer: l.swish.nummer, mottagare: l.swish.namnPaKonto, meddelande: l.swish.meddelande,
-      pris: harPris ? l.pris : "", inkopspris: harPris ? l.inkopspris : "", minimum: l.minimum > 0 ? l.minimum : "", mal: l.mal > 0 ? l.mal : "",
+      pris: harPris ? l.pris : "", inkopspris: harPris ? l.inkopspris : "", minimum: l.minimum > 0 ? l.minimum : "", mal: l.mal > 0 ? l.mal : "", lager: l.lager > 0 ? l.lager : "",
       maxAntal: l.maxAntal, kartong: l.kartong };
   }
   function bestallningsLank(slug) { return new URL("./?lag=" + encodeURIComponent(slug), location.href).href; }
@@ -95,7 +95,8 @@
       kv("Swish", (l.swish.nummer || "saknas") + (l.swish.namnPaKonto ? " (" + l.swish.namnPaKonto + ")" : "")),
       kv("Pris / inköpspris", kr(l.pris) + " / " + kr(l.inkopspris)),
       kv("Till lagkassan per " + produkt.enhetEn, kr(marginal)),
-      kv("Minimum / mål", nf.format(l.minimum) + " / " + nf.format(l.mal)),
+      kv(l.minimum > 0 ? "Minimum / mål" : "Mål", l.minimum > 0 ? nf.format(l.minimum) + " / " + nf.format(l.mal) : nf.format(l.mal)),
+      l.lager > 0 ? kv("Antal i lager", nf.format(l.lager)) : null,
       kv("Max per beställning", nf.format(l.maxAntal)),
       l.kartong > 0 ? kv("Antal per kartong", nf.format(l.kartong)) : null);
   }
@@ -207,6 +208,7 @@
       oPanel.appendChild(h("h2", { class: "title", text: "Översikt" }));
       oPanel.appendChild(h("div", { class: "stats", style: "margin-top:16px" },
         stat("Beställt", nf.format(o.bestallt), "av " + nf.format(l.mal) + " " + E),
+        l.lager > 0 ? stat("Kvar i lager", nf.format(o.kvarILager), "av " + nf.format(l.lager) + " " + E, o.kvarILager === 0) : null,
         stat("Betalt", nf.format(o.betalt), kr(o.betaltKr)),
         stat("Obetalt", nf.format(o.obetalt), kr(o.obetaltKr), o.obetalt > 0),
         stat("Avbrutet", nf.format(o.avbrutna), E),
@@ -268,7 +270,7 @@
       oPanel.appendChild(h("div", { class: "card", style: "margin-top:16px" }, h("h3", { style: "margin:0 0 6px", text: "Länk till den som delar ut" }), utlPlats));
 
       var lev = h("div", { class: "card", style: "margin-top:16px" }, h("h3", { style: "margin:0 0 8px", text: "Beställning hos leverantören" }),
-        kv("Minimum " + nf.format(l.minimum), o.minimumNatt ? "Nått ✓" : nf.format(o.minimumKvar) + " kvar", o.minimumNatt ? "pos" : "", true));
+        l.minimum > 0 ? kv("Minimum " + nf.format(l.minimum), o.minimumNatt ? "Nått ✓" : nf.format(o.minimumKvar) + " kvar", o.minimumNatt ? "pos" : "", true) : null);
       if (l.kartong > 0) {
         lev.appendChild(kv("Kartonger att beställa (à " + l.kartong + ")", nf.format(o.kartonger)));
         lev.appendChild(kv(E.charAt(0).toUpperCase() + E.slice(1) + " i kartongerna", nf.format(o.levereras)));
@@ -698,7 +700,8 @@
     ["mottagare", "Mottagarens namn i Swish", "Så att föräldern känner igen namnet i Swish.", "text"],
     ["meddelande", "Meddelande i Swish", "Förifylls för föräldern, följt av ordernumret. Tomt = lagets namn + försäljning.", "text"],
     ["pris", "Pris (kr)", "Det föräldern swishar per styck.", "number", 1], ["inkopspris", "Inköpspris (kr)", "Det laget betalar per styck. 0 om ni får det gratis.", "number", 1],
-    ["minimum", "Minimum", "Minst så många krävs för att beställa.", "number", 2], ["mal", "Mål", "", "number", 2],
+    ["minimum", "Minimum", "Minst så många krävs för att beställa. Skriv 0 om ni har ett lager.", "number", 2], ["mal", "Mål", "För lotter: samma som antal i lager.", "number", 2],
+    ["lager", "Antal i lager (valfritt)", "Har laget fått ett bestämt antal, till exempel bingolotter? Skriv antalet. Då kan inte fler beställas än så. Tomt = ingen gräns.", "number", 5],
     ["maxAntal", "Max per beställning", "", "number", 3], ["kartong", "Antal per kartong", "0 om det inte säljs i kartonger.", "number", 3]
   ];
 
@@ -947,6 +950,7 @@
       if (x.hamtad === "JA") { o.hamtat += x.antal; if (x.betald !== "JA") o.hamtatObetalt += x.antal; } else if (x.betald === "JA") o.attHamta += x.antal;
     });
     o.minimumNatt = o.bestallt >= l.minimum; o.minimumKvar = Math.max(0, l.minimum - o.bestallt);
+    o.lager = l.lager || 0; o.kvarILager = l.lager > 0 ? Math.max(0, l.lager - o.bestallt) : 0;
     o.kartonger = l.kartong > 0 ? Math.ceil(o.bestallt / l.kartong) : 0;
     o.levereras = l.kartong > 0 ? o.kartonger * l.kartong : o.bestallt;
     o.faktura = Math.round(o.levereras * l.inkopspris * 100) / 100;
@@ -961,7 +965,8 @@
     if (!l.swish.nummer) m.push("Swish-nummer");
     if (!l.swish.namnPaKonto) m.push("Mottagarens namn i Swish");
     if (!(l.pris > 0)) m.push("Pris");
-    if (!(l.minimum > 0) || !(l.mal > 0)) m.push("Minimum och mål");
+    if (l.lager > 0) { if (!(l.mal > 0)) m.push("Mål"); }
+    else if (!(l.minimum > 0) || !(l.mal > 0)) m.push("Minimum och mål");
     if (m.length) return "Fyll i först: " + m.join(", ") + ".";
     if (l.inkopspris > l.pris) return "Inköpspriset kan inte vara högre än priset.";
     if (l.mal < l.minimum) return "Målet kan inte vara lägre än minimum.";
@@ -977,7 +982,7 @@
     if (f.mottagare !== undefined) l.swish.namnPaKonto = String(f.mottagare).trim();
     if (f.meddelande !== undefined) l.swish.meddelande = String(f.meddelande).trim();
     if (f.status !== undefined) l.status = f.status;
-    ["pris", "inkopspris", "minimum", "mal", "maxAntal", "kartong"].forEach(function (k) { if (f[k] !== undefined && f[k] !== "") l[k] = Number(String(f[k]).replace(",", ".")); });
+    ["pris", "inkopspris", "minimum", "mal", "lager", "maxAntal", "kartong"].forEach(function (k) { if (f[k] !== undefined && f[k] !== "") l[k] = Number(String(f[k]).replace(",", ".")); });
     l.titel = l.kampanj || l.produkt.namn;
   }
   // En försäljning som är godkänd eller öppen måste ha allt föräldrarna behöver
@@ -1110,7 +1115,7 @@
           if (s.lag[slug]) { svar = { ok: false, fel: "Det finns redan ett lag med adressen " + slug + "." }; break; }
           var nytt = { slug: slug, namn: dd.namn, status: "utkast", kommentar: "", harUtlamningslank: false, kampanj: "", titel: "", intro: "", belonning: "", utlamningsText: "",
             produkt: { namn: "", detalj: "", enhetEn: "", enhet: "" }, swish: { nummer: "", namnPaKonto: "", meddelande: dd.namn + " försäljning" },
-            pris: 0, inkopspris: 0, minimum: 0, mal: 0, maxAntal: 50, kartong: 0 };
+            pris: 0, inkopspris: 0, minimum: 0, mal: 0, lager: 0, maxAntal: 50, kartong: 0 };
           demoApplicera(nytt, dd);
           var nyFel = demoKanInteOppnas(nytt, nytt.status);
           if (nyFel) { svar = { ok: false, fel: nyFel }; break; }

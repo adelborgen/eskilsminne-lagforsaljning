@@ -189,7 +189,7 @@ test("nytt lag: kontroller, standardvärden och slug", () => {
   assert.equal(r.slug, "flickor-a-o");
   assert.deepEqual(r.lag, { slug: "flickor-a-o", namn: "Flickor Å-Ö", kampanj: "", titel: "", status: "utkast",
     swish: { nummer: "", namnPaKonto: "", meddelande: "Flickor Å-Ö försäljning" }, produkt: { namn: "", detalj: "", enhetEn: "", enhet: "" },
-    intro: "", utlamningsText: "", belonning: "", pris: 35.5, inkopspris: 10, minimum: 100, mal: 150, maxAntal: 50, kartong: 0, kommentar: "", harUtlamningslank: false });
+    intro: "", utlamningsText: "", belonning: "", pris: 35.5, inkopspris: 10, minimum: 100, mal: 150, lager: 0, maxAntal: 50, kartong: 0, kommentar: "", harUtlamningslank: false });
   assert.match(m.admin("*", sk, "lagNy", { data: { namn: "Flickor Å-Ö", pris: 1, inkopspris: 0, minimum: 1, mal: 1 } }).fel, /finns redan/);
 });
 
@@ -323,6 +323,89 @@ test("beställning: namn med & och / godtas, formeltecken och siffror gör det i
   assert.equal(bestall(m, "lag-a", { mobil: "0046 (0)70-222 33 44" }).ok, true);
   assert.equal(m.blad["Beställningar"].data[rader + 1][4], "0702223344");
   assert.match(bestall(m, "lag-a", { mobil: "+47 912 34 567" }).fel, /svenskt mobilnummer/);
+});
+
+test("lager: det kan inte beställas mer än det finns, avbrutna och borttagna ger tillbaka, och 0 betyder ingen gräns", () => {
+  const { m, sk } = ny();
+  const a = skapaLag(m, sk, { namn: "Lag A", lager: 10 });
+  skapaLag(m, sk, { namn: "Lag B", lager: 5 });
+  const lagA = (o) => bestall(m, "lag-a", { mobil: "070" + String(2000000 + (++lagA.n || (lagA.n = 1))), ...o });
+  assert.equal(lagA({ antal: 5 }).ok, true);
+  assert.equal(lagA({ antal: 5 }).ok, true, "precis det som finns kvar går bra");
+  const slut = lagA({ antal: 1 });
+  assert.match(slut.fel, /slutsålt/);
+  assert.equal(slut.kvar, 0);
+  assert.equal(m.admin("lag-a", a.key, "oversikt").oversikt.kvarILager, 0);
+  // en avbruten beställning ger tillbaka sina
+  m.admin("lag-a", a.key, "satt", { id: "0001", varde: "AVBRUTEN" });
+  assert.equal(m.admin("lag-a", a.key, "oversikt").oversikt.kvarILager, 5);
+  assert.equal(lagA({ antal: 6 }).fel, "Det finns bara 5 kvar. Välj högst 5.");
+  assert.equal(lagA({ antal: 6 }).kvar, 5, "svaret säger hur många som finns kvar, så att sidan kan visa det");
+  assert.equal(lagA({ antal: 5 }).ok, true);
+  assert.match(lagA({ antal: 1 }).fel, /slutsålt/);
+  // en borttagen beställning också
+  assert.equal(m.admin("lag-a", a.key, "taBort", { id: "0002" }).ok, true);
+  assert.equal(lagA({ antal: 5 }).ok, true);
+  assert.equal(m.blad["Beställningar"].getLastRow() - 1, 3);
+  // ett annat lags lager påverkas inte, och 0 betyder ingen gräns
+  assert.equal(bestall(m, "lag-b", { antal: 5 }).ok, true);
+  assert.match(bestall(m, "lag-b", { antal: 1, mobil: "0709999999" }).fel, /slutsålt/);
+  skapaLag(m, sk, { namn: "Lag C", lager: 0 });
+  assert.equal(bestall(m, "lag-c", { antal: 50 }).ok, true);
+  assert.equal(bestall(m, "lag-c", { antal: 50, mobil: "0708888888" }).ok, true);
+  assert.equal(m.admin("*", sk, "lagLista").lag.find((l) => l.slug === "lag-c").lager, 0);
+});
+
+test("lager: när det sista tas medan en annan beställning väntar på låset stoppas den som kommer sist", () => {
+  const { m, sk } = ny();
+  skapaLag(m, sk, { namn: "Lag A", lager: 5 });
+  let forsta;
+  m.hooks.vidLas = () => { m.hooks.vidLas = null; forsta = bestall(m, "lag-a", { antal: 5, mobil: "0702222222" }); };
+  const andra = bestall(m, "lag-a", { antal: 5, mobil: "0703333333" });
+  assert.equal(forsta.ok, true);
+  assert.match(andra.fel, /slutsålt/, "kontrolleras om inne i låset");
+  assert.equal(m.blad["Beställningar"].getLastRow() - 1, 1);
+});
+
+test("lager syns i listan och översikten, och bara laget (som utkast) eller klubben får ändra det", () => {
+  const { m, sk } = ny();
+  const a = utkast(m, sk);
+  assert.equal(m.admin("lag-a", a.key, "oversikt").lag.lager, 0);
+  for (const fel of ["abc", -1, 1.5, 100001]) assert.match(m.admin("lag-a", a.key, "lagSpara", { falt: { lager: fel } }).fel, /Antal i lager är felaktigt/, String(fel));
+  assert.equal(m.admin("lag-a", a.key, "lagSpara", { falt: { ...komplett, lager: "120" } }).lag.lager, 120);
+  assert.equal(m.admin("lag-a", a.key, "lagSpara", { falt: { lager: "" } }).lag.lager, 120, "tomt rör inte det som finns");
+  assert.equal(m.blad["Lag"].data[1][24], 120, "sparas i kolumn 25");
+  m.admin("lag-a", a.key, "skickaGodkannande", { bekraftat: true });
+  assert.match(m.admin("lag-a", a.key, "lagSpara", { falt: { lager: 200 } }).fel, /låst/);
+  assert.equal(m.admin("*", sk, "lagUppdatera", { slug: "lag-a", falt: { lager: 200, status: "pagar" } }).lag.lager, 200, "klubben får ändra efteråt");
+  bestall(m, "lag-a", { antal: 5 });
+  const l = m.get({ action: "lag" }).lag[0];
+  assert.deepEqual([l.lager, l.bestallt], [200, 5]);
+  const ov = m.admin("lag-a", a.key, "oversikt").oversikt;
+  assert.deepEqual([ov.lager, ov.kvarILager], [200, 195]);
+  utkast(m, sk, { namn: "Lag Z" });
+  assert.ok(!("lager" in m.get({ action: "lag" }).lag.find((x) => x.slug === "lag-z")), "ett utkast visar bara namn och status");
+});
+
+test("lager: med ett lager behövs inget minimum, bara ett mål", () => {
+  const { m, sk } = ny();
+  const utanMin = { ...komplett, minimum: 0 };
+  const e = m.admin("*", sk, "lagNy", { data: { namn: "Lag E" } });   // ett tomt utkast: varken minimum eller mål är ifyllda
+  const utanMinOchMal = { ...komplett }; delete utanMinOchMal.minimum; delete utanMinOchMal.mal;
+  m.admin("lag-e", e.key, "lagSpara", { falt: utanMinOchMal });
+  assert.match(m.admin("lag-e", e.key, "skickaGodkannande", { bekraftat: true }).fel, /Fyll i först: Minimum och mål/, "utan lager krävs minimum och mål");
+  m.admin("lag-e", e.key, "lagSpara", { falt: { lager: 50 } });
+  assert.match(m.admin("lag-e", e.key, "skickaGodkannande", { bekraftat: true }).fel, /Fyll i först: Mål\./, "med lager krävs bara mål");
+  m.admin("lag-e", e.key, "lagSpara", { falt: { mal: 50 } });
+  assert.equal(m.admin("lag-e", e.key, "skickaGodkannande", { bekraftat: true }).ok, true);
+  // klubben kan skapa och öppna direkt, och ändra status tillsammans med lagret
+  const r = m.admin("*", sk, "lagNy", { data: { ...lagData({ namn: "Lag B", minimum: 0, lager: 40, mal: 40 }) } });
+  assert.equal(r.ok, true, JSON.stringify(r));
+  assert.match(m.admin("*", sk, "lagNy", { data: { ...lagData({ namn: "Lag C", minimum: 0, lager: 0 }) } }).fel, /Minimum och mål/);
+  utkast(m, sk, { namn: "Lag D" });
+  m.admin("*", sk, "lagUppdatera", { slug: "lag-d", falt: { ...utanMin, status: "utkast" } });
+  assert.match(m.admin("*", sk, "lagUppdatera", { slug: "lag-d", falt: { status: "pagar" } }).fel, /Minimum och mål/);
+  assert.equal(m.admin("*", sk, "lagUppdatera", { slug: "lag-d", falt: { status: "pagar", lager: 30 } }).ok, true, "lagret i samma ändring räknas");
 });
 
 test("admin: fel nyckel avvisas, och ett lags nyckel ger bara det laget", () => {
@@ -704,7 +787,7 @@ test("setup lägger till produkt- och utlämningskolumnerna i en äldre lagflik"
   const sh = m.blad["Lag"];
   sh.data.forEach((rad) => { rad.length = Math.min(rad.length, 16); });
   m.setup();
-  assert.deepEqual(sh.data[0].slice(16), ["Produkt", "Produktbeskrivning", "Enhet (ental)", "Enhet (flertal)", "Om försäljningen", "Utlämning (text)", "Belöning", "Utlämningsnyckel (hash)"]);
+  assert.deepEqual(sh.data[0].slice(16), ["Produkt", "Produktbeskrivning", "Enhet (ental)", "Enhet (flertal)", "Om försäljningen", "Utlämning (text)", "Belöning", "Utlämningsnyckel (hash)", "Antal i lager"]);
   assert.equal(sh.data[1][0], "lag-a");
   assert.deepEqual(m.admin("lag-a", m.admin("*", sk, "nyNyckel", { slug: "lag-a" }).key, "oversikt").lag.produkt, { namn: "", detalj: "", enhetEn: "", enhet: "" });
 });
