@@ -117,7 +117,7 @@ var DEMO_LAG = [
     l.swish.nummer = l.swish.nummer || "";
     l.swish.namnPaKonto = l.swish.namnPaKonto || (tomt ? "" : "Eskilsminne IF " + l.namn);
     l.swish.meddelande = l.swish.meddelande || "";
-    l.kommentar = ""; l.harUtlamningslank = false; l.lager = l.lager || 0;
+    l.kommentar = ""; l.lager = l.lager || 0;
     if (tomt) {
       l.kampanj = ""; l.produkt = { namn: "", detalj: "", enhetEn: "", enhet: "" }; l.intro = ""; l.utlamningsText = ""; l.belonning = "";
       l.pris = 0; l.inkopspris = 0; l.minimum = 0; l.mal = 0; l.maxAntal = 50; l.kartong = 0; l.titel = "";
