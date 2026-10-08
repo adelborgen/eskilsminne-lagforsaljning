@@ -48,5 +48,8 @@
       .catch(function (e) { cb(e); });
   }
 
-  window.U = { nf: nf, kr: kr, h: h, merge: merge, hamtaLag: hamtaLag };
+  // Gör ett element av en fast SVG-sträng i koden. Används aldrig med text från servern eller från användare.
+  function ikon(svg) { var t = document.createElement("template"); t.innerHTML = svg.trim(); return t.content.firstChild; }
+
+  window.U = { nf: nf, kr: kr, h: h, merge: merge, hamtaLag: hamtaLag, ikon: ikon };
 })();

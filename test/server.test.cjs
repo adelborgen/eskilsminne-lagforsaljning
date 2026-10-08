@@ -414,9 +414,9 @@ test("setup lägger till kolumnen Klubbens kommentar i en äldre lagflik", () =>
 
 test("översikt: lag utan kartonger fakturerar det som beställts", () => {
   const { m, sk } = ny();
-  const a = skapaLag(m, sk, { namn: "Bingo", pris: 50, inkopspris: 20, minimum: 100, mal: 200, kartong: 0 });
-  bestall(m, "bingo", { antal: 7 });
-  const ov = m.admin("bingo", a.key, "oversikt").oversikt;
+  const a = skapaLag(m, sk, { namn: "Bullar", pris: 50, inkopspris: 20, minimum: 100, mal: 200, kartong: 0 });
+  bestall(m, "bullar", { antal: 7 });
+  const ov = m.admin("bullar", a.key, "oversikt").oversikt;
   assert.deepEqual([ov.kartonger, ov.levereras, ov.faktura, ov.minimumNatt, ov.minimumKvar], [0, 7, 140, false, 93]);
 });
 

@@ -26,7 +26,8 @@ En klubbsida där föräldern väljer lag i en lista och beställer, i samma sti
 | `admin.html`, `admin.js` | Adminvyn för lagföräldrar och klubbens administratör. |
 | `Server.gs` | Servern: klistras in i Google Apps Script. Sköter lag, beställningar, nycklar och adminåtgärder. |
 | `lag.js` | Klubbens gemensamma inställningar (namn, texter, adressen till servern) och texter som skiljer för ett visst lag. **Inte lagens siffror**, de läggs till i adminvyn. |
-| `util.js`, `style.css` | Delade hjälpfunktioner och utseende. |
+| `util.js`, `style.css` | Delade hjälpfunktioner och utseende (Matchdag: blå bakgrund med ränder, krämfärgade kort, gula lagbrickor, vimplar). Samma utseende för förälder, lagförälder och klubbadministratör. |
+| `fonts/`, `assets/` | Typsnitten (Archivo och Atkinson Hyperlegible Next, självhostade) och klubbmärket. |
 | `test/` | Tester för servern. Se längst ned. |
 
 ## Prova utan att sätta upp något (demoläge)
@@ -103,20 +104,21 @@ P2019-sidan och dess skript (`Code.gs` i [P2019-repot](https://github.com/adelbo
 
 ## Beslut hittills (oktober 2026)
 
-Tagna efter granskningen av designbriefen "Kassaskrinet":
+Tagna efter genomgången av designbriefen:
 
 1. **Bara Eskilsminne IF.** Designen delas i lager (plattform, förening, grupp, försäljning) så att den går att bygga ut, men vi bygger inte plattformsadmin, temaeditor eller fler föreningstyper. En dialekt: Matchdag.
 2. **Ingen förifylld Swish.** Föräldern kopierar nummer, belopp och meddelande. Appen försöker inte öppna Swish. (Redan så i prototypen.)
 3. **Swish-meddelandet innehåller bara ordernumret**, inte barnets namn. (Redan så i prototypen.) Lagföräldern slår upp namnet i adminvyn.
 4. **Mätarens "till lagkassan" märks "beräknat"**, eftersom pengarna inte är inne förrän de är swishade. Ännu inte ändrat i prototypen.
-5. **Typsnitten ligger i repot** (`fonts/`: Archivo och Atkinson Hyperlegible Next) och laddas inte från Google. Inte kopplade till appen än.
-6. **"Kassaskrinet" är ett arbetsnamn.** Byt innan lansering: kontrollera domän och varumärke. Briefen anger att kassaskrinet.se och klubbkassan.se redan är upptagna.
+5. **Typsnitten ligger i repot** (`fonts/`: Archivo och Atkinson Hyperlegible Next) och laddas inte från Google. De används nu i hela appen.
+6. **Namnet är inte bestämt.** "Lagförsäljning" är ett arbetsnamn. Kontrollera domän och varumärke innan lansering.
 
-Det som designbriefen beskriver och som ännu inte finns i prototypen: försäljning som egen nivå (flera per grupp, status på försäljningen), kvittosida som tål omladdning, ordernummer med lagkod (P14-037), ångra-fönster på 8 sekunder, rensa-knapp per lag, och utseendet (Matchdag).
+Det som designbriefen beskriver och som ännu inte finns i prototypen: försäljning som egen nivå (flera per grupp, status på försäljningen), kvittosida som tål omladdning, ordernummer med lagkod (P14-037), ångra-fönster på 8 sekunder, rensa-knapp per lag, 
+Utseendet (Matchdag) är byggt: blå bakgrund med ränder, vimplar, klubbmärket med gul kant, krämfärgade kort (aldrig vitt), gula lagbrickor och Archivo/Atkinson. Alla text- och färgpar har minst 5,8:1 i kontrast. Färger, bilder och typsnitt är desamma för alla lag, eftersom klubben äger utseendet. Inga bilder på barn.
 
 ## Att bestämma innan ni går live
 
-1. **Namn.** "Lagförsäljning" i prototypen och "Kassaskrinet" i designbriefen är arbetsnamn. Välj ett namn som inte krockar med någon annan tjänst (kolla domän och varumärke).
+1. **Namn.** "Lagförsäljning" är ett arbetsnamn. Välj ett namn som inte krockar med någon annan tjänst (kolla domän och varumärke).
 2. **Klubbens godkännande** för namn, logga och färger (färgerna är de som redan används på P2019-sidan och hämtades från en tredjepartssida, inte från klubben), och för att administratören sköter servern.
 3. **En andra administratör** som kommer åt kalkylarket, Apps Script-projektet, GitHub och domänen.
 4. **Uppdraget kring personuppgifter** (se ovan).

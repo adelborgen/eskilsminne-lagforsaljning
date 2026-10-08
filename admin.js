@@ -21,7 +21,7 @@
     document.getElementById("club").textContent = K.namn;
     document.getElementById("apptitle").textContent = title;
   }
-  if (K.logo) { var lg = document.getElementById("logo"); lg.src = K.logo; lg.alt = K.namn; lg.hidden = false; }
+  if (K.logo) { var lg = document.getElementById("logo"); lg.src = K.logo; lg.hidden = false; }
   document.getElementById("foot").appendChild(h("strong", { text: K.namn }));
   document.getElementById("foot").appendChild(h("div", { style: "margin-top:8px" }, h("a", { href: "./", text: "Till lagsidan" })));
 

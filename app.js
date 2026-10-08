@@ -25,7 +25,7 @@
     document.getElementById("club").textContent = K.namn;
     document.getElementById("apptitle").textContent = title;
   }
-  if (K.logo) { var lg = document.getElementById("logo"); lg.src = K.logo; lg.alt = K.namn; lg.hidden = false; }
+  if (K.logo) { var lg = document.getElementById("logo"); lg.src = K.logo; lg.hidden = false; }
   var foot = document.getElementById("foot");
   foot.appendChild(h("strong", { text: K.namn }));
   if (K.motto) foot.appendChild(h("div", { text: K.motto }));
@@ -54,33 +54,61 @@
     return a;
   }
 
-  /* ---------- Laglistan ---------- */
+  /* ---------- Laglistan: framsida med lagbrickor ---------- */
+  var IK_PIL = '<svg width="22" height="22" viewBox="0 0 22 22" aria-hidden="true" focusable="false"><path d="M4 11h13M12 5l6 6-6 6" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+  var IK_PRICK = '<svg width="14" height="14" viewBox="0 0 14 14" aria-hidden="true" focusable="false"><circle cx="7" cy="7" r="6" fill="currentColor"/></svg>';
+  var IK_RING = '<svg width="14" height="14" viewBox="0 0 14 14" aria-hidden="true" focusable="false"><circle cx="7" cy="7" r="5" fill="none" stroke="currentColor" stroke-width="2.4"/></svg>';
+  var IK_STRECK = '<svg width="14" height="14" viewBox="0 0 14 14" aria-hidden="true" focusable="false"><path d="M2 7h10" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"/></svg>';
+  var IK_CIRKEL = '<svg class="cirkel" viewBox="0 0 220 220" aria-hidden="true" focusable="false"><circle cx="110" cy="110" r="100"/><circle cx="110" cy="110" r="5" class="spot"/></svg>';
+
+  // Lagets namn på brickan: "F2017" blir F över 2017. Andra namn visas som de är.
+  function platta(namn) {
+    var m = /^([A-Za-zÅÄÖåäö])[A-Za-zÅÄÖåäö]*\s*(\d{4})$/.exec(String(namn).trim());
+    if (m) return h("span", { class: "plate" }, h("b", { text: m[1].toUpperCase() }), h("i", { text: m[2] }));
+    return h("span", { class: "plate lang" }, h("b", { text: namn }));
+  }
+
   function teamCard(l) {
-    var open = l.status === "pagar";
-    var badges = h("span", { class: "badges" },
-      h("span", { class: "badge " + (open ? "live" : ""), text: open ? "Pågår" : l.status === "avslutad" ? "Avslutad" : "Startar snart" }));
+    var c = bygg(l), open = l.status === "pagar", slut = l.status === "avslutad";
+    var titel = l.kampanj || K.titel;
+    var sub = c.pris > 0 ? kr(c.pris) + " per " + (c.produkt.enhetEn || "styck") : "";
+    var tillstand = open ? ["Pågår", IK_PRICK] : slut ? ["Avslutad", IK_STRECK] : ["Startar snart", IK_RING];
+    var state = h("span", { class: "t-state" }, U.ikon(tillstand[1]), tillstand[0]);
+    var badges = h("span", { class: "badges", style: "margin-top:10px" }, state);
     if (!K.endpoint) badges.appendChild(h("span", { class: "badge demo", text: "Exempel" }));
-    var body = h("span", { class: "t-body" }, h("span", { class: "t-title", text: l.kampanj || K.titel }), badges);
+    var body = h("span", { class: "t-body" }, h("span", { class: "t-title", text: titel }), sub ? h("span", { class: "t-sub", text: sub }) : null, badges);
     var card = open
-      ? navLank(l.slug, { class: "teamcard" })
-      : h("div", { class: "teamcard off", "aria-disabled": "true" });
-    card.appendChild(h("span", { class: "pill", text: l.namn }));
+      ? navLank(l.slug, { class: "tile teamcard", "aria-label": l.namn + ", " + titel + (sub ? ", " + sub : "") + ", pågår" })
+      : h("div", { class: "tile teamcard off " + (slut ? "slut" : "snart") });
+    card.appendChild(platta(l.namn));
     card.appendChild(body);
-    return h("li", { style: "list-style:none" }, card);
+    card.appendChild(open ? h("span", { class: "t-go", "aria-hidden": "true" }, U.ikon(IK_PIL)) : h("span"));
+    return card;
+  }
+
+  function tileList(lista, start) {
+    var ul = h("ul", { class: "teams", "aria-label": "Lag" });
+    lista.forEach(function (l, i) { ul.appendChild(h("li", { style: "--i:" + (start + i) }, teamCard(l))); });
+    return ul;
   }
 
   function renderList(LAG) {
     setTopbar("", K.titel);
     document.title = K.namn + " – " + K.titel;
-    var list = h("ul", { class: "teams", style: "padding:0;margin:16px 0 0" });
     // Utkast och försäljningar som väntar på klubbens godkännande visas inte för föräldrar.
     LAG = LAG.filter(function (l) { return l.status !== "utkast" && l.status !== "granskas"; });
-    LAG.forEach(function (l) { list.appendChild(teamCard(l)); });
+    var pagande = LAG.filter(function (l) { return l.status !== "avslutad"; }), avslutade = LAG.filter(function (l) { return l.status === "avslutad"; });
     app.textContent = "";
-    app.appendChild(h("h2", { class: "title", text: "Välj ditt lag" }));
-    app.appendChild(h("p", { class: "lead", text: K.valjLagText }));
-    app.appendChild(list);
-    if (!LAG.length) app.appendChild(h("p", { class: "notice", text: "Inga lag är tillagda ännu." }));
+    app.appendChild(h("header", { class: "hero" },
+      h("div", { class: "deco", "aria-hidden": "true" }, U.ikon(IK_CIRKEL)),
+      h("h1", null, "Välj ditt ", h("span", { class: "mark", text: "lag" })),
+      h("p", { class: "lead", text: K.valjLagText }),
+      h("ol", { class: "hero-steps" }, h("li", null, h("b", { text: "1" }), "Välj lag"), h("li", null, h("b", { text: "2" }), "Beställ"), h("li", null, h("b", { text: "3" }), "Swisha till laget")),
+      h("p", { class: "fast", text: "Klart på under en minut." })));
+    app.appendChild(h("div", { class: "mittlinje", "aria-hidden": "true" }, h("i")));
+    if (pagande.length) app.appendChild(tileList(pagande, 0));
+    if (avslutade.length) app.appendChild(h("details", { class: "avslutade" }, h("summary", { text: "Avslutade (" + avslutade.length + ")" }), tileList(avslutade, 0)));
+    if (!LAG.length) app.appendChild(h("p", { class: "notice", style: "margin-top:22px", text: "Inga lag är tillagda ännu." }));
   }
 
   function renderIngetLag() {

@@ -1,224 +1,289 @@
-  /* Färger: Eskilsminne IF blå #174297 (accent) och gul #faeb1e (markering).
-     Bekräfta mot klubbens grafiska profil. */
-  :root {
-    --bg: #f4f6fb; --card: #ffffff; --text: #0f1b3d; --muted: #5a6585;
-    --line: #e1e6f2; --soft: #eaeffb;
-    --brand: #174297; --yellow: #faeb1e; --navy: #0f1b3d;
-    --accent: #174297;
-    --cta-bg: #174297; --cta-ink: #ffffff; --sel-border: #174297;
-    --ok: #1b7a34; --ok-ink: #ffffff; --err: #b3261e;
-    --shadow: 0 1px 2px rgba(15,27,61,.06), 0 6px 20px rgba(15,27,61,.06);
-    --r: 20px;
-  }
-  /* Mörkt läge följer telefonens inställning. data-theme används bara av miljöer som låter användaren välja själv. */
-  @media (prefers-color-scheme: dark) {
-    :root:not([data-theme="light"]) {
-      --bg: #0a1230; --card: #121d44; --text: #eef1fa; --muted: #a9b3d2;
-      --line: #26346a; --soft: #1a2857; --accent: #faeb1e;
-      --cta-bg: #faeb1e; --cta-ink: #0f1b3d; --sel-border: #faeb1e;
-      --ok: #7bd88f; --ok-ink: #0a1230; --err: #ff9a92; --shadow: none; color-scheme: dark;
-    }
-  }
-  :root[data-theme="dark"] {
-      --bg: #0a1230; --card: #121d44; --text: #eef1fa; --muted: #a9b3d2;
-      --line: #26346a; --soft: #1a2857; --accent: #faeb1e;
-      --cta-bg: #faeb1e; --cta-ink: #0f1b3d; --sel-border: #faeb1e;
-      --ok: #7bd88f; --ok-ink: #0a1230; --err: #ff9a92; --shadow: none; color-scheme: dark;
-  }
-  * { box-sizing: border-box; }
-  html { -webkit-text-size-adjust: 100%; }
-  body { margin: 0; background: var(--bg); color: var(--text); font-size: 16px; line-height: 1.5;
-    font-family: system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
-  .num { font-variant-numeric: tabular-nums; }
+/* ==========================================================================
+   Utseende: Matchdag. Klubbens blå och gul, krämfärgade kort (aldrig vitt), tjocka
+   rubriker i Archivo och brödtext i Atkinson Hyperlegible Next. Typsnitten ligger i
+   fonts/ och länkas före den här filen. Samma utseende i alla tre vyerna: förälder,
+   lagförälder och klubbadministratör. Färgerna är samma för alla lag.
+   ========================================================================== */
+:root {
+  --ink: #0f1a33; --cream: #fff8d6; --cream2: #f1e8b4; --yellow: #faeb1e; --blue: #174297; --sky: #bfd4ff; --hard: #0a2559;
+  --bg-a: #174297; --bg-b: #1a4aa3;
+  --fg: #fff8d6; --fg2: #cbd9ff;                      /* text på den blå bakgrunden */
+  --text: #0f1a33; --muted: #4a5575;                  /* text på krämfärgade kort */
+  --line: #d4c98a; --edge: #7c7440;                   /* linjer och fältkanter på kort */
+  --err: #a3261d; --ok: #17612b;
+  --display: Archivo, "Arial Black", system-ui, sans-serif;
+  --body: "Atkinson Hyperlegible Next", system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  --r: 22px;
+}
+/* Mörkt läge följer telefonens inställning och gör bara bakgrunden mörkare. Korten är alltid krämfärgade. */
+@media (prefers-color-scheme: dark) {
+  :root { --bg-a: #0b1530; --bg-b: #0e1b3d; --hard: #050b1c; --fg2: #b9c8f2; }
+}
+* { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; }
+body { margin: 0; min-height: 100vh; color: var(--fg); font: 17px/1.45 var(--body); overflow-x: hidden;
+  background: repeating-linear-gradient(90deg, var(--bg-a) 0 56px, var(--bg-b) 56px 112px); }
+.num { font-variant-numeric: tabular-nums; }
+a { color: inherit; }
+:focus-visible { outline: 3px solid var(--yellow); outline-offset: 3px; box-shadow: 0 0 0 3px var(--ink); border-radius: 8px; }
+[hidden] { display: none !important; }
 
-  .topbar { background: var(--brand); color: #fff; padding: calc(env(safe-area-inset-top, 0px) + 14px) 16px 18px; }
-  .topbar-in { max-width: 560px; margin: 0 auto; display: flex; align-items: center; gap: 12px; }
-  .topbar img { height: 36px; width: auto; }
-  .pill { display: inline-block; background: var(--yellow); color: var(--navy); font-weight: 800; letter-spacing: .05em; padding: 3px 12px; border-radius: 999px; font-size: 14px; }
-  .brandline { line-height: 1.2; }
-  .club { font-size: 12px; letter-spacing: .1em; text-transform: uppercase; opacity: .85; font-weight: 600; }
-  .appname { font-size: 20px; font-weight: 800; }
+/* Allt som ligger på ett krämfärgat kort: mörk text, och --sub för sekundär text */
+.card, .ordercard, .stat, .pick, .teamadmin { color: var(--text); --sub: var(--muted); }
 
-  .tabs { display: flex; gap: 6px; background: var(--soft); padding: 4px; border-radius: 14px; }
-  .tabs button { flex: 1; border: 0; background: transparent; color: var(--muted); font: inherit; font-weight: 700; padding: 10px 8px; border-radius: 10px; cursor: pointer; min-height: 46px; }
-  .tabs button[aria-selected="true"] { background: var(--card); color: var(--text); box-shadow: 0 1px 3px rgba(0,0,0,.15); }
-  details { border-top: 1px solid var(--line); }
-  details:first-of-type { border-top: 0; }
-  summary { cursor: pointer; font-weight: 700; padding: 14px 0; list-style: none; display: flex; justify-content: space-between; gap: 12px; min-height: 48px; }
-  summary::-webkit-details-marker { display: none; }
-  summary::after { content: "+"; font-size: 22px; line-height: 1; color: var(--muted); }
-  details[open] summary::after { content: "–"; }
-  details p { margin: 0 0 14px; }
-  .page { max-width: 560px; margin: 0 auto; padding: 20px 16px calc(env(safe-area-inset-bottom, 0px) + 40px); }
-  .page > * + * { margin-top: 16px; }
-  h2.title { font-size: 26px; line-height: 1.2; margin: 4px 0 0; }
-  .lead { color: var(--muted); margin: 6px 0 0; }
-  .card { background: var(--card); border-radius: var(--r); padding: 20px; box-shadow: var(--shadow); border: 1px solid var(--line); }
-  @media (prefers-color-scheme: light) { :root:not([data-theme="dark"]) .card { border-color: transparent; } }
-  :root[data-theme="light"] .card { border-color: transparent; }
-  .notice { background: var(--soft); border-left: 4px solid var(--yellow); border-radius: 10px; padding: 10px 14px; font-size: 14px; }
+/* ---------- Vimpelgirlang, topp och sidfot ---------- */
+.bunting { display: block; width: 100%; height: 60px; margin-top: calc(env(safe-area-inset-top, 0px) + 4px); }
+.bunting .rope { stroke: var(--fg); fill: none; stroke-width: 2.5; }
+.bunting .f1 { fill: var(--yellow); } .bunting .f2 { fill: var(--sky); } .bunting .f3 { fill: var(--cream); }
+.topbar { padding: 4px 16px 0; }
+.topbar-in { max-width: 560px; margin: 0 auto; display: flex; align-items: center; gap: 14px; }
+.crest { display: block; width: 58px; height: auto; flex: none;
+  /* klistermärkeskant i klubbens gula, så att sköldens blå kant syns mot den blå bakgrunden */
+  filter: drop-shadow(3px 0 0 var(--yellow)) drop-shadow(-3px 0 0 var(--yellow)) drop-shadow(0 3px 0 var(--yellow)) drop-shadow(0 -3px 0 var(--yellow)) drop-shadow(0 5px 0 var(--hard)); }
+.brandline { line-height: 1.15; flex: 1; min-width: 0; }
+.club { font: 800 13px/1.1 var(--display); font-stretch: 125%; letter-spacing: .12em; text-transform: uppercase; }
+.appname { font: 800 22px/1.15 var(--display); font-stretch: 112%; overflow-wrap: break-word; hyphens: auto; }
+.pill { display: inline-block; flex: none; background: var(--yellow); color: var(--ink); font: 800 15px/1 var(--display); font-stretch: 112%; letter-spacing: .04em;
+  padding: 7px 13px; border-radius: 12px; transform: rotate(-3deg); box-shadow: 0 3px 0 var(--hard); }
+.page { max-width: 560px; margin: 0 auto; padding: 14px 16px calc(env(safe-area-inset-bottom, 0px) + 40px); position: relative; }
+.page > * + * { margin-top: 16px; }
+.foot { margin-top: 40px; text-align: center; font-size: 14px; color: var(--fg2); }
+.foot strong { font: 800 12px/1.6 var(--display); font-stretch: 120%; letter-spacing: .1em; text-transform: uppercase; color: var(--fg); }
+.foot a { color: var(--fg2); }
 
-  /* ---------- Mätare ---------- */
-  .meters { background: var(--brand); color: #fff; border: 0; display: grid; gap: 22px; }
-  .kicker { font-size: 12px; letter-spacing: .1em; text-transform: uppercase; opacity: .85; font-weight: 700; margin: 0; }
-  .m-head { display: block; }
-  .m-label { display: block; font-weight: 700; opacity: .92; }
-  .m-value { font-size: 30px; font-weight: 800; line-height: 1.1; }
-  .m-value small { font-size: 14px; font-weight: 600; opacity: .85; }
-  .track-wrap { position: relative; padding-top: 22px; margin-top: 4px; }
-  .track { height: 12px; border-radius: 999px; background: rgba(255,255,255,.25); overflow: hidden; }
-  .track > span { display: block; height: 100%; background: var(--yellow); border-radius: 999px; transition: width .5s ease; }
-  .marker { position: absolute; top: 0; bottom: -4px; width: 0; border-left: 2px solid #fff; }
-  .marker span { position: absolute; top: -2px; left: 0; transform: translateX(-50%); font-size: 12px; font-weight: 700; white-space: nowrap; background: var(--brand); padding: 0 4px; }
-  .m-cap { margin: 8px 0 0; font-size: 14px; opacity: .92; }
-  .m-cap strong { color: var(--yellow); }
+h2.title { font: 900 30px/1.08 var(--display); font-stretch: 112%; margin: 4px 0 0; letter-spacing: -.01em; text-wrap: balance; }
+h3 { font-family: var(--display); font-stretch: 105%; }
+.lead { color: var(--fg2); margin: 8px 0 0; }
+.small { font-size: 14px; color: var(--sub, var(--fg2)); }
+.loading { text-align: center; color: var(--fg2); padding: 24px 0; }
+.back { display: inline-block; font-weight: 800; color: var(--yellow); text-decoration: none; padding: 8px 0; min-height: 44px; }
+.back:hover { text-decoration: underline; }
+.linkbtn { background: none; border: 0; color: var(--yellow); font: 800 15px var(--body); cursor: pointer; padding: 8px 0; min-height: 44px; }
+.linkbtn:hover { text-decoration: underline; }
 
-  /* ---------- Formulär ---------- */
-  label, .label { display: block; font-weight: 700; margin: 0 0 6px; font-size: 15px; }
-  .hint { font-weight: 400; color: var(--muted); font-size: 13px; display: block; margin-top: 2px; }
-  input[type=text], input[type=tel], input[type=number], input[type=password] { width: 100%; font: inherit; color: var(--text); background: var(--bg);
-    border: 1px solid var(--line); border-radius: 12px; padding: 12px 14px; min-height: 50px; }
-  input:focus, button:focus-visible, a:focus-visible, summary:focus-visible { outline: 3px solid var(--sel-border); outline-offset: 2px; }
-  .field + .field { margin-top: 16px; }
-  .error { color: var(--err); font-size: 14px; margin: 6px 0 0; min-height: 1em; }
-  .formerror { color: var(--err); font-weight: 700; margin: 0 0 12px; }
-  .hp { position: absolute; left: -9999px; width: 1px; height: 1px; overflow: hidden; }
-  .check { display: flex; gap: 10px; align-items: flex-start; font-size: 14px; color: var(--muted); font-weight: 400; }
-  .check input { width: 22px; height: 22px; margin-top: 2px; flex-shrink: 0; accent-color: var(--brand); }
+/* ---------- Kort, flikar och rutor ---------- */
+.card { background: var(--cream); border-radius: var(--r); padding: 20px; box-shadow: 0 5px 0 var(--hard); }
+.notice { background: var(--cream); color: var(--ink); border-left: 8px solid var(--yellow); border-radius: 14px; padding: 12px 16px; font-size: 15px; --sub: var(--muted); }
+.tabs { display: flex; gap: 6px; background: rgba(0,0,0,.22); padding: 5px; border-radius: 999px; }
+.tabs button { flex: 1; border: 0; background: transparent; color: var(--fg2); font: 800 clamp(12.5px, 3.7vw, 14.5px)/1.1 var(--display); font-stretch: 105%;
+  padding: 10px 4px; border-radius: 999px; cursor: pointer; min-height: 46px; }
+.tabs button[aria-selected="true"] { background: var(--yellow); color: var(--ink); box-shadow: 0 3px 0 var(--hard); }
+.tabs ~ section { margin-top: 16px; }
+details { border-top: 1px solid var(--line); }
+details:first-of-type { border-top: 0; }
+summary { cursor: pointer; font: 800 16px/1.2 var(--display); font-stretch: 105%; padding: 14px 0; list-style: none; display: flex; justify-content: space-between; gap: 12px; min-height: 52px; align-items: center; }
+summary::-webkit-details-marker { display: none; }
+summary::after { content: "+"; display: grid; place-items: center; flex: none; width: 30px; height: 30px; border-radius: 50%; border: 2px solid var(--ink); font-size: 20px; line-height: 1; }
+details[open] summary::after { content: "–"; }
+details p { margin: 0 0 14px; }
 
-  .product { display: flex; align-items: center; gap: 12px; margin-bottom: 14px; }
-  .ico { flex: 0 0 48px; height: 48px; border-radius: 12px; background: var(--soft); display: grid; place-items: center; font-size: 26px; }
-  .product .name { font-weight: 700; }
-  .product .meta { font-size: 13px; color: var(--muted); }
-  .stepper { display: flex; align-items: center; justify-content: center; gap: 10px; }
-  .stepper button { width: 56px; height: 56px; border-radius: 14px; border: 1px solid var(--line); background: var(--soft); color: var(--text); font-size: 26px; font-weight: 700; cursor: pointer; }
-  .stepper input { width: 96px; text-align: center; min-height: 56px; font-size: 26px; font-weight: 800; -moz-appearance: textfield; }
-  .stepper input::-webkit-outer-spin-button, .stepper input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
-  .presets { display: flex; gap: 8px; justify-content: center; margin-top: 12px; }
-  .preset { min-width: 56px; min-height: 44px; border-radius: 12px; border: 2px solid var(--line); background: transparent; color: var(--text); font: inherit; font-weight: 800; cursor: pointer; }
-  .preset[aria-pressed="true"] { border-color: var(--sel-border); background: var(--soft); }
+/* ---------- Mätare ---------- */
+.card.meters { background: var(--ink); color: var(--cream); display: grid; gap: 22px; }
+.kicker { font: 800 12px/1 var(--display); font-stretch: 120%; letter-spacing: .12em; text-transform: uppercase; opacity: .85; margin: 0; }
+.m-head { display: block; }
+.m-label { display: block; font-weight: 700; opacity: .92; }
+.m-value { font: 900 34px/1.05 var(--display); font-stretch: 112%; }
+.m-value small { font: 600 15px var(--body); opacity: .85; }
+.track-wrap { position: relative; padding-top: 22px; margin-top: 4px; }
+.track { height: 14px; border-radius: 999px; background: rgba(255,248,214,.25); overflow: hidden; }
+.track > span { display: block; height: 100%; background: var(--yellow); border-radius: 999px; transition: width .5s ease; }
+.marker { position: absolute; top: 0; bottom: -4px; width: 0; border-left: 2px solid var(--cream); }
+.marker span { position: absolute; top: -2px; left: 0; transform: translateX(-50%); font-size: 12px; font-weight: 700; white-space: nowrap; background: var(--ink); padding: 0 4px; }
+.m-cap { margin: 8px 0 0; font-size: 15px; opacity: .95; }
+.m-cap strong { color: var(--yellow); }
 
-  .pay { background: var(--soft); border-radius: 14px; padding: 14px 16px; margin-top: 16px; }
-  .pay p { margin: 0; }
-  .pay .big { font-size: 22px; font-weight: 800; }
-  .pay .sub { color: var(--muted); font-size: 14px; margin-top: 2px; }
-  .pay .sub strong { color: var(--text); }
+/* ---------- Formulär ---------- */
+label, .label { display: block; font-weight: 800; margin: 0 0 6px; font-size: 15px; }
+.hint { font-weight: 400; color: var(--sub, var(--fg2)); font-size: 13px; display: block; margin-top: 2px; }
+input[type=text], input[type=tel], input[type=number], input[type=password], input[type=search], select, textarea {
+  width: 100%; font: inherit; color: var(--ink); background: var(--cream2); border: 2px solid var(--edge); border-radius: 14px; padding: 12px 14px; min-height: 52px; }
+textarea { min-height: 0; resize: vertical; }
+.field + .field { margin-top: 16px; }
+.error, .formerror, .okline { display: inline-block; max-width: 100%; border-radius: 10px; padding: 6px 12px; font-size: 14px; font-weight: 700; margin: 8px 0 0; background: var(--cream); }
+.error, .formerror { color: var(--err); }
+.okline { color: var(--ok); }
+.error:empty, .okline:empty { display: none; }
+.formerror { display: block; margin: 0 0 12px; font-size: 15px; }
+.hp { position: absolute; left: -9999px; width: 1px; height: 1px; overflow: hidden; }
+.check { display: flex; gap: 10px; align-items: flex-start; font-size: 14px; color: var(--sub, var(--fg2)); font-weight: 400; }
+.check input { width: 26px; height: 26px; margin-top: 0; flex-shrink: 0; }
+/* Egna kryssrutor: krämfärgade, med ett gult kryss på bläck när de är ibockade (aldrig vita) */
+.check input, .pick input { appearance: none; -webkit-appearance: none; display: grid; place-content: center; cursor: pointer;
+  background: var(--cream2); border: 3px solid var(--ink); border-radius: 9px; }
+.check input::after, .pick input::after { content: ""; width: 8px; height: 15px; border: solid var(--yellow); border-width: 0 4px 4px 0; transform: rotate(45deg) translate(-1px, -2px); opacity: 0; }
+.check input:checked, .pick input:checked { background: var(--ink); }
+.check input:checked::after, .pick input:checked::after { opacity: 1; }
+.grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
 
-  .primary { display: block; width: 100%; text-align: center; text-decoration: none; border: 0; border-radius: 14px; background: var(--cta-bg); color: var(--cta-ink);
-    font: inherit; font-weight: 800; font-size: 17px; padding: 14px; cursor: pointer; min-height: 54px; }
-  .primary[disabled] { opacity: .6; cursor: wait; }
-  .ghost { width: 100%; border: 2px solid var(--line); border-radius: 14px; background: transparent; color: var(--text); font: inherit; font-weight: 700; padding: 12px; cursor: pointer; min-height: 48px; }
+.product { display: flex; align-items: center; gap: 12px; margin-bottom: 14px; }
+.ico { flex: 0 0 52px; height: 52px; border-radius: 14px; background: var(--yellow); display: grid; place-items: center; font-size: 28px; transform: rotate(-4deg); }
+.product .name { font-weight: 800; }
+.product .meta { font-size: 13px; color: var(--sub); }
+.stepper { display: flex; align-items: center; justify-content: center; gap: 10px; }
+.stepper button { width: 58px; height: 58px; border-radius: 16px; border: 2px solid var(--ink); background: var(--cream2); color: var(--ink); font: 900 28px var(--display); cursor: pointer; box-shadow: 0 4px 0 var(--hard); }
+.stepper button:active { transform: translateY(3px); box-shadow: 0 1px 0 var(--hard); }
+.stepper input { width: 100px; text-align: center; min-height: 58px; font: 900 28px var(--display); -moz-appearance: textfield; }
+.stepper input::-webkit-outer-spin-button, .stepper input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+.presets { display: flex; gap: 8px; justify-content: center; margin-top: 12px; }
+.preset { min-width: 58px; min-height: 46px; border-radius: 14px; border: 2px solid var(--ink); background: transparent; color: var(--ink); font: 800 16px var(--display); cursor: pointer; }
+.preset[aria-pressed="true"] { background: var(--yellow); box-shadow: 0 3px 0 var(--hard); }
 
-  /* ---------- Bekräftelse ---------- */
-  .done h2 { margin: 0 0 4px; font-size: 24px; }
-  .okline { color: var(--ok); font-weight: 800; margin: 0 0 4px; }
-  .sumrow { display: flex; justify-content: space-between; gap: 12px; padding: 10px 0; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); margin: 14px 0; font-weight: 700; }
-  .swish { border: 2px solid var(--yellow); border-radius: 16px; padding: 16px; }
-  .swish h3 { margin: 0 0 4px; font-size: 20px; }
-  .copyrow { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 10px 0; border-top: 1px solid var(--line); }
-  .copyrow:first-of-type { border-top: 0; }
-  .copyrow .k { font-size: 12px; color: var(--muted); letter-spacing: .06em; text-transform: uppercase; font-weight: 700; }
-  .copyrow .v { font-size: 20px; font-weight: 800; word-break: break-word; }
-  .copy { flex-shrink: 0; min-width: 84px; min-height: 44px; border-radius: 12px; border: 2px solid var(--line); background: transparent; color: var(--text); font: inherit; font-weight: 700; cursor: pointer; }
-  .copy.ok { border-color: var(--ok); color: var(--ok); }
-  .steps { margin: 14px 0 0; padding-left: 20px; }
-  .steps li + li { margin-top: 4px; }
-  .small { font-size: 14px; color: var(--muted); }
-  .foot { text-align: center; font-size: 12px; color: var(--muted); margin-top: 28px; }
-  .foot strong { color: var(--text); }
-  .foot a { color: var(--muted); }
-  .loading { text-align: center; color: var(--muted); padding: 24px 0; }
-  [hidden] { display: none !important; }
+.pay { background: var(--cream2); border-radius: 16px; padding: 14px 16px; margin-top: 16px; }
+.pay p { margin: 0; }
+.pay .big { font: 900 24px/1.15 var(--display); font-stretch: 108%; }
+.pay .sub { color: var(--muted); font-size: 14px; margin-top: 2px; }
+.pay .sub strong { color: var(--text); }
 
-  /* ---------- Klubbsidan: laglista (nytt jämfört med P2019-sidan) ---------- */
-  .teams { display: grid; grid-template-columns: minmax(0, 1fr); gap: 12px; margin-top: 16px; }
-  .teamcard { display: flex; align-items: center; gap: 14px; text-decoration: none; color: inherit; min-height: 72px;
-    background: var(--card); border: 1px solid var(--line); border-radius: var(--r); padding: 14px 16px; box-shadow: var(--shadow); }
-  a.teamcard:hover { border-color: var(--sel-border); }
-  .teamcard.off { opacity: .6; }
-  .teamcard .pill { flex-shrink: 0; min-width: 64px; text-align: center; }
-  .t-body { flex: 1; min-width: 0; display: flex; flex-direction: column; }
-  .t-title { font-weight: 700; }
-  .t-sub { font-size: 13px; color: var(--muted); }
-  .badges { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 4px; }
-  .badge { font-size: 12px; font-weight: 700; padding: 2px 10px; border-radius: 999px; background: var(--soft); color: var(--muted); white-space: nowrap; }
-  .badge.live { background: var(--ok); color: var(--ok-ink); }
-  .badge.demo { border: 1px dashed var(--muted); background: transparent; }
-  .back { display: inline-block; font-weight: 700; color: var(--accent); text-decoration: none; padding: 8px 0; min-height: 44px; }
-  .back:hover { text-decoration: underline; }
+/* ---------- Knappar ---------- */
+.primary { display: block; width: 100%; text-align: center; text-decoration: none; border: 0; border-radius: 16px; background: var(--ink); color: var(--yellow);
+  font: 800 17px/1.1 var(--display); font-stretch: 105%; padding: 15px; cursor: pointer; min-height: 56px; box-shadow: 0 5px 0 var(--hard); transition: transform .12s ease, box-shadow .12s ease; }
+.primary:hover { transform: translateY(-2px); box-shadow: 0 7px 0 var(--hard); }
+.primary:active { transform: translateY(3px); box-shadow: 0 2px 0 var(--hard); }
+.primary:focus-visible, .mini:focus-visible, .ghost:focus-visible { box-shadow: 0 5px 0 var(--hard), 0 0 0 3px var(--ink); }
+.primary[disabled] { opacity: .55; cursor: not-allowed; transform: none; }
+.ghost { width: 100%; border: 2px solid var(--ink); border-radius: 16px; background: var(--cream); color: var(--ink); font: 800 16px var(--display); font-stretch: 105%; padding: 12px; cursor: pointer; min-height: 50px; box-shadow: 0 4px 0 var(--hard); }
+.ghost:active { transform: translateY(2px); box-shadow: 0 2px 0 var(--hard); }
+.btnrow { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+.mini { min-height: 44px; padding: 0 14px; border-radius: 12px; border: 2px solid var(--ink); background: var(--cream2); color: var(--ink);
+  font: 800 14px var(--display); font-stretch: 105%; cursor: pointer; text-decoration: none; display: inline-flex; align-items: center; }
+.mini.go { background: var(--ink); color: var(--yellow); }
+.mini[disabled] { opacity: .55; cursor: wait; }
 
-  /* ---------- Lägg till lag (nytt-lag.html) ---------- */
-  .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
-  .out { width: 100%; font: 13px/1.5 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; color: var(--text); background: var(--bg);
-    border: 1px solid var(--line); border-radius: 12px; padding: 12px; min-height: 150px; resize: vertical; white-space: pre; overflow: auto; }
-  .warn { color: var(--err); font-size: 14px; margin: 6px 0 0; }
-  .steps li { margin-top: 8px; }
-  .tabs ~ section { margin-top: 16px; }   /* samma avstånd under flikarna som på P2019-sidan */
+/* ---------- Bekräftelse efter beställning ---------- */
+.done h2 { margin: 0 0 4px; font: 900 26px/1.1 var(--display); font-stretch: 112%; }
+.sumrow { display: flex; justify-content: space-between; gap: 12px; padding: 10px 0; border-top: 2px solid var(--ink); border-bottom: 2px solid var(--ink); margin: 14px 0; font-weight: 800; }
+.swish { background: var(--yellow); color: var(--ink); border: 3px solid var(--ink); border-radius: 18px; padding: 16px; --sub: #3d3a10; }
+.swish h3 { margin: 0 0 4px; font-size: 21px; }
+.copyrow { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 10px 0; border-top: 2px solid rgba(15,26,51,.25); }
+.copyrow:first-of-type { border-top: 0; }
+.copyrow .k { font-size: 12px; color: #3d3a10; letter-spacing: .08em; text-transform: uppercase; font-weight: 800; }
+.copyrow .v { font: 800 22px/1.2 var(--display); word-break: break-word; }
+.copy { flex-shrink: 0; min-width: 88px; min-height: 46px; border-radius: 12px; border: 2px solid var(--ink); background: var(--cream); color: var(--ink); font: 800 14px var(--display); cursor: pointer; box-shadow: 0 3px 0 var(--hard); }
+.copy.ok { background: var(--ok); border-color: var(--ok); color: var(--cream); }
+.steps { margin: 14px 0 0; padding-left: 22px; }
+.steps li { margin-top: 6px; }
 
-  /* ---------- Adminvy (admin.html) ---------- */
-  .topactions { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
-  .linkbtn { background: none; border: 0; color: var(--accent); font: inherit; font-weight: 700; cursor: pointer; padding: 8px 0; min-height: 44px; }
-  .linkbtn:hover { text-decoration: underline; }
-  input[type=search], select { width: 100%; font: inherit; color: var(--text); background: var(--bg);
-    border: 1px solid var(--line); border-radius: 12px; padding: 12px 14px; min-height: 50px; }
-  .stats { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 12px; }
-  .stat { background: var(--card); border: 1px solid var(--line); border-radius: 16px; padding: 14px; }
-  .stat.alert { border-color: var(--yellow); border-width: 2px; }
-  .stat .l { font-size: 12px; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); font-weight: 700; }
-  .stat .n { font-size: 28px; font-weight: 800; line-height: 1.15; }
-  .stat .s { font-size: 13px; color: var(--muted); }
-  .kv { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; padding: 10px 0; border-top: 1px solid var(--line); }
-  .kv.first { border-top: 0; padding-top: 0; }
-  .kv .k { color: var(--muted); }
-  .kv .v { font-weight: 700; text-align: right; word-break: break-word; }
-  .pos { color: var(--ok); }
-  .neg { color: var(--err); }
-  .chips { display: flex; flex-wrap: wrap; gap: 8px; }
-  .chip { min-height: 44px; padding: 0 14px; border-radius: 999px; border: 2px solid var(--line); background: transparent; color: var(--text); font: inherit; font-weight: 700; cursor: pointer; }
-  .chip[aria-pressed="true"] { border-color: var(--sel-border); background: var(--soft); }
-  .ordercard { background: var(--card); border: 1px solid var(--line); border-radius: 16px; padding: 14px; }
-  .ordercard + .ordercard { margin-top: 10px; }
-  .o-head { display: flex; justify-content: space-between; gap: 12px; align-items: baseline; }
-  .o-name { font-weight: 800; }
-  .o-sum { font-weight: 700; white-space: nowrap; }
-  .o-sub { font-size: 13px; color: var(--muted); margin-top: 2px; }
-  .badge.unpaid { background: var(--yellow); color: var(--navy); }
-  .btnrow { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
-  .mini { min-height: 44px; padding: 0 14px; border-radius: 12px; border: 2px solid var(--line); background: transparent; color: var(--text);
-    font: inherit; font-weight: 700; cursor: pointer; text-decoration: none; display: inline-flex; align-items: center; }
-  .mini.go { background: var(--cta-bg); color: var(--cta-ink); border-color: transparent; }
-  .mini[disabled] { opacity: .6; cursor: wait; }
-  .keybox { display: flex; align-items: center; justify-content: space-between; gap: 10px; background: var(--bg); border: 1px dashed var(--muted); border-radius: 12px; padding: 10px 12px; margin-top: 6px; }
-  .keybox code { font: 14px/1.4 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; word-break: break-all; }
-  .checklist { list-style: none; padding: 0; margin: 12px 0 0; }
-  .checklist li + li { margin-top: 10px; }
-  .teamadmin + .teamadmin { margin-top: 12px; }
-  .ordercard .error:empty { display: none; }
+/* ---------- Klubbsidan: framsida med lagbrickor ---------- */
+.hero { position: relative; padding: 10px 0 6px; }
+.hero .deco { position: absolute; top: 0; bottom: 0; left: -16px; right: -16px; overflow: hidden; pointer-events: none; z-index: 0; }
+.hero .cirkel { position: absolute; right: -70px; top: 60px; width: 230px; height: 230px; opacity: .2; }
+.hero .cirkel circle { fill: none; stroke: var(--fg); stroke-width: 3; }
+.hero .cirkel .spot { fill: var(--fg); stroke: none; }
+.hero > *:not(.deco) { position: relative; z-index: 1; }
+@media (min-width: 480px) { .hero .cirkel { right: 16px; } }
+.hero h1 { margin: 8px 0 0; font: 900 clamp(46px, 15vw, 68px)/.95 var(--display); font-stretch: 125%; letter-spacing: -.015em; text-wrap: balance; }
+.mark { display: inline-block; background: var(--yellow); color: var(--ink); padding: .02em .22em .08em; border-radius: .2em; transform: rotate(-2.5deg); margin-top: .12em; }
+.hero .lead { margin: 16px 0 0; font-size: 19px; max-width: 30ch; color: var(--fg); text-wrap: balance; }
+.hero-steps { list-style: none; margin: 20px 0 0; padding: 0; display: flex; flex-wrap: wrap; gap: 8px; }
+.hero-steps li { display: flex; align-items: center; gap: 8px; border: 2px solid var(--fg2); border-radius: 999px; padding: 6px 14px 6px 6px; font-weight: 700; font-size: 15px; min-height: 40px; }
+.hero-steps b { display: grid; place-items: center; width: 26px; height: 26px; border-radius: 50%; background: var(--fg); color: var(--bg-a); font: 800 14px/1 var(--display); }
+.hero .fast { margin: 10px 0 0; font-size: 15px; color: var(--fg2); }
+.mittlinje { display: flex; align-items: center; margin: 26px 0 0; }
+.mittlinje::before, .mittlinje::after { content: ""; flex: 1; height: 3px; background: var(--fg2); opacity: .55; border-radius: 2px; }
+.mittlinje i { width: 30px; height: 30px; border: 3px solid var(--fg2); border-radius: 50%; opacity: .8; position: relative; }
+.mittlinje i::after { content: ""; position: absolute; inset: 9px; border-radius: 50%; background: var(--fg2); }
+.teams { list-style: none; margin: 22px 0 0; padding: 0; display: grid; grid-template-columns: minmax(0, 1fr); gap: 18px; }
+.tile { display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 14px; min-height: 116px; padding: 14px; border-radius: 26px;
+  background: var(--yellow); color: var(--ink); text-decoration: none; box-shadow: 0 6px 0 var(--hard); transition: transform .12s ease, box-shadow .12s ease; }
+a.tile:hover { transform: translateY(-2px); box-shadow: 0 8px 0 var(--hard); }
+a.tile:active { transform: translateY(4px); box-shadow: 0 2px 0 var(--hard); }
+.teams > li:nth-child(2) .plate { transform: rotate(3deg); }
+.teams > li:nth-child(3) .plate { transform: rotate(-2deg); }
+.plate { display: grid; place-items: center; align-content: center; width: 88px; height: 88px; border-radius: 20px; background: var(--ink); color: var(--yellow);
+  transform: rotate(-4deg); font-family: var(--display); font-stretch: 125%; text-align: center; }
+.plate b { font-weight: 900; font-size: 44px; line-height: .9; }
+.plate i { font-style: normal; font-weight: 800; font-size: 15px; letter-spacing: .06em; margin-top: 2px; font-variant-numeric: tabular-nums; }
+.plate.lang b { font-size: 24px; line-height: 1.05; padding: 0 6px; overflow-wrap: anywhere; }
+.t-body { display: block; min-width: 0; }
+.t-title { display: block; font: 800 21px/1.1 var(--display); font-stretch: 105%; overflow-wrap: break-word; hyphens: auto; }
+.t-sub { display: block; margin-top: 4px; font: 600 16px/1.3 var(--display); font-stretch: 100%; }
+.t-state { display: inline-flex; align-items: center; gap: 8px; background: var(--ink); color: var(--cream); border-radius: 999px; padding: 5px 12px 5px 10px; font: 700 14px/1.2 var(--display); font-stretch: 100%; }
+.t-go { display: grid; place-items: center; width: 46px; height: 46px; border-radius: 50%; background: var(--ink); color: var(--yellow); }
+.tile.snart { background: transparent; color: var(--fg); box-shadow: none; border: 3px dashed var(--fg2); padding: 11px; }
+.tile.snart .plate { background: transparent; color: var(--fg); border: 3px dashed var(--fg2); }
+.tile.snart .t-state { background: transparent; color: var(--fg); border: 2px solid var(--fg2); }
+.tile.slut { background: rgba(0,0,0,.2); color: var(--fg2); box-shadow: none; min-height: 92px; }
+.tile.slut .plate { background: transparent; color: var(--fg2); border: 3px solid var(--fg2); transform: none; width: 72px; height: 72px; }
+.tile.slut .plate b { font-size: 34px; } .tile.slut .plate i { font-size: 13px; }
+.tile.slut .t-state { background: transparent; color: var(--fg2); border: 2px solid var(--fg2); }
+.avslutade { border: 0; margin-top: 22px; }
+.avslutade summary { font-size: 15px; letter-spacing: .06em; text-transform: uppercase; color: var(--fg2); justify-content: flex-start; gap: 10px; flex-direction: row-reverse; }
+.avslutade summary::after { border-color: var(--fg2); }
+.avslutade .teams { margin-top: 6px; }
+/* Smala telefoner: lite kompaktare, så att långa ord som "Chokladförsäljning" ryms utan att brytas mitt i */
+@media (max-width: 430px) {
+  .appname { font-size: 19px; font-stretch: 100%; }
+  .tile { gap: 10px; padding: 12px; }
+  .plate { width: 76px; height: 76px; }
+  .plate b { font-size: 38px; }
+  .plate i { font-size: 14px; }
+  .t-go { width: 40px; height: 40px; }
+  .t-title { font-size: 18px; font-stretch: 100%; }
+  .t-sub { font-size: 15px; }
+  .tile.snart { padding: 9px; }
+}
+@keyframes pop { from { opacity: 0; transform: translateY(18px) scale(.96); } to { opacity: 1; transform: none; } }
+.teams > li { animation: pop .5s cubic-bezier(.2, 1.3, .4, 1) both; animation-delay: calc(var(--i, 0) * 80ms + 120ms); }
 
-  /* ---------- Utlämning ---------- */
-  .badges { display: flex; flex-wrap: wrap; gap: 6px; }
-  .badge.picked { background: var(--brand); color: #fff; }
-  .okline:empty { display: none; }
-  .pick { display: grid; grid-template-columns: 32px minmax(0, 1fr) auto; gap: 12px; align-items: center; min-height: 60px; margin: 0; padding: 8px 14px;
-    background: var(--card); border: 1px solid var(--line); border-radius: 16px; cursor: pointer; font-weight: 400; }
-  .pick + .pick { margin-top: 8px; }
-  .pick input { width: 28px; height: 28px; margin: 0; accent-color: var(--accent); }
-  .pick:has(input:checked) { background: var(--soft); }
-  .p-main { display: flex; flex-direction: column; min-width: 0; }
-  .p-name { font-weight: 800; overflow-wrap: anywhere; }
-  .p-sub { font-size: 13px; color: var(--muted); }
-  .printonly { display: none; }
-  @media print {
-    :root { color-scheme: light; }
-    body { background: #fff; color: #000; }
-    .topbar, .foot, .tabs, .topactions, .noprint { display: none !important; }
-    .page { max-width: none; padding: 0; }
-    h2.title { font-size: 14px; margin: 0; }
-    .printonly { display: block; font-size: 20px; font-weight: 800; margin: 0 0 12px; }
-    .pick, .pick[hidden] { display: grid !important; background: #fff !important; border: 0; border-bottom: 1px solid #888; border-radius: 0; box-shadow: none; break-inside: avoid; min-height: 0; padding: 7px 0; }
-    .pick .badge { background: transparent !important; color: #000 !important; border: 1px solid #000; }
-    .p-sub { color: #333; }
-  }
+.badges { display: flex; flex-wrap: wrap; gap: 6px; }
+.badge { font: 800 12px/1.4 var(--display); letter-spacing: .02em; padding: 2px 10px; border-radius: 999px; background: var(--cream2); color: var(--ink); border: 1.5px solid var(--edge); white-space: nowrap; }
+.badge.live { background: var(--ok); border-color: var(--ok); color: var(--cream); }
+.badge.unpaid { background: var(--yellow); border-color: var(--ink); color: var(--ink); }
+.badge.picked { background: var(--blue); border-color: var(--blue); color: var(--cream); }
+.badge.demo { border: 1.5px dashed var(--edge); background: transparent; }
 
-  textarea { width: 100%; font: inherit; color: var(--text); background: var(--bg); border: 1px solid var(--line); border-radius: 12px; padding: 12px 14px; resize: vertical; }
-  textarea:focus { outline: 3px solid var(--sel-border); outline-offset: 2px; }
+/* ---------- Adminvyn ---------- */
+.topactions { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
+.stats { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 12px; }
+.stat { background: var(--cream); border-radius: 18px; padding: 14px; box-shadow: 0 4px 0 var(--hard); }
+.stat.alert { background: var(--yellow); }
+.stat .l { font: 800 12px/1.2 var(--display); font-stretch: 112%; letter-spacing: .06em; text-transform: uppercase; color: var(--sub); }
+.stat .n { font: 900 32px/1.1 var(--display); font-stretch: 112%; }
+.stat .s { font-size: 13px; color: var(--sub); }
+.kv { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; padding: 10px 0; border-top: 1px solid var(--line); }
+.kv.first { border-top: 0; padding-top: 0; }
+.kv .k { color: var(--sub); }
+.kv .v { font-weight: 800; text-align: right; word-break: break-word; }
+.pos { color: var(--ok); }
+.neg { color: var(--err); }
+.chips { display: flex; flex-wrap: wrap; gap: 8px; }
+.chip { min-height: 44px; padding: 0 16px; border-radius: 999px; border: 2px solid var(--fg2); background: transparent; color: var(--fg); font: 700 15px var(--body); cursor: pointer; }
+.chip[aria-pressed="true"] { border-color: var(--yellow); background: var(--yellow); color: var(--ink); box-shadow: 0 3px 0 var(--hard); }
+.ordercard { background: var(--cream); border-radius: 18px; padding: 14px; box-shadow: 0 4px 0 var(--hard); }
+.ordercard + .ordercard { margin-top: 12px; }
+.o-head { display: flex; justify-content: space-between; gap: 12px; align-items: baseline; }
+.o-name { font-weight: 800; }
+.o-sum { font-weight: 800; white-space: nowrap; }
+.o-sub { font-size: 13px; color: var(--sub); margin-top: 2px; }
+.keybox { display: flex; align-items: center; justify-content: space-between; gap: 10px; background: var(--cream2); border: 2px dashed var(--edge); border-radius: 12px; padding: 10px 12px; margin-top: 6px; }
+.keybox code { font: 14px/1.4 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; word-break: break-all; }
+.checklist { list-style: none; padding: 0; margin: 12px 0 0; }
+.checklist li + li { margin-top: 10px; }
+.teamadmin + .teamadmin { margin-top: 14px; }
+.ordercard .error:empty { display: none; }
+.out { width: 100%; font: 13px/1.5 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; color: var(--ink); background: var(--cream2); border: 2px solid var(--edge); border-radius: 12px; padding: 12px; min-height: 150px; resize: vertical; white-space: pre; overflow: auto; }
+
+/* ---------- Utlämning ---------- */
+.pick { display: grid; grid-template-columns: 32px minmax(0, 1fr) auto; gap: 12px; align-items: center; min-height: 62px; margin: 0; padding: 8px 14px;
+  background: var(--cream); border-radius: 16px; cursor: pointer; font-weight: 400; box-shadow: 0 4px 0 var(--hard); }
+.pick + .pick { margin-top: 12px; }
+.pick input { width: 30px; height: 30px; margin: 0; }
+.pick:has(input:checked) { background: var(--cream2); }
+.p-main { display: flex; flex-direction: column; min-width: 0; }
+.p-name { font-weight: 800; overflow-wrap: anywhere; }
+.p-sub { font-size: 13px; color: var(--sub); }
+.printonly { display: none; }
+
+@media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }
+
+@media print {
+  :root { color-scheme: light; }
+  body { background: #fff; color: #000; }
+  .bunting, .topbar, .foot, .tabs, .topactions, .noprint { display: none !important; }
+  .page { max-width: none; padding: 0; }
+  h2.title { font-size: 14px; margin: 0; color: #000; }
+  .printonly { display: block; font: 800 20px var(--display); margin: 0 0 12px; color: #000; }
+  .pick, .pick[hidden] { display: grid !important; background: #fff !important; border: 0; border-bottom: 1px solid #888; border-radius: 0; box-shadow: none; break-inside: avoid; min-height: 0; padding: 7px 0; color: #000; }
+  .pick .badge { background: transparent !important; color: #000 !important; border: 1px solid #000; }
+  .p-sub { color: #333; }
+}

@@ -17,8 +17,8 @@ var KLUBB = {
   namn: "Eskilsminne IF",
   titel: "Lagförsäljning",              // platshållare, se README
   motto: "Respekt – Kamratskap – Jämlikhet",
-  logo: "",                             // lägg filen i den här mappen, till exempel "logga.png". Fråga klubben först.
-  valjLagText: "Välj ditt lag för att beställa. Pengarna går direkt till lagets egen lagkassa.",
+  logo: "assets/klubbmarke.png",         // klubbmärket. Klubben har gett tillåtelse att använda det.
+  valjLagText: "Pengarna går direkt till lagets egen lagkassa.",
   kontakt: "Hittar du inte svaret? Skriv i lagets WhatsApp-grupp.",
 
   // Adressen till klubbens Apps Script (webbappens URL, slutar på /exec). Se README, steg "Sätt upp servern".
@@ -84,17 +84,17 @@ var LAG_EXTRA = {
   },
   // Exempel på ett lag som säljer något annat än kakor: egen produkt, egna frågor.
   p2018: {
-    produkt: { namn: "Bingolott", detalj: "Vinster i lagets bingo", emoji: "🎟️", enhet: "lotter", enhetEn: "lott" },
+    produkt: { namn: "Kanelbullar", detalj: "Påse med sex hembakade bullar", emoji: "🥐", enhet: "påsar", enhetEn: "påse" },
     snabbval: [2, 5, 10],
-    intro: "Köp en bingolott och stötta laget. Lottdragningen är på lagets vårfest.",
-    utlamning: "Lotterna delas ut på träningen.",
-    belonning: "Når vi {mal} lotter blir det extra stora vinster.",
-    belonningNatt: "Det blir extra stora vinster på bingot.",
+    intro: "Köp en påse kanelbullar och stötta laget. Bullarna bakas av lagets föräldrar.",
+    utlamning: "Bullarna delas ut på träningen.",
+    belonning: "Når vi {mal} påsar åker hela laget på en gemensam fika.",
+    belonningNatt: "Hela laget åker på en gemensam fika.",
     faq: [
-      { f: "Vad kostar en lott?", s: "{pris} per lott. Du swishar direkt när du har beställt." },
-      { f: "När är dragningen?", s: "På lagets vårfest. Datum meddelas i lagets WhatsApp-grupp." },
-      { f: "Vad händer om vi når {mal} lotter?", kraver: "belonning", s: "{belonning}" },
-      { f: "Vad händer om det inte blir tillräckligt många lotter?", s: "Säljer vi färre än {minimum} lotter ställer vi in bingot och betalar tillbaka din Swish." }
+      { f: "Vad kostar en påse?", s: "{pris} per påse. Du swishar direkt när du har beställt." },
+      { f: "När får jag bullarna?", s: "De delas ut på träningen. Datum meddelas i lagets WhatsApp-grupp." },
+      { f: "Vad händer om vi når {mal} påsar?", kraver: "belonning", s: "{belonning}" },
+      { f: "Vad händer om det inte blir tillräckligt många beställningar?", s: "Säljer vi färre än {minimum} påsar bakar vi inte, och då betalar vi tillbaka din Swish." }
     ]
   }
 };
@@ -106,8 +106,8 @@ var LAG_EXTRA = {
 var DEMO_LAG = [
   { slug: "f2017", namn: "F2017", kampanj: "Chokladförsäljning", status: "pagar",
     swish: { nummer: "", namnPaKonto: "Eskilsminne IF F2017", meddelande: "" }, demoBestallt: 94 },
-  { slug: "p2018", namn: "P2018", kampanj: "Bingolotter", status: "pagar",
-    pris: 50, inkopspris: 20, minimum: 100, mal: 200, maxAntal: 20, kartong: 0,
+  { slug: "p2018", namn: "P2018", kampanj: "Kanelbullar", status: "pagar",
+    pris: 60, inkopspris: 25, minimum: 50, mal: 120, maxAntal: 10, kartong: 0,
     swish: { nummer: "", namnPaKonto: "Eskilsminne IF P2018", meddelande: "" }, demoBestallt: 61 },
   { slug: "f2016", namn: "F2016", kampanj: "Chokladförsäljning", status: "snart",
     swish: { nummer: "", namnPaKonto: "Eskilsminne IF F2016", meddelande: "" } },
