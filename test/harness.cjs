@@ -49,7 +49,7 @@ class Sheet {
 }
 
 function skapaMiljo() {
-  const blad = {}, cache = new Map(), cacheSek = new Map(), props = new Map(), loggar = [];
+  const blad = {}, cache = new Map(), cacheSek = new Map(), props = new Map(), loggar = [], hooks = {};
   const ss = {
     getSheetByName: (n) => blad[n] || null,
     insertSheet: (n) => (blad[n] = new Sheet(n)),
@@ -58,7 +58,7 @@ function skapaMiljo() {
     console: { log: (...a) => loggar.push(a.join(" ")), error: (...a) => loggar.push("ERROR " + a.join(" ")) },
     Date, // samma Date som testet, så att instanceof och toISOString fungerar likadant
     SpreadsheetApp: { getActive: () => ss, flush() {} },
-    LockService: { getScriptLock: () => ({ waitLock() {}, tryLock: () => true, releaseLock() {} }) },
+    LockService: { getScriptLock: () => ({ waitLock() { if (hooks.vidLas) hooks.vidLas(); }, tryLock: () => true, releaseLock() {} }) },   // hooks.vidLas: något som hinner hända medan en beställning väntar på låset
     CacheService: { getScriptCache: () => ({
       get: (k) => (cache.has(k) ? cache.get(k) : null),
       put: (k, v, sek) => {
@@ -87,7 +87,7 @@ function skapaMiljo() {
 
   const parse = (o) => JSON.parse(o.getContent());
   return {
-    ctx, blad, cache, cacheSek, props, loggar,
+    ctx, blad, cache, cacheSek, props, loggar, hooks,
     lasningar: () => Object.values(blad).reduce((s, b) => s + b.lasningar, 0),
     setup: () => ctx.setup(),
     post: (obj) => parse(ctx.doPost({ postData: { contents: JSON.stringify(obj) } })),

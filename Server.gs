@@ -20,9 +20,11 @@ var CFG = {
   FEL_MAX: 10,          // högst så många felaktiga nyckelförsök per lag ...
   FEL_MAX_ALLA: 40,     // ... och totalt ...
   FEL_MINUTER: 10,      // ... under så här många minuter
-  CACHE_LISTA: "pub:lag", // den offentliga laglistan sparas i serverns minne ...
-  CACHE_SEK: 30         // ... så här många sekunder, så att besökare inte läser kalkylarket varje gång
+  CACHE_LISTA: "pub:lag", // den offentliga laglistan sparas i serverns minne så att besökare inte läser kalkylarket varje gång ...
+  CACHE_SEK: 300,       // ... och räknas om efter så här många sekunder, som skyddsnät. Annars uppdateras den vid varje beställning och ändring.
+  KOD_SEK: 900          // en beställningskod kommer ihåg sin beställning så här länge (skyddar mot dubbletter när föräldern försöker igen)
 };
+var BARN_RE = /^[\p{L}][\p{L}\p{M} '’\-.&\/,()]{1,39}$/u;   // barnets namn: börjar med en bokstav, så inget kan tolkas som formel
 
 var LAG_FLIK = "Lag";
 var ORDER_FLIK = "Beställningar";
@@ -121,6 +123,10 @@ function doPost(e) {
 function hanteraBestallning(d) {
   // Honeypot: låtsas att det gick bra, spara inget.
   if (d.website) return json({ ok: true, id: "0000", belopp: 0 });
+  // Har den här beställningskoden redan gett en beställning (föräldern försökte igen efter ett svar som uteblev) får hen samma kvitto igen.
+  var kod = /^[A-Za-z0-9:_-]{8,80}$/.test(String(d.kod || "")) ? String(d.kod) : "";
+  var redan = kod ? kvittoFranKod(kod, String(d.lag || "").toLowerCase()) : null;
+  if (redan) return json(redan);
   if (typeof d.t !== "number" || d.t < CFG.MIN_TID_MS) return json({ ok: false, fel: "Vänta några sekunder och försök igen." });
 
   var lag = hittaLag(String(d.lag || "").toLowerCase());
@@ -129,7 +135,7 @@ function hanteraBestallning(d) {
   var antal = Number(d.antal);
   if (!lag) return json({ ok: false, fel: "Okänt lag." });
   if (lag.status !== "pagar") return json({ ok: false, fel: "Försäljningen är inte öppen just nu." });
-  if (!/^[\p{L}][\p{L} '\-.]{1,39}$/u.test(barn)) return json({ ok: false, fel: "Skriv barnets namn (2–40 tecken)." });
+  if (!BARN_RE.test(barn)) return json({ ok: false, fel: "Skriv barnets namn med bokstäver (2–40 tecken). Mellanslag, bindestreck och & går bra." });
   if (!/^07\d{8}$/.test(mobil)) return json({ ok: false, fel: "Skriv ett svenskt mobilnummer, till exempel 070 123 45 67." });
   if (!(antal >= 1 && antal <= lag.maxAntal && antal % 1 === 0)) return json({ ok: false, fel: "Välj mellan 1 och " + lag.maxAntal + "." });
   if (d.samtycke !== true) return json({ ok: false, fel: "Du behöver godkänna för att kunna beställa." });
@@ -142,6 +148,9 @@ function hanteraBestallning(d) {
 
   var belopp = antal * lag.pris;   // räknas alltid här, aldrig från sidan
   return medLas(function () {
+    // En likadan beställning kan ha hunnit bli klar medan den här väntade på sin tur.
+    var klar = kod ? kvittoFranKod(kod, lag.slug) : null;
+    if (klar) return json(klar);
     // Läs om laget inne i låset: radnumret kan ha ändrats och numreringen ska inte kunna dubbleras.
     var l = hittaLag(lag.slug);
     var cell = flik(LAG_FLIK).getRange(l._rad, LAG_COL.NASTA);
@@ -152,9 +161,19 @@ function hanteraBestallning(d) {
     sh.appendRow([new Date(), "'" + id, l.slug, barn, "'" + mobil, antal, belopp, ""]);
     SpreadsheetApp.flush();
     raknaUppLista(l.slug, antal);
+    if (kod) { try { cache.put("kod:" + l.slug + ":" + kod, JSON.stringify({ id: id, belopp: belopp }), CFG.KOD_SEK); } catch (err) {} }
     cache.put(nyckel, String(tidigare + 1), CFG.SPARR_MINUTER * 60);
     return json({ ok: true, id: id, belopp: belopp });
   });
+}
+
+function kvittoFranKod(kod, slug) {
+  var sparat = CacheService.getScriptCache().get("kod:" + slug + ":" + kod);   // per lag, så att en kod aldrig kan hämta ett annat lags kvitto
+  if (!sparat) return null;
+  try {
+    var s = JSON.parse(sparat);
+    return { ok: true, id: s.id, belopp: s.belopp };
+  } catch (err) { return null; }
 }
 
 /* ---------- Adminvy ---------- */
@@ -172,20 +191,23 @@ function hanteraAdmin(d) {
     godkann: opGodkann, skickaTillbaka: opSkickaTillbaka };
   var har = function (o, k) { return Object.prototype.hasOwnProperty.call(o, k); };
   var svar;
-  if (a.roll === "utlamning") {
-    if (!har(utlamningsOps, op)) return json({ ok: false, fel: "Den här länken får bara bocka av utlämningen." });
-    svar = utlamningsOps[op](a.lag, d, a.roll);
-  } else if (har(lagOps, op)) {
-    if (!a.lag) return json({ ok: false, fel: "Okänt lag." });
-    svar = lagOps[op](a.lag, d, a.roll);
-  } else if (har(superOps, op)) {
-    if (a.roll !== "super") return json({ ok: false, fel: "Bara klubbens administratör får göra det här." });
-    svar = superOps[op](d);
-  } else {
-    return json({ ok: false, fel: "Okänd åtgärd." });
+  try {
+    if (a.roll === "utlamning") {
+      if (!har(utlamningsOps, op)) return json({ ok: false, fel: "Den här länken får bara bocka av utlämningen." });
+      svar = utlamningsOps[op](a.lag, d, a.roll);
+    } else if (har(lagOps, op)) {
+      if (!a.lag) return json({ ok: false, fel: "Okänt lag." });
+      svar = lagOps[op](a.lag, d, a.roll);
+    } else if (har(superOps, op)) {
+      if (a.roll !== "super") return json({ ok: false, fel: "Bara klubbens administratör får göra det här." });
+      svar = superOps[op](d);
+    } else {
+      return json({ ok: false, fel: "Okänd åtgärd." });
+    }
+  } finally {
+    // Allt utom att läsa kan ändra det besökarna ser (status, pris, antal beställda). Det sparade svaret rensas även om något gick fel halvvägs.
+    if (op !== "oversikt" && op !== "lista" && op !== "lagLista") CacheService.getScriptCache().remove(CFG.CACHE_LISTA);
   }
-  // Allt utom att läsa kan ändra det besökarna ser (status, pris, antal beställda): rensa det sparade svaret.
-  if (op !== "oversikt" && op !== "lista" && op !== "lagLista") CacheService.getScriptCache().remove(CFG.CACHE_LISTA);
   svar.roll = a.roll;
   return json(svar);
 }
@@ -194,8 +216,6 @@ function hanteraAdmin(d) {
 function autentisera(slug, key) {
   var cache = CacheService.getScriptCache();
   var kLag = "fel:" + slug, kAlla = "fel:alla";
-  if (Number(cache.get(kLag) || 0) >= CFG.FEL_MAX || Number(cache.get(kAlla) || 0) >= CFG.FEL_MAX_ALLA)
-    return { fel: "För många felaktiga försök. Vänta en stund och försök igen." };
   var k = normNyckel(key);
   var hk = k.length >= 20 ? hash(k) : "";
   var superHash = PropertiesService.getScriptProperties().getProperty("SUPER_HASH");
@@ -203,6 +223,10 @@ function autentisera(slug, key) {
   if (hk && superHash && hk === superHash) return { roll: "super", lag: lag };
   if (hk && lag && lag._hash && hk === lag._hash) return { roll: "lag", lag: lag };
   if (hk && lag && lag._hashUtl && hk === lag._hashUtl) return { roll: "utlamning", lag: lag };
+  // Rätt nyckel kommer alltid in, även under en spärr. Nycklarna är för långa för att gissa, så spärren ska bara bromsa fel nycklar och
+  // får inte kunna användas för att låsa ute den som har rätt.
+  if (Number(cache.get(kLag) || 0) >= CFG.FEL_MAX || Number(cache.get(kAlla) || 0) >= CFG.FEL_MAX_ALLA)
+    return { fel: "För många felaktiga försök. Vänta en stund och försök igen." };
   cache.put(kLag, String(Number(cache.get(kLag) || 0) + 1), CFG.FEL_MINUTER * 60);
   cache.put(kAlla, String(Number(cache.get(kAlla) || 0) + 1), CFG.FEL_MINUTER * 60);
   return { fel: "Fel lag eller nyckel." };
@@ -717,7 +741,7 @@ function oversikt(lag, ordrar) {
 
 /* ---------- Hjälpfunktioner ---------- */
 function normalizeMobil(s) {
-  s = String(s || "").replace(/[\s\-().]/g, "");
+  s = String(s || "").replace(/\(0\)/g, "").replace(/[\s\-().]/g, "");   // +46 (0)70 … skrivs ofta med (0) som ska bort
   if (s.indexOf("+46") === 0) s = "0" + s.slice(3); else if (s.indexOf("0046") === 0) s = "0" + s.slice(4);
   return s;
 }

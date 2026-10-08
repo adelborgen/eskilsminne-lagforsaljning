@@ -65,7 +65,8 @@ test("besökare läser inte kalkylarket varje gång: listan sparas en kort stund
   for (let i = 0; i < 20; i++) { m.get({ action: "lag" }); m.get({ action: "status", lag: "lag-a" }); }
   assert.equal(m.lasningar(), efterForsta, "40 besök till läste inte kalkylarket alls");
   const sek = m.cacheSek.get("pub:lag");
-  assert.ok(sek >= 1 && sek <= 60, "sparas högst en minut, annars blir mätaren och statusen för gamla: " + sek);
+  assert.ok(sek >= 1 && sek <= 600, "sparas högst tio minuter som skyddsnät: " + sek);
+  assert.equal(sek, m.ctx.CFG.CACHE_SEK);
   // en ny beställning räknas upp i det sparade, utan att listan läses om
   const lagA = () => m.get({ action: "lag" }).lag.find((l) => l.slug === "lag-a");
   bestall(m, "lag-a", { antal: 4, mobil: "070 222 33 44" });
@@ -83,14 +84,14 @@ test("en beställning förlänger inte hur länge det sparade får gälla, och e
   const { m, sk } = ny();
   skapaLag(m, sk, { namn: "Lag A" });
   m.get({ action: "lag" });
-  const verklig = Date.now;
+  const verklig = Date.now, T = m.ctx.CFG.CACHE_SEK;
   try {
-    Date.now = () => verklig() + 20 * 1000;   // 20 sekunder senare
+    Date.now = () => verklig() + (T - 10) * 1000;   // tio sekunder kvar
     bestall(m, "lag-a", { antal: 5 });
     const kvar = m.cacheSek.get("pub:lag");
-    assert.ok(kvar >= 9 && kvar <= 10, "tiden som var kvar behålls, inte 30 sekunder igen: " + kvar);
+    assert.ok(kvar >= 9 && kvar <= 10, "tiden som var kvar behålls, inte hela tiden igen: " + kvar);
     assert.equal(m.get({ action: "lag" }).lag[0].bestallt, 5);
-    Date.now = () => verklig() + 40 * 1000;   // efter att det borde ha gått ut
+    Date.now = () => verklig() + (T + 10) * 1000;   // efter att det borde ha gått ut
     bestall(m, "lag-a", { antal: 4, mobil: "070 222 33 44" });
     assert.equal(m.cache.has("pub:lag"), false, "ett utgånget svar rensas i stället för att sparas om");
     assert.equal(m.get({ action: "lag" }).lag[0].bestallt, 9);
@@ -125,6 +126,20 @@ test("allt som ändras i adminvyn syns direkt för besökarna", () => {
   m.get({ action: "lag" });
   assert.equal(m.lasningar(), efterAdmin, "att titta rensade inte det sparade");
   assert.ok(efterAdmin > las);
+});
+
+test("går en åtgärd i adminvyn fel halvvägs rensas ändå det sparade, så besökarna inte får gamla uppgifter", () => {
+  const { m, sk } = ny();
+  const a = skapaLag(m, sk, { namn: "Lag A" });
+  bestall(m, "lag-a", { antal: 5 });
+  assert.equal(m.get({ action: "lag" }).lag[0].bestallt, 5);   // sparat
+  const blad = m.blad["Beställningar"], verklig = blad.getRange.bind(blad);
+  blad.getRange = (...arg) => { const r = verklig(...arg), sv = r.setValue.bind(r); r.setValue = (v) => { sv(v); throw new Error("fel hos Google, efter att raden ändrats"); }; return r; };
+  const svar = m.admin("lag-a", a.key, "satt", { id: "0001", varde: "AVBRUTEN" });   // raden ändras, sedan går något fel
+  assert.match(svar.fel, /Tekniskt fel/);
+  assert.equal(m.cache.has("pub:lag"), false, "det sparade rensades trots felet");
+  blad.getRange = verklig;
+  assert.equal(m.get({ action: "lag" }).lag[0].bestallt, 0, "besökarna ser det som faktiskt står i kalkylarket");
 });
 
 test("en beställning kontrollerar alltid lagets uppgifter i kalkylarket, aldrig mot det sparade svaret", () => {
@@ -250,6 +265,64 @@ test("beställning: mobilnummer normaliseras och spärr efter fem beställningar
   for (let i = 0; i < 4; i++) assert.equal(bestall(m, "lag-a").ok, true);
   assert.match(bestall(m, "lag-a").fel, /Många beställningar/);
   assert.equal(bestall(m, "lag-a", { mobil: "0709999999" }).ok, true, "andra nummer påverkas inte");
+});
+
+test("försöker föräldern igen med samma kod blir det ingen dubblett, utan samma kvitto", () => {
+  const { m, sk } = ny();
+  const a = skapaLag(m, sk, { namn: "Lag A" }); skapaLag(m, sk, { namn: "Lag B" });
+  const rader = () => m.blad["Beställningar"].getLastRow() - 1;
+  const forsta = bestall(m, "lag-a", { kod: "abc12345-xyz" });
+  assert.equal(forsta.ok, true);
+  assert.deepEqual(bestall(m, "lag-a", { kod: "abc12345-xyz" }), forsta, "samma kvitto igen");
+  for (let i = 0; i < 8; i++) bestall(m, "lag-a", { kod: "abc12345-xyz" });
+  assert.equal(rader(), 1, "en enda beställning, och spärren på fem per mobilnummer slogs inte ut av försöken");
+  assert.equal(m.get({ action: "lag" }).lag[0].bestallt, 5, "mätaren räknar den en gång");
+  const ttl = m.cacheSek.get("kod:lag-a:abc12345-xyz");
+  assert.ok(ttl >= 300 && ttl <= 3600, "koden kommer ihåg beställningen en stund, men inte för evigt: " + ttl);
+  // en annan kod är en ny beställning
+  assert.equal(bestall(m, "lag-a", { kod: "abc12345-nytt", antal: 2 }).id, "0002");
+  // utan kod, eller med en ogiltig kod, finns inget skydd: varje anrop är en beställning
+  bestall(m, "lag-a", { mobil: "0702222222" }); bestall(m, "lag-a", { mobil: "0702222222" });
+  bestall(m, "lag-a", { mobil: "0703333333", kod: "kort" }); bestall(m, "lag-a", { mobil: "0703333333", kod: "kort" });
+  bestall(m, "lag-a", { mobil: "0704444444", kod: "har ett mellanslag!" }); bestall(m, "lag-a", { mobil: "0704444444", kod: "har ett mellanslag!" });
+  assert.equal(rader(), 8);
+  // en kod gäller bara hos laget den användes hos
+  const b = bestall(m, "lag-b", { kod: "abc12345-xyz", mobil: "0705555555" });
+  assert.equal(b.ok, true);
+  assert.equal(m.blad["Beställningar"].data[rader()][2], "lag-b", "lag B fick en egen beställning");
+  // också när försäljningen hunnit stängas får föräldern sitt kvitto, inte ett fel
+  m.admin("lag-a", a.key, "satt", { id: "0001", varde: "JA" });
+  m.admin("*", sk, "lagUppdatera", { slug: "lag-a", falt: { status: "avslutad" } });
+  assert.deepEqual(bestall(m, "lag-a", { kod: "abc12345-xyz" }), forsta);
+  assert.match(bestall(m, "lag-a", { kod: "abc12345-annan", mobil: "0706666666" }).fel, /inte öppen/, "men en ny beställning stoppas");
+});
+
+test("beställningskoden gäller också när en likadan beställning hinner bli klar medan den väntar på sin tur", () => {
+  const { m, sk } = ny();
+  skapaLag(m, sk, { namn: "Lag A" });
+  // medan den andra beställningen väntar på låset blir den första klar
+  let forsta;
+  m.hooks.vidLas = () => { m.hooks.vidLas = null; forsta = bestall(m, "lag-a", { kod: "abc12345-xyz" }); };
+  const andra = bestall(m, "lag-a", { kod: "abc12345-xyz" });
+  assert.equal(forsta.ok, true);
+  assert.deepEqual(andra, forsta, "samma kvitto, ingen ny rad");
+  assert.equal(m.blad["Beställningar"].getLastRow(), 2);
+});
+
+test("beställning: namn med & och / godtas, formeltecken och siffror gör det inte, och +46 (0)70 fungerar", () => {
+  const { m, sk } = ny();
+  skapaLag(m, sk, { namn: "Lag A" });
+  let n = 0;
+  const ok = (barn) => bestall(m, "lag-a", { barn, mobil: "070" + String(1000000 + ++n) }).ok;
+  for (const barn of ["Emil & Ella", "Emil/Ella", "Emil, Ella", "Anna-Lisa", "D\u2019Angelo", "Jos\u00e9", "Jose\u0301", "Mo", "Åsa (Z)", "Emil F."]) assert.equal(ok(barn), true, barn);
+  for (const barn of ["=SUMMA(A1)", "&Emil", "+46", "Emil2", "E", "x".repeat(41), "Emil <b>", "Emil;Ella", "@Emil"]) assert.equal(ok(barn), false, barn);
+  assert.match(bestall(m, "lag-a", { barn: "Emil2" }).fel, /barnets namn med bokstäver/);
+  const rader = m.blad["Beställningar"].getLastRow();
+  assert.equal(bestall(m, "lag-a", { mobil: "+46 (0)70 123 45 67" }).ok, true);
+  assert.equal(m.blad["Beställningar"].data[rader][4], "0701234567", "(0) tas bort");
+  assert.equal(bestall(m, "lag-a", { mobil: "0046 (0)70-222 33 44" }).ok, true);
+  assert.equal(m.blad["Beställningar"].data[rader + 1][4], "0702223344");
+  assert.match(bestall(m, "lag-a", { mobil: "+47 912 34 567" }).fel, /svenskt mobilnummer/);
 });
 
 test("admin: fel nyckel avvisas, och ett lags nyckel ger bara det laget", () => {
@@ -751,16 +824,20 @@ test("ny superadmin-nyckel byter ut den gamla", () => {
   assert.equal(m.admin("*", ny2, "lagLista").ok, true);
 });
 
-test("spärr efter för många felaktiga försök, även med rätt nyckel tills spärren löpt ut", () => {
+test("spärren bromsar fel nycklar men släpper alltid in rätt nyckel", () => {
   const { m, sk } = ny();
   const a = skapaLag(m, sk, { namn: "Lag A" });
-  for (let i = 0; i < 10; i++) assert.match(m.admin("lag-a", "f".repeat(32), "oversikt").fel, /Fel lag eller nyckel/);
-  assert.match(m.admin("lag-a", a.key, "oversikt").fel, /För många felaktiga försök/);
-  assert.equal(m.admin("*", sk, "lagLista").ok, true, "en annan adress och rätt superadmin-nyckel påverkas inte av ett enskilt lags spärr");
+  const fel = "f".repeat(32);
+  for (let i = 0; i < 10; i++) assert.match(m.admin("lag-a", fel, "oversikt").fel, /Fel lag eller nyckel/);
+  assert.match(m.admin("lag-a", fel, "oversikt").fel, /För många felaktiga försök/, "fel nyckel stoppas efter tio försök");
+  assert.equal(m.admin("lag-a", a.key, "oversikt").ok, true, "men rätt nyckel kommer in trots spärren");
+  assert.equal(m.admin("*", sk, "lagLista").ok, true, "och en annan adress påverkas inte");
+  for (let i = 0; i < 40; i++) m.admin("slug" + i, fel, "oversikt");
+  assert.match(m.admin("lag-a", fel, "oversikt").fel, /För många felaktiga försök/, "den gemensamma spärren gäller alla lag");
+  assert.equal(m.admin("lag-a", a.key, "oversikt").ok, true, "rätt nyckel kommer in även då");
+  assert.equal(m.admin("*", sk, "lagLista").ok, true, "också klubbens administratör");
   m.cache.clear();
-  assert.equal(m.admin("lag-a", a.key, "oversikt").ok, true);
-  for (let i = 0; i < 40; i++) m.admin("slug" + i, "f".repeat(32), "oversikt");
-  assert.match(m.admin("lag-a", a.key, "oversikt").fel, /För många felaktiga försök/, "den gemensamma spärren gäller alla lag");
+  assert.match(m.admin("lag-a", fel, "oversikt").fel, /Fel lag eller nyckel/, "när spärren löpt ut räknas det från noll");
 });
 
 test("felaktiga anrop ger ett fel, inte ett krasch", () => {

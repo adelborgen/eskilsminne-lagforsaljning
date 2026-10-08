@@ -164,11 +164,40 @@
     app.appendChild(navLank(null, { class: "primary", style: "margin-top:16px" }, "Till alla lag"));
   }
 
+  /* ---------- Delat för beställningen ---------- */
+  var MIN_VANTA_MS = 3500;   // servern nekar beställningar som kommer snabbare än 3 sekunder efter att sidan visades. Sidan väntar själv.
+  var KVITTO_DAGAR = 14;     // så länge kvittot finns kvar i webbläsaren
+  var BARN_RE = /^[\p{L}][\p{L}\p{M} '’\-.&\/,()]{1,39}$/u;   // samma regel som på servern
+
+  // En kod per beställning. Försöker föräldern igen med samma uppgifter efter ett svar som uteblev får hen samma beställning, inte en ny.
+  function slumpKod() {
+    try { if (window.crypto && crypto.randomUUID) return crypto.randomUUID(); } catch (e) {}
+    return Date.now().toString(36) + "-" + Math.random().toString(36).slice(2, 12);
+  }
+  function litenHash(s) { var x = 5381; for (var i = 0; i < s.length; i++) x = ((x << 5) + x + s.charCodeAt(i)) | 0; return (x >>> 0).toString(36); }
+
   /* ---------- Ett lag: beställning, översikt, vanliga frågor ---------- */
   function renderTeam(cfg) {
     var loadedAt = Date.now();
     var state = { bestallt: null, antal: 0, barn: "", mobil: "" };
     var demo = !cfg.endpoint;
+    var kodBas = slumpKod();
+
+    // Kvittot (ordernummer, belopp, antal) sparas i webbläsaren så att det finns kvar om sidan laddas om medan föräldern är i Swish.
+    // Varken barnets namn eller mobilnummer sparas.
+    function sparaKvitto(p, id, belopp) {
+      if (demo) return;
+      try { localStorage.setItem("kvitto:" + cfg.slug, JSON.stringify({ id: id, belopp: belopp, antal: p.antal, t: Date.now() })); } catch (e) {}
+    }
+    function hamtaKvitto() {
+      if (demo) return null;
+      try {
+        var s = JSON.parse(localStorage.getItem("kvitto:" + cfg.slug) || "null");
+        if (s && /^\d{4,}$/.test(String(s.id)) && typeof s.belopp === "number" && typeof s.antal === "number" && Date.now() - s.t < KVITTO_DAGAR * 864e5) return s;
+      } catch (e) {}
+      return null;
+    }
+    function rensaKvitto() { try { localStorage.removeItem("kvitto:" + cfg.slug); } catch (e) {} }
     var marginal = cfg.pris - cfg.inkopspris;
     var E = cfg.produkt.enhet || "st", En = cfg.produkt.enhetEn || "st";
 
@@ -259,6 +288,7 @@
 
     /* ---------- Formulär ---------- */
     function renderForm() {
+      kodBas = slumpKod();
       content.textContent = "";
       if (demo) content.appendChild(h("p", { class: "notice", text: "Förhandsvisning med exempeldata. Inget skickas eller sparas." }));
       content.appendChild(h("div", { style: "margin-top:16px" }, h("h2", { class: "title", text: "Beställ" }), h("p", { class: "lead", text: fill(cfg.intro) })));
@@ -329,7 +359,7 @@
 
       function setErr(id, msg) { var e = document.getElementById(id); if (e) e.textContent = msg || ""; }
       function normalizeMobil(s) {
-        s = String(s || "").replace(/[\s\-().]/g, "");
+        s = String(s || "").replace(/\(0\)/g, "").replace(/[\s\-().]/g, "");
         if (s.indexOf("+46") === 0) s = "0" + s.slice(3); else if (s.indexOf("0046") === 0) s = "0" + s.slice(4);
         return s;
       }
@@ -340,32 +370,38 @@
         errBox.hidden = true;
         var ok = true;
         var namn = barn.value.trim();
-        if (!/^[\p{L}][\p{L} '\-.]{1,39}$/u.test(namn)) { setErr("err-barn", "Skriv barnets namn (2–40 tecken)."); ok = false; }
+        if (!BARN_RE.test(namn)) { setErr("err-barn", "Skriv barnets namn med bokstäver (2–40 tecken). Mellanslag, bindestreck och & går bra."); ok = false; }
         var tel = normalizeMobil(mobil.value);
         if (!/^07\d{8}$/.test(tel)) { setErr("err-mobil", "Skriv ett svenskt mobilnummer, till exempel 070 123 45 67."); ok = false; }
         if (state.antal < 1) { setErr("err-antal", "Välj hur många " + E + " du vill beställa."); ok = false; }
         if (!samtycke.checked) { setErr("err-samtycke", "Du behöver godkänna för att kunna beställa."); ok = false; }
         if (!ok) { var f = form.querySelector(".error:not(:empty)"); if (f) f.scrollIntoView({ block: "center", behavior: "smooth" }); return; }
 
-        var payload = { lag: cfg.slug, barn: namn, mobil: tel, antal: state.antal, samtycke: true, website: hp.value, t: Date.now() - loadedAt };
+        var payload = { lag: cfg.slug, barn: namn, mobil: tel, antal: state.antal, samtycke: true, website: hp.value,
+          kod: kodBas + "-" + litenHash(namn + "|" + tel + "|" + state.antal) };
         submit.disabled = true; submit.textContent = "Skickar…";
         function fail(msg) {
           submit.disabled = false; submit.textContent = "Beställ och gå vidare till Swish";
           errBox.textContent = msg; errBox.hidden = false; errBox.scrollIntoView({ block: "center", behavior: "smooth" });
         }
         if (demo) { setTimeout(function () { success(payload, "DEMO0001", payload.antal * cfg.pris); }, 400); return; }
-        fetch(cfg.endpoint, { method: "POST", headers: { "Content-Type": "text/plain;charset=utf-8" }, body: JSON.stringify(payload) })
-          .then(function (r) { return r.json(); })
-          .then(function (d) {
-            if (d && d.ok) success(payload, d.id, typeof d.belopp === "number" ? d.belopp : payload.antal * cfg.pris);
-            else fail((d && d.fel) || "Något gick fel. Försök igen.");
-          })
-          .catch(function () { fail("Det gick inte att skicka just nu. Kolla uppkopplingen och försök igen, eller hör av dig där du brukar prata med laget."); });
+        // Går föräldern fort fram väntar sidan själv de sekunder som saknas, så att hen aldrig ser ett fel för det.
+        setTimeout(function () {
+          payload.t = Date.now() - loadedAt;
+          fetch(cfg.endpoint, { method: "POST", headers: { "Content-Type": "text/plain;charset=utf-8" }, body: JSON.stringify(payload) })
+            .then(function (r) { return r.json(); })
+            .then(function (d) {
+              if (d && d.ok) success(payload, d.id, typeof d.belopp === "number" ? d.belopp : payload.antal * cfg.pris);
+              else fail((d && d.fel) || "Något gick fel. Försök igen.");
+            })
+            .catch(function () { fail("Det gick inte att skicka just nu. Kolla uppkopplingen och försök igen, eller hör av dig där du brukar prata med laget."); });
+        }, Math.max(0, MIN_VANTA_MS - (Date.now() - loadedAt)));
       });
     }
 
     function success(p, orderId, belopp) {
       if (typeof state.bestallt === "number") state.bestallt += p.antal;
+      sparaKvitto(p, orderId, belopp);
       renderMeters();
       renderDone(p, orderId, belopp);
     }
@@ -380,7 +416,7 @@
       }
     }
 
-    function renderDone(p, orderId, belopp) {
+    function renderDone(p, orderId, belopp, aterstalld) {
       content.textContent = "";
       var nummer = cfg.swish.nummer || (demo ? cfg.demoSwish : "");
       var meddelande = (cfg.swish.meddelande + " " + orderId).slice(0, 50);
@@ -406,8 +442,9 @@
 
       content.appendChild(h("div", { class: "card done", style: "margin-top:16px" },
         h("p", { class: "okline", text: demo ? "Förhandsvisning (inget skickades)" : "Beställningen är mottagen" }),
-        h("h2", { text: "Tack, " + p.barn + "!" }),
+        h("h2", { text: p.barn ? "Tack, " + p.barn + "!" : "Din beställning" }),
         h("div", { class: "sumrow" }, h("span", { class: "num", text: p.antal + " × " + cfg.produkt.namn }), h("span", { class: "num", text: kr(belopp) })),
+        aterstalld ? h("p", { class: "notice", text: "Det här är din senaste beställning. Har du redan swishat är du klar." }) : null,
         swish,
         h("p", { class: "small", style: "margin:14px 0 0", text: "Ordernummer: " + orderId + ". Ta gärna en skärmdump." }),
         h("p", { class: "small", text: "Din beställning räknas som klar när betalningen har kommit in." }),
@@ -415,7 +452,7 @@
         h("p", { class: "small", text: cfg.aterbetalning }),
         h("p", { class: "small", text: K.kontakt }),
         h("button", { type: "button", class: "ghost", text: "Gör en ny beställning",
-          onclick: function () { state.antal = 0; state.barn = ""; renderForm(); window.scrollTo(0, 0); } })));
+          onclick: function () { rensaKvitto(); state.antal = 0; state.barn = ""; renderForm(); window.scrollTo(0, 0); } })));
       window.scrollTo(0, 0);
     }
 
@@ -446,6 +483,8 @@
 
     renderFaq();
     renderForm();
+    var kvitto = hamtaKvitto();
+    if (kvitto) renderDone({ barn: "", antal: kvitto.antal }, kvitto.id, kvitto.belopp, true);
     loadStatus();
     if (location.hash) showTab(location.hash.slice(1));
   }
