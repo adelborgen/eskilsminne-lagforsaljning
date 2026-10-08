@@ -10,6 +10,7 @@ class Range {
   _cell(v) { return typeof v === "string" && v.startsWith("'") ? v.slice(1) : v; }   // inledande ' = text, som i Google Kalkylark
   getValue() { return this.getValues()[0][0]; }
   getValues() {
+    this.sheet.lasningar++;   // räknas så att testerna kan se hur ofta kalkylarket läses
     const ut = [];
     for (let i = 0; i < this.nr; i++) {
       const rad = this.sheet.data[this.r - 1 + i] || [];
@@ -31,7 +32,7 @@ class Range {
   setFontWeight() { return this; }
 }
 class Sheet {
-  constructor(name) { this.name = name; this.data = []; this.maxCols = 26; }
+  constructor(name) { this.name = name; this.data = []; this.maxCols = 26; this.lasningar = 0; }
   getMaxColumns() { return this.maxCols; }
   insertColumnsAfter(pos, antal) { this.maxCols += antal; }
   getLastRow() { let n = this.data.length; while (n > 0 && !(this.data[n - 1] || []).some((v) => v !== "" && v !== undefined)) n--; return n; }
@@ -48,7 +49,7 @@ class Sheet {
 }
 
 function skapaMiljo() {
-  const blad = {}, cache = new Map(), props = new Map(), loggar = [];
+  const blad = {}, cache = new Map(), cacheSek = new Map(), props = new Map(), loggar = [];
   const ss = {
     getSheetByName: (n) => blad[n] || null,
     insertSheet: (n) => (blad[n] = new Sheet(n)),
@@ -60,7 +61,10 @@ function skapaMiljo() {
     LockService: { getScriptLock: () => ({ waitLock() {}, tryLock: () => true, releaseLock() {} }) },
     CacheService: { getScriptCache: () => ({
       get: (k) => (cache.has(k) ? cache.get(k) : null),
-      put: (k, v) => { cache.set(k, String(v)); },
+      put: (k, v, sek) => {
+        if (String(v).length > 100 * 1024) throw new Error("Argument too large: value");   // som Googles gräns på 100 KB
+        cache.set(k, String(v)); cacheSek.set(k, sek);
+      },
       remove: (k) => { cache.delete(k); },
     }) },
     PropertiesService: { getScriptProperties: () => ({
@@ -83,7 +87,8 @@ function skapaMiljo() {
 
   const parse = (o) => JSON.parse(o.getContent());
   return {
-    ctx, blad, cache, props, loggar,
+    ctx, blad, cache, cacheSek, props, loggar,
+    lasningar: () => Object.values(blad).reduce((s, b) => s + b.lasningar, 0),
     setup: () => ctx.setup(),
     post: (obj) => parse(ctx.doPost({ postData: { contents: JSON.stringify(obj) } })),
     postRaw: (txt) => parse(ctx.doPost({ postData: { contents: txt } })),

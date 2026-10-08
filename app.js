@@ -246,6 +246,7 @@
 
     function loadStatus() {
       if (demo) { state.bestallt = cfg.demoBestallt; renderMeters(); return; }
+      if (typeof cfg.bestallt === "number") { state.bestallt = cfg.bestallt; renderMeters(); return; }   // följer med laglistan
       fetch(cfg.endpoint + "?action=status&lag=" + encodeURIComponent(cfg.slug))
         .then(function (r) { return r.json(); })
         .then(function (d) {

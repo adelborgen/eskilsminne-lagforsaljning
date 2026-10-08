@@ -39,6 +39,121 @@ test("laglistan är publik men innehåller aldrig nyckel, hash eller radnummer",
   for (const hemligt of ["hash", "_rad", "nyckel", key, key.replace(/-/g, "")]) assert.ok(!txt.includes(hemligt), "läcker: " + hemligt);
 });
 
+test("laglistan har antal beställda per lag: avbrutna räknas inte, och utkast har inget att visa", () => {
+  const { m, sk } = ny();
+  const a = skapaLag(m, sk, { namn: "Lag A" });
+  const b = skapaLag(m, sk, { namn: "Lag B" });
+  utkast(m, sk, { namn: "Lag C" });
+  assert.equal(bestall(m, "lag-a", { antal: 5 }).ok, true);
+  assert.equal(bestall(m, "lag-a", { antal: 7, mobil: "070 222 33 44" }).ok, true);
+  assert.equal(bestall(m, "lag-b", { antal: 3 }).ok, true);
+  m.admin("lag-a", a.key, "satt", { id: "0002", varde: "AVBRUTEN" });   // avbruten: räknas inte
+  const lista = Object.fromEntries(m.get({ action: "lag" }).lag.map((l) => [l.slug, l]));
+  assert.deepEqual([lista["lag-a"].bestallt, lista["lag-b"].bestallt], [5, 3]);
+  assert.ok(!("bestallt" in lista["lag-c"]), "ett utkast visar bara namn och status");
+  assert.equal(m.admin("lag-a", a.key, "oversikt").oversikt.bestallt, lista["lag-a"].bestallt, "samma siffra som i adminvyn");
+  assert.deepEqual(m.get({ action: "status", lag: "lag-b" }), { ok: true, bestallt: 3 });
+});
+
+test("besökare läser inte kalkylarket varje gång: listan sparas en kort stund och räknas upp av nya beställningar", () => {
+  const { m, sk } = ny();
+  skapaLag(m, sk, { namn: "Lag A" });
+  skapaLag(m, sk, { namn: "Lag B" });
+  bestall(m, "lag-a", { antal: 5 });
+  m.get({ action: "lag" });
+  const efterForsta = m.lasningar();
+  for (let i = 0; i < 20; i++) { m.get({ action: "lag" }); m.get({ action: "status", lag: "lag-a" }); }
+  assert.equal(m.lasningar(), efterForsta, "40 besök till läste inte kalkylarket alls");
+  const sek = m.cacheSek.get("pub:lag");
+  assert.ok(sek >= 1 && sek <= 60, "sparas högst en minut, annars blir mätaren och statusen för gamla: " + sek);
+  // en ny beställning räknas upp i det sparade, utan att listan läses om
+  const lagA = () => m.get({ action: "lag" }).lag.find((l) => l.slug === "lag-a");
+  bestall(m, "lag-a", { antal: 4, mobil: "070 222 33 44" });
+  const efterOrder = m.lasningar();
+  assert.equal(lagA().bestallt, 9, "den nya beställningen syns direkt");
+  assert.equal(m.get({ action: "status", lag: "lag-a" }).bestallt, 9);
+  assert.equal(m.lasningar(), efterOrder, "och listan lästes inte om för det");
+  // när det sparade har gått ut läses det om från kalkylarket
+  m.cache.delete("pub:lag");
+  assert.equal(lagA().bestallt, 9);
+  assert.ok(m.lasningar() > efterOrder);
+});
+
+test("en beställning förlänger inte hur länge det sparade får gälla, och ett utgånget sparas inte om", () => {
+  const { m, sk } = ny();
+  skapaLag(m, sk, { namn: "Lag A" });
+  m.get({ action: "lag" });
+  const verklig = Date.now;
+  try {
+    Date.now = () => verklig() + 20 * 1000;   // 20 sekunder senare
+    bestall(m, "lag-a", { antal: 5 });
+    const kvar = m.cacheSek.get("pub:lag");
+    assert.ok(kvar >= 9 && kvar <= 10, "tiden som var kvar behålls, inte 30 sekunder igen: " + kvar);
+    assert.equal(m.get({ action: "lag" }).lag[0].bestallt, 5);
+    Date.now = () => verklig() + 40 * 1000;   // efter att det borde ha gått ut
+    bestall(m, "lag-a", { antal: 4, mobil: "070 222 33 44" });
+    assert.equal(m.cache.has("pub:lag"), false, "ett utgånget svar rensas i stället för att sparas om");
+    assert.equal(m.get({ action: "lag" }).lag[0].bestallt, 9);
+  } finally { Date.now = verklig; }
+});
+
+test("allt som ändras i adminvyn syns direkt för besökarna", () => {
+  const { m, sk } = ny();
+  const a = utkast(m, sk);
+  const status = () => m.get({ action: "lag" }).lag.find((l) => l.slug === "lag-a").status;
+  assert.equal(status(), "utkast");
+  m.admin("lag-a", a.key, "lagSpara", { falt: komplett });
+  m.admin("lag-a", a.key, "skickaGodkannande", { bekraftat: true });
+  assert.equal(status(), "granskas", "lagets egen ändring syns direkt");
+  m.admin("*", sk, "godkann", { slug: "lag-a", till: "pagar" });
+  assert.equal(status(), "pagar", "klubbens godkännande syns direkt");
+  bestall(m, "lag-a", { antal: 5 });
+  m.get({ action: "lag" });
+  m.admin("lag-a", a.key, "satt", { id: "0001", varde: "AVBRUTEN" });
+  assert.equal(m.get({ action: "lag" }).lag[0].bestallt, 0, "en avbruten beställning försvinner ur mätaren direkt");
+  bestall(m, "lag-a", { antal: 6, mobil: "070 222 33 44" });
+  m.get({ action: "lag" });
+  m.admin("lag-a", a.key, "taBort", { id: "0001" });
+  assert.equal(m.get({ action: "lag" }).lag[0].bestallt, 6, "en borttagen beställning också");
+  m.admin("*", sk, "lagUppdatera", { slug: "lag-a", falt: { pris: 45 } });
+  assert.equal(m.get({ action: "lag" }).lag[0].pris, 45, "nytt pris syns direkt");
+  // att bara titta i adminvyn rensar inget
+  m.get({ action: "lag" });
+  const las = m.lasningar();
+  m.admin("lag-a", a.key, "oversikt"); m.admin("lag-a", a.key, "lista"); m.admin("*", sk, "lagLista");
+  const efterAdmin = m.lasningar();
+  m.get({ action: "lag" });
+  assert.equal(m.lasningar(), efterAdmin, "att titta rensade inte det sparade");
+  assert.ok(efterAdmin > las);
+});
+
+test("en beställning kontrollerar alltid lagets uppgifter i kalkylarket, aldrig mot det sparade svaret", () => {
+  const { m, sk } = ny();
+  skapaLag(m, sk, { namn: "Lag A" });
+  assert.equal(m.get({ action: "lag" }).lag[0].status, "pagar");   // sparat som öppet
+  m.blad["Lag"].data[1][3] = "avslutad";                          // ändrat direkt i kalkylarket, utan adminvyn
+  assert.equal(m.get({ action: "lag" }).lag[0].status, "pagar", "besökarna ser det gamla tills det sparade går ut");
+  assert.match(bestall(m, "lag-a").fel, /inte öppen/, "men en beställning stoppas direkt");
+  assert.equal(m.blad["Beställningar"].getLastRow(), 1);
+  m.cache.delete("pub:lag");
+  assert.equal(m.get({ action: "lag" }).lag[0].status, "avslutad");
+});
+
+test("är laglistan för stor för minnet fungerar sidan ändå, den läser då kalkylarket varje gång", () => {
+  const { m, sk } = ny();
+  const lang = { kampanj: "K".repeat(40), intro: "i".repeat(400), utlamningsText: "u".repeat(200), belonning: "b".repeat(160), detalj: "d".repeat(80) };
+  for (let i = 0; i < 90; i++) {
+    const r = m.admin("*", sk, "lagNy", { data: lagData({ namn: "Lag " + String(i).padStart(3, "0"), ...lang }) });
+    assert.equal(r.ok, true, JSON.stringify(r));
+  }
+  const svar = m.get({ action: "lag" });
+  assert.equal(svar.ok, true);
+  assert.equal(svar.lag.length, 90);
+  assert.ok(JSON.stringify(svar).length > 100 * 1024, "testet ska verkligen vara större än gränsen");
+  assert.equal(m.cache.has("pub:lag"), false, "för stort för att sparas");
+  assert.equal(bestall(m, "lag-000").ok, true, "beställningar fungerar ändå");
+});
+
 test("nytt lag: kontroller, standardvärden och slug", () => {
   const { m, sk } = ny();
   const fel = (o) => m.admin("*", sk, "lagNy", { data: lagData(o) });

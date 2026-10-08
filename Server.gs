@@ -19,7 +19,9 @@ var CFG = {
   SPARR_MINUTER: 10,    // ... under så här många minuter
   FEL_MAX: 10,          // högst så många felaktiga nyckelförsök per lag ...
   FEL_MAX_ALLA: 40,     // ... och totalt ...
-  FEL_MINUTER: 10       // ... under så här många minuter
+  FEL_MINUTER: 10,      // ... under så här många minuter
+  CACHE_LISTA: "pub:lag", // den offentliga laglistan sparas i serverns minne ...
+  CACHE_SEK: 30         // ... så här många sekunder, så att besökare inte läser kalkylarket varje gång
 };
 
 var LAG_FLIK = "Lag";
@@ -90,11 +92,12 @@ function flik(namn) { return SpreadsheetApp.getActive().getSheetByName(namn); }
 function doGet(e) {
   try {
     var p = (e && e.parameter) || {};
-    if (p.action === "lag") return json({ ok: true, lag: lasLag().map(publik) });
-    if (p.action === "status") {
-      var lag = hittaLag(String(p.lag || "").toLowerCase());
-      if (!lag) return json({ ok: false, fel: "Okänt lag." });
-      return json({ ok: true, bestallt: oversikt(lag, lasOrdrar()).bestallt });
+    if (p.action === "lag") return json({ ok: true, lag: publikLista() });
+    if (p.action === "status") {   // äldre sidor frågar så här: samma siffra som följer med laglistan
+      var slug = String(p.lag || "").toLowerCase();
+      var l = publikLista().filter(function (x) { return x.slug === slug; })[0];
+      if (!l) return json({ ok: false, fel: "Okänt lag." });
+      return json({ ok: true, bestallt: l.bestallt || 0 });
     }
     return json({ ok: false, fel: "Okänd förfrågan." });
   } catch (err) {
@@ -148,6 +151,7 @@ function hanteraBestallning(d) {
     var sh = flik(ORDER_FLIK) || sakraFlik(ORDER_FLIK, ORDER_RUBRIKER);
     sh.appendRow([new Date(), "'" + id, l.slug, barn, "'" + mobil, antal, belopp, ""]);
     SpreadsheetApp.flush();
+    raknaUppLista(l.slug, antal);
     cache.put(nyckel, String(tidigare + 1), CFG.SPARR_MINUTER * 60);
     return json({ ok: true, id: id, belopp: belopp });
   });
@@ -180,6 +184,8 @@ function hanteraAdmin(d) {
   } else {
     return json({ ok: false, fel: "Okänd åtgärd." });
   }
+  // Allt utom att läsa kan ändra det besökarna ser (status, pris, antal beställda): rensa det sparade svaret.
+  if (op !== "oversikt" && op !== "lista" && op !== "lagLista") CacheService.getScriptCache().remove(CFG.CACHE_LISTA);
   svar.roll = a.roll;
   return json(svar);
 }
@@ -537,6 +543,42 @@ function offentlig(l) {
 // Utkast och försäljningar som väntar på godkännande visas bara med namn: inga uppgifter, och ingen kan beställa.
 function publik(l) {
   return l.status === "utkast" || l.status === "granskas" ? { slug: l.slug, namn: l.namn, status: l.status } : offentlig(l);
+}
+
+/* Den offentliga laglistan, med antal beställda per lag. Besökarna är många och ändringarna få, så svaret sparas en kort stund
+   i stället för att kalkylarket läses för varje besök. Det rensas när något ändras i adminvyn, och varje ny beställning räknas
+   upp i det som sparats, så mätaren stämmer. Ändrar någon direkt i kalkylarket syns det inom CFG.CACHE_SEK sekunder.
+   Beställningen själv kontrollerar alltid lagets uppgifter direkt i kalkylarket, aldrig mot det sparade svaret. */
+function publikLista() {
+  var cache = CacheService.getScriptCache();
+  var sparat = cache.get(CFG.CACHE_LISTA);
+  if (sparat) {
+    try { return JSON.parse(sparat).lista; } catch (err) { cache.remove(CFG.CACHE_LISTA); }
+  }
+  var antal = {};
+  lasOrdrar().forEach(function (o) { if (o.betald !== "AVBRUTEN") antal[o.lag] = (antal[o.lag] || 0) + o.antal; });
+  var lista = lasLag().map(function (l) {
+    var u = publik(l);
+    if (l.status !== "utkast" && l.status !== "granskas") u.bestallt = antal[l.slug] || 0;
+    return u;
+  });
+  try { cache.put(CFG.CACHE_LISTA, JSON.stringify({ t: Date.now(), lista: lista }), CFG.CACHE_SEK); }
+  catch (err) { /* för stort för minnet: då läses kalkylarket igen nästa gång */ }
+  return lista;
+}
+
+// Räknar upp antalet beställda i det sparade svaret. Anropas inne i låset, så två beställningar kan inte skriva över varandra.
+function raknaUppLista(slug, antal) {
+  var cache = CacheService.getScriptCache();
+  var sparat = cache.get(CFG.CACHE_LISTA);
+  if (!sparat) return;
+  try {
+    var s = JSON.parse(sparat);
+    s.lista.forEach(function (l) { if (l.slug === slug && typeof l.bestallt === "number") l.bestallt += antal; });
+    var kvar = CFG.CACHE_SEK - Math.floor((Date.now() - s.t) / 1000);   // behåll den ursprungliga tiden
+    if (kvar < 1) cache.remove(CFG.CACHE_LISTA);
+    else cache.put(CFG.CACHE_LISTA, JSON.stringify(s), kvar);
+  } catch (err) { cache.remove(CFG.CACHE_LISTA); }
 }
 
 // För inloggade i adminvyn: samma som offentlig plus klubbens kommentar. Kommentaren är aldrig publik.
