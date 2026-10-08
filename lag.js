@@ -19,7 +19,7 @@ var KLUBB = {
   motto: "Respekt – Kamratskap – Jämlikhet",
   logo: "assets/klubbmarke.png",         // klubbmärket. Klubben har gett tillåtelse att använda det.
   valjLagText: "Du swishar direkt till laget, och pengarna går till lagets kassa.",
-  kontakt: "Hittar du inte svaret? Skriv i lagets WhatsApp-grupp.",
+  kontakt: "Hittar du inte svaret? Fråga lagföräldern.",
 
   // Adressen till klubbens Apps Script (webbappens URL, slutar på /exec). Se README, steg "Sätt upp servern".
   // Tom = demoläge: sidorna visar exempellag och exempeldata, och inget sparas eller skickas.
@@ -38,7 +38,7 @@ var KLUBB = {
     aterbetalning: "Kan vi av något skäl inte genomföra beställningen betalar vi tillbaka din Swish. Läs mer under Vanliga frågor.",
     belonning: "",       // text under mätaren innan målet är nått. Laget skriver den själv, till exempel en belöning vid {mal}.
     belonningNatt: "",   // text när målet är nått
-    utlamning: "Information om när och var du hämtar kommer i lagets WhatsApp-grupp.",
+    utlamning: "Information om när och var du hämtar får du av lagföräldern.",
 
     // Vanliga frågor som passar vilken produkt som helst. {lag}, {pris}, {mal}, {minimum}, {enhet} (flera), {enhetEn} (en),
     // {produkt} och {belonning} fylls i. kraver: "belonning" = frågan visas bara om laget har skrivit en belöning.
@@ -52,9 +52,9 @@ var KLUBB = {
       { f: "Vad händer om det inte blir tillräckligt många beställningar?",
         s: "Vi lägger beställningen hos leverantören först när minst {minimum} {enhet} är beställda. Om vi inte når dit betalar vi tillbaka din Swish." },
       { f: "När och var hämtar jag min beställning?",
-        s: "Utlämning meddelas i lagets WhatsApp-grupp när allt är på plats." },
+        s: "Lagföräldern meddelar när det är dags att hämta och var." },
       { f: "Kan jag ändra eller komplettera min beställning?",
-        s: "Ja, gör en ny beställning eller hör av dig i lagets WhatsApp-grupp." },
+        s: "Ja, gör en ny beställning eller hör av dig till lagföräldern." },
       { f: "Vad sparar ni om mig?",
         s: "Vi sparar barnets förnamn och ditt mobilnummer, enbart för att hantera beställningen, utlämningen och betalningen. Uppgifterna delas inte vidare. Kontakta laget om du vill ha dem raderade." }
     ],
@@ -129,7 +129,7 @@ var DEMO_LAG = [
     if (l.produkt.enhet === "kakor") {
       l.intro = l.intro || "Beställ klubbens chokladkaka med logga. Pengarna går till cuper och aktiviteter för laget.";
       l.belonning = l.belonning || "Når vi {mal} kakor blir det en överraskning för barnen på sista träningen.";
-      l.utlamningsText = l.utlamningsText || "Information om utlämning kommer i lagets WhatsApp-grupp.";
+      l.utlamningsText = l.utlamningsText || "Information om utlämning kommer från lagföräldern.";
     }
     l.intro = l.intro || ""; l.belonning = l.belonning || ""; l.utlamningsText = l.utlamningsText || "";
     l.titel = l.kampanj || l.produkt.namn;

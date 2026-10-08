@@ -213,12 +213,12 @@
         stat("Hämtat", nf.format(o.hamtat), o.hamtatObetalt > 0 ? "varav " + nf.format(o.hamtatObetalt) + " obetalt" : E, o.hamtatObetalt > 0),
         stat("Kvar att dela ut", nf.format(o.attHamta), "betalt, ej hämtat")));
 
-      // Länken som föräldrarna använder. Lagföräldern delar den i lagets WhatsApp-grupp. I demoläget är sidans riktiga adress en intern adress, så där visas bara slutet.
+      // Länken som föräldrarna använder. Lagföräldern delar den på det sätt laget brukar prata med föräldrarna. I demoläget är sidans riktiga adress en intern adress, så där visas bara slutet.
       var lank = DEMO ? "[sidans adress]/?lag=" + slug : bestallningsLank(slug);
       var kopBtn = h("button", { type: "button", class: "mini", text: "Kopiera" });
       kopBtn.addEventListener("click", function () { kopiera(lank, kopBtn); });
       oPanel.appendChild(h("div", { class: "card", style: "margin-top:16px" }, h("h3", { style: "margin:0 0 6px", text: "Länk till beställningssidan" }),
-        h("p", { style: "margin:0", text: "Lägg den här länken i lagets WhatsApp-grupp, så kommer föräldrarna direkt till " + l.namn + " utan att leta bland alla lag." }),
+        h("p", { style: "margin:0", text: "Dela den här länken med föräldrarna där laget brukar prata, till exempel i en gruppchatt eller i ett meddelande, så kommer de direkt till " + l.namn + " utan att leta bland alla lag." }),
         h("div", { class: "keybox" }, h("code", { text: lank }), kopBtn),
         DEMO ? h("p", { class: "small", style: "margin:10px 0 0", text: "I demoläget visas bara slutet av adressen. När sidan ligger på en riktig adress blir det en länk som går att dela." }) : null));
 

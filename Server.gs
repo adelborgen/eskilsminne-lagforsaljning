@@ -110,7 +110,7 @@ function doPost(e) {
     return d && d.action === "admin" ? hanteraAdmin(d) : hanteraBestallning(d || {});
   } catch (err) {
     console.error(err);
-    return json({ ok: false, fel: "Tekniskt fel. Hör av dig i lagets WhatsApp-grupp." });
+    return json({ ok: false, fel: "Tekniskt fel. Försök igen om en stund, eller hör av dig till lagföräldern." });
   }
 }
 
@@ -135,7 +135,7 @@ function hanteraBestallning(d) {
   var cache = CacheService.getScriptCache();
   var nyckel = "m" + mobil;
   var tidigare = Number(cache.get(nyckel) || 0);
-  if (tidigare >= CFG.MAX_PER_MOBIL) return json({ ok: false, fel: "Många beställningar på kort tid. Vänta en stund eller skriv i lagets WhatsApp-grupp." });
+  if (tidigare >= CFG.MAX_PER_MOBIL) return json({ ok: false, fel: "Många beställningar på kort tid. Vänta en stund eller hör av dig till lagföräldern." });
 
   var belopp = antal * lag.pris;   // räknas alltid här, aldrig från sidan
   return medLas(function () {

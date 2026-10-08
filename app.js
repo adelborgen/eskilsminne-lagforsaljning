@@ -149,7 +149,7 @@
       }
       if (info) info.textContent = q ? (vis.length ? vis.length + (vis.length === 1 ? " lag" : " lag") + " matchar" : "") : "";
       if (!vis.length) host.appendChild(h("p", { class: "notice", style: "margin-top:22px", text: LAG.length
-        ? "Inget lag matchar. Kontrollera stavningen, eller be om länken i lagets WhatsApp-grupp." : "Inga lag är tillagda ännu." }));
+        ? "Inget lag matchar. Kontrollera stavningen, eller be lagföräldern om länken." : "Inga lag är tillagda ännu." }));
     }
     if (sok) sok.addEventListener("input", rita);
     rita();
@@ -359,7 +359,7 @@
             if (d && d.ok) success(payload, d.id, typeof d.belopp === "number" ? d.belopp : payload.antal * cfg.pris);
             else fail((d && d.fel) || "Något gick fel. Försök igen.");
           })
-          .catch(function () { fail("Det gick inte att skicka just nu. Kontrollera uppkopplingen och försök igen, eller hör av dig i WhatsApp-gruppen."); });
+          .catch(function () { fail("Det gick inte att skicka just nu. Kontrollera uppkopplingen och försök igen, eller hör av dig till lagföräldern."); });
       });
     }
 
@@ -400,7 +400,7 @@
           h("li", { text: "Behåll meddelandet. Det är så vi hittar din betalning." }),
           h("li", { text: "Klart! Du behöver inte göra något mer." })));
       } else {
-        swish.appendChild(h("p", { text: "Swish-uppgifter kommer inom kort. Vi hör av oss i lagets WhatsApp-grupp." }));
+        swish.appendChild(h("p", { text: "Swish-uppgifter kommer inom kort. Lagföräldern hör av sig." }));
       }
 
       content.appendChild(h("div", { class: "card done", style: "margin-top:16px" },
@@ -457,7 +457,7 @@
     app.appendChild(h("h2", { class: "title", text: cfg.status === "avslutad" ? "Försäljningen är avslutad" : "Försäljningen har inte startat än" }));
     app.appendChild(h("p", { class: "lead", text: cfg.status === "avslutad"
       ? "Tack till alla som har beställt! Det går inte att beställa längre för " + cfg.namn + "."
-      : "Försäljningen för " + cfg.namn + " öppnar snart. Vi meddelar i lagets WhatsApp-grupp." }));
+      : "Försäljningen för " + cfg.namn + " öppnar snart. Lagföräldern meddelar när den öppnar." }));
     app.appendChild(h("p", { class: "small", text: K.kontakt }));
   }
 
