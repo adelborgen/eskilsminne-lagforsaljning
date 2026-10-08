@@ -219,3 +219,6 @@
     .pick .badge { background: transparent !important; color: #000 !important; border: 1px solid #000; }
     .p-sub { color: #333; }
   }
+
+  textarea { width: 100%; font: inherit; color: var(--text); background: var(--bg); border: 1px solid var(--line); border-radius: 12px; padding: 12px 14px; resize: vertical; }
+  textarea:focus { outline: 3px solid var(--sel-border); outline-offset: 2px; }

@@ -1,7 +1,7 @@
 /* ==========================================================================
    Adminvy för klubbens lagförsäljning.
-   Lagets kassör loggar in med lagets adminnyckel och ser bara sitt eget lag:
-   översikt, beställningar, betalningar och utlämning (vem som hämtat). Klubbens administratör loggar in med
+   Lagföräldern loggar in med lagets adminnyckel och ser bara sitt eget lag: först försäljningen
+   (utkast som skickas till klubben för godkännande), sedan översikt, beställningar, betalningar och utlämning. Klubbens administratör loggar in med
    superadmin-nyckeln, ser alla lag och lägger till nya.
    All behörighet kontrolleras av servern (Server.gs). Den här filen visar bara.
    Utan KLUBB.endpoint körs demoläge med exempeldata och inget sparas.
@@ -76,7 +76,20 @@
     var t = new Date(iso);
     return isNaN(t) ? String(iso) : t.toLocaleString("sv-SE", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" });
   }
-  var STATUS_TEXT = { pagar: "Pågår", snart: "Startar snart", avslutad: "Avslutad" };
+  var STATUS_TEXT = { utkast: "Utkast", granskas: "Väntar på godkännande", snart: "Godkänd, öppnar snart", pagar: "Pågår", avslutad: "Avslutad" };
+
+  // Försäljningens uppgifter som en läsbar ruta. Används där lagföräldern väntar på klubben och där klubben granskar.
+  function villkorKort(l, rubrik) {
+    var produkt = produktFor(l.slug), marginal = l.pris - l.inkopspris;
+    return h("div", { class: "card", style: "margin-top:16px" }, rubrik ? h("h3", { style: "margin:0 0 8px", text: rubrik }) : null,
+      kv("Vad ni säljer", l.kampanj || "saknas", "", true),
+      kv("Swish", (l.swish.nummer || "saknas") + (l.swish.namnPaKonto ? " (" + l.swish.namnPaKonto + ")" : "")),
+      kv("Pris / inköpspris", kr(l.pris) + " / " + kr(l.inkopspris)),
+      kv("Till lagkassan per " + (produkt.enhetEn || "styck"), kr(marginal)),
+      kv("Minimum / mål", nf.format(l.minimum) + " / " + nf.format(l.mal)),
+      kv("Max per beställning", nf.format(l.maxAntal)),
+      l.kartong > 0 ? kv("Antal per kartong", nf.format(l.kartong)) : null);
+  }
 
   function visaFelSida(meddelande) {
     setTopbar("", "Admin");
@@ -150,6 +163,7 @@
   function orderStatus(o) { return o.betald === "JA" ? "betald" : o.betald === "AVBRUTEN" ? "avbruten" : "obetald"; }
 
   function byggLagVy(d) {
+    if (d.lag.status === "utkast" || d.lag.status === "granskas") return byggUppsattning(d);
     var slug = d.lag.slug, produkt = produktFor(slug);
     var filter = "alla", sok = "";
     setTopbar(d.lag.namn, "Admin");
@@ -416,6 +430,86 @@
     ritaOversikt(); ritaLista(); ritaUtlamning();
   }
 
+  /* ---------- Uppsättning: lagföräldern fyller i försäljningen och skickar den till klubben ---------- */
+  function byggUppsattning(d) {
+    var l = d.lag, slug = l.slug, granskas = l.status === "granskas", arSuper = S.roll === "super";
+    setTopbar(l.namn, "Admin");
+    document.title = K.namn + " – Admin " + l.namn;
+    app.textContent = "";
+    app.appendChild(h("div", { class: "topactions" },
+      arSuper ? h("button", { type: "button", class: "linkbtn", text: "← Alla lag", onclick: function () { S.valt = null; renderAdmin(); } }) : h("span"),
+      h("button", { type: "button", class: "linkbtn", text: "Logga ut", onclick: loggaUt })));
+    app.appendChild(h("h2", { class: "title", text: "Din försäljning" }));
+    app.appendChild(h("div", { class: "badges", style: "margin-top:8px" }, h("span", { class: "badge " + (granskas ? "unpaid" : ""), text: STATUS_TEXT[l.status] })));
+    app.appendChild(h("ol", { class: "steps small" },
+      h("li", { text: "Fyll i uppgifterna om försäljningen." }),
+      h("li", { text: "Skicka dem till klubben för godkännande." }),
+      h("li", { text: "Klubben godkänner och öppnar försäljningen. Då kan föräldrarna beställa." })));
+
+    var fel = h("p", { class: "formerror", role: "alert", hidden: "" });
+    var ok = h("p", { class: "okline", role: "status" });
+    function visaFel(t) { ok.textContent = ""; fel.textContent = t; fel.hidden = false; fel.scrollIntoView({ block: "center", behavior: "smooth" }); }
+
+    if (granskas) {
+      app.appendChild(h("p", { class: "notice", style: "margin-top:12px", text: "Skickad till klubben. Säg till klubbens administratör att den väntar. De godkänner den eller skickar tillbaka den med en kommentar." }));
+      app.appendChild(villkorKort(l, "Uppgifterna som skickades"));
+      var tillbaka = h("button", { type: "button", class: "ghost", style: "margin-top:16px", text: "Dra tillbaka och ändra" });
+      tillbaka.addEventListener("click", function () {
+        tillbaka.disabled = true; fel.hidden = true;
+        anropa("dragTillbaka", null, slug).then(function (r) {
+          if (!r.ok) { tillbaka.disabled = false; return visaFel(r.fel || "Det gick inte att dra tillbaka."); }
+          d.lag = r.lag; byggUppsattning(d); window.scrollTo(0, 0);
+        });
+      });
+      app.appendChild(fel); app.appendChild(tillbaka);
+      return;
+    }
+
+    if (l.kommentar) app.appendChild(h("div", { class: "notice", style: "margin-top:12px" },
+      h("strong", { text: "Klubben skickade tillbaka försäljningen:" }), h("p", { style: "margin:4px 0 0", text: l.kommentar })));
+    if (arSuper) {
+      app.appendChild(h("p", { class: "notice", style: "margin-top:12px", text: "Du ser utkastet som klubbadministratör. Ändra uppgifterna under Alla lag." }));
+      app.appendChild(villkorKort(l));
+      return;
+    }
+
+    var fb = faltBlock({ kampanj: l.kampanj, swishNummer: l.swish.nummer, mottagare: l.swish.namnPaKonto, meddelande: l.swish.meddelande,
+      pris: l.pris, inkopspris: l.inkopspris, minimum: l.minimum, mal: l.mal, maxAntal: l.maxAntal, kartong: l.kartong }, false);
+    var kryss = ["Den som äger Swish-numret vet om att numret används för försäljningen.", "Vi säljer inget som kräver tillstånd, till exempel lotter."];
+    var kryssEl = [], lista = h("ul", { class: "checklist" });
+    kryss.forEach(function (t) {
+      var id = "u" + (++uid), cb = h("input", { type: "checkbox", id: id });
+      cb.addEventListener("change", function () { skicka.disabled = !kryssEl.every(function (c) { return c.checked; }); });
+      kryssEl.push(cb);
+      lista.appendChild(h("li", null, h("label", { class: "check", for: id }, cb, h("span", { text: t }))));
+    });
+    var spara = h("button", { type: "button", class: "ghost", style: "margin-top:16px", text: "Spara utkast" });
+    var skicka = h("button", { type: "button", class: "primary", style: "margin-top:12px", text: "Skicka för godkännande", disabled: "" });
+    function sparaUtkast() { return anropa("lagSpara", { falt: fb.hamta() }, slug); }
+    spara.addEventListener("click", function () {
+      spara.disabled = true; fel.hidden = true; ok.textContent = "";
+      sparaUtkast().then(function (r) {
+        spara.disabled = false;
+        if (!r.ok) return visaFel(r.fel || "Det gick inte att spara.");
+        d.lag = r.lag; ok.textContent = "Utkastet är sparat.";
+      });
+    });
+    skicka.addEventListener("click", function () {
+      skicka.disabled = true; spara.disabled = true; fel.hidden = true; ok.textContent = "";
+      function igen() { spara.disabled = false; skicka.disabled = !kryssEl.every(function (c) { return c.checked; }); }
+      sparaUtkast().then(function (r) {
+        if (!r.ok) { igen(); return visaFel(r.fel || "Det gick inte att spara."); }
+        d.lag = r.lag;
+        return anropa("skickaGodkannande", { bekraftat: true }, slug).then(function (r2) {
+          if (!r2.ok) { igen(); return visaFel(r2.fel || "Det gick inte att skicka."); }
+          d.lag = r2.lag; byggUppsattning(d); window.scrollTo(0, 0);
+        });
+      });
+    });
+    app.appendChild(h("div", { class: "card", style: "margin-top:16px" }, fel, fb.el,
+      h("p", { class: "small", style: "margin:16px 0 0", text: "Bekräfta innan du skickar:" }), lista, ok, spara, skicka));
+  }
+
   function csvCell(v) {
     var s = String(v);
     if (/^[=+\-@]/.test(s)) s = "'" + s;   // så att kalkylprogram inte tolkar innehållet som formel
@@ -483,12 +577,12 @@
   }
 
   function byggSuper(lista) {
-    var nyckelPlats = h("div"), listEl = h("div"), fel = h("p", { class: "error", role: "alert" });
+    var nyckelPlats = h("div"), kogEl = h("div", { style: "margin-bottom:24px" }), listEl = h("div"), fel = h("p", { class: "error", role: "alert" });
     app.textContent = "";
     app.appendChild(h("div", { class: "topactions" }, h("h2", { class: "title", text: "Alla lag" }),
       h("button", { type: "button", class: "linkbtn", text: "Logga ut", onclick: loggaUt })));
     app.appendChild(nyckelPlats);
-    app.appendChild(h("div", { style: "margin-top:16px" }, fel, listEl));
+    app.appendChild(h("div", { style: "margin-top:16px" }, fel, kogEl, listEl));
     if (DEMO) app.insertBefore(h("p", { class: "notice", text: "Demoläge med exempeldata. Inget sparas." }), nyckelPlats);
 
     function ladda() { anropa("lagLista").then(function (r) { if (r.ok) { lista = r.lag; ritaLag(); } else fel.textContent = r.fel; }); }
@@ -503,11 +597,11 @@
       nyckelPlats.textContent = "";
       nyckelPlats.appendChild(h("div", { class: "card", style: "margin-top:16px; border: 2px solid var(--yellow)" },
         h("h3", { style: "margin:0 0 6px", text: rubrik }),
-        h("p", { style: "margin:0", text: "Nyckeln visas bara nu. Skicka adminlänken till lagets kassör på ett säkert sätt, inte i en öppen grupp." }),
+        h("p", { style: "margin:0", text: "Nyckeln visas bara nu. Skicka adminlänken till lagföräldern på ett säkert sätt, inte i en öppen grupp." }),
         rad("Adminlänk (loggar in direkt)", lank), rad("Adminnyckel", key), rad("Beställningssida för föräldrar", bestallningsLank(slug)),
         h("ol", { class: "steps small" },
-          h("li", { text: "Skicka adminlänken till lagets kassör." }),
-          h("li", { text: "Sätt status till Pågår när laget ska öppna." }),
+          h("li", { text: "Skicka adminlänken till lagföräldern. Lagföräldern fyller i försäljningen och skickar den till klubben." }),
+          h("li", { text: "Granska och godkänn den här under Väntar på godkännande." }),
           h("li", { text: "Gör en testbeställning på beställningssidan och markera den som avbruten." })),
         h("button", { type: "button", class: "ghost", style: "margin-top:12px", text: "Stäng", onclick: function () { nyckelPlats.textContent = ""; } })));
       nyckelPlats.scrollIntoView({ block: "start", behavior: "smooth" });
@@ -546,7 +640,8 @@
           h("button", { type: "button", class: "mini", text: "Avbryt", onclick: function () { bekrafta.hidden = true; } })));
       return h("div", { class: "card teamadmin" },
         h("div", { class: "o-head" }, h("span", { class: "o-name", text: l.namn + " · " + (l.kampanj || "") }), h("span", { class: "badge", text: STATUS_TEXT[l.status] || l.status })),
-        h("div", { class: "o-sub num", text: "Beställt " + nf.format(ov.bestallt) + " av " + nf.format(l.mal) + " · Betalt " + nf.format(ov.betalt) + " · Obetalt " + nf.format(ov.obetalt) + " · Hämtat " + nf.format(ov.hamtat || 0) }),
+        h("div", { class: "o-sub num", text: l.status === "utkast" ? "Laget fyller i uppgifterna." + (l.kommentar ? " Tillbakaskickad: " + l.kommentar : "")
+          : "Beställt " + nf.format(ov.bestallt) + " av " + nf.format(l.mal) + " · Betalt " + nf.format(ov.betalt) + " · Obetalt " + nf.format(ov.obetalt) + " · Hämtat " + nf.format(ov.hamtat || 0) }),
         h("div", { class: "field", style: "margin-top:12px" }, sel),
         h("div", { class: "btnrow" },
           h("button", { type: "button", class: "mini go", text: "Öppna admin", onclick: function () { S.valt = l.slug; renderAdmin(); } }),
@@ -555,17 +650,45 @@
         andra);
     }
 
+    // En försäljning som väntar på klubbens godkännande: granska uppgifterna, godkänn eller skicka tillbaka med en kommentar.
+    function kogKort(l) {
+      var kFel = h("p", { class: "error", role: "alert" });
+      var kom = h("textarea", { id: "kom-" + l.slug, rows: "3", maxlength: "300", placeholder: "Vad behöver ändras?", "aria-label": "Kommentar till " + l.namn });
+      var skickaBtn = h("button", { type: "button", class: "mini go", text: "Skicka tillbaka" });
+      var tillbakaBox = h("div", { hidden: "", style: "margin-top:12px" }, kom, h("div", { class: "btnrow" }, skickaBtn));
+      function klar(r) { if (!r.ok) { kFel.textContent = r.fel || "Det gick inte att spara."; return; } ladda(); }
+      function godkann(till) { kFel.textContent = ""; anropa("godkann", { slug: l.slug, till: till }).then(klar); }
+      skickaBtn.addEventListener("click", function () {
+        kFel.textContent = "";
+        anropa("skickaTillbaka", { slug: l.slug, kommentar: kom.value }).then(klar);
+      });
+      return h("div", { class: "card teamadmin", style: "border: 2px solid var(--yellow)" },
+        h("div", { class: "o-head" }, h("span", { class: "o-name", text: l.namn }), h("span", { class: "badge unpaid", text: STATUS_TEXT.granskas })),
+        villkorKort(l),
+        h("p", { class: "small", style: "margin:12px 0 0", text: "Kontrollera att Swish-numret ägs av någon som vet om det, att priserna stämmer och att inget som kräver tillstånd (till exempel lotter) säljs." }),
+        h("div", { class: "btnrow" },
+          h("button", { type: "button", class: "mini go", text: "Godkänn och öppna nu", onclick: function () { godkann("pagar"); } }),
+          h("button", { type: "button", class: "mini", text: "Godkänn, öppna senare", onclick: function () { godkann("snart"); } }),
+          h("button", { type: "button", class: "mini", text: "Skicka tillbaka…", onclick: function () { tillbakaBox.hidden = !tillbakaBox.hidden; if (!tillbakaBox.hidden) kom.focus(); } })),
+        tillbakaBox, kFel);
+    }
+
     function ritaLag() {
-      listEl.textContent = "";
+      listEl.textContent = ""; kogEl.textContent = "";
+      var vantar = lista.filter(function (l) { return l.status === "granskas"; });
+      if (vantar.length) {
+        kogEl.appendChild(h("h3", { style: "margin:0 0 12px", text: "Väntar på godkännande (" + vantar.length + ")" }));
+        vantar.forEach(function (l) { kogEl.appendChild(kogKort(l)); });
+      }
       if (!lista.length) listEl.appendChild(h("p", { class: "notice", text: "Inga lag är tillagda ännu. Lägg till det första nedan." }));
-      lista.forEach(function (l) { listEl.appendChild(lagKort(l)); });
+      lista.filter(function (l) { return l.status !== "granskas"; }).forEach(function (l) { listEl.appendChild(lagKort(l)); });
     }
 
     /* Lägg till lag */
     var kryss = [
       "Klubben eller lagets ansvariga har bekräftat att laget finns och att den som ber om det får sälja i lagets namn.",
-      "Swish-numret är det laget har bestämt ska ta emot pengarna (privat nummer eller Swish Handel), och den som äger numret vet om det.",
-      "Lagets kassör har fått veta att adminlänken är personlig och bara ska delas med dem som hanterar betalningarna, och att föräldrars uppgifter ska hanteras enligt klubbens regler."
+      "Lagföräldern vet att uppgifterna om försäljningen fylls i och skickas till klubben för godkännande innan något säljs.",
+      "Lagföräldern har fått veta att adminlänken är personlig och bara ska delas med dem som hanterar betalningarna, och att föräldrars uppgifter ska hanteras enligt klubbens regler."
     ];
     var kryssEl = [], lista2 = h("ul", { class: "checklist" });
     kryss.forEach(function (t) {
@@ -578,7 +701,7 @@
     var nytt = faltBlock({ kampanj: "Chokladförsäljning", pris: std.pris, inkopspris: std.inkopspris, minimum: std.minimum, mal: std.mal, maxAntal: std.maxAntal, kartong: 24 }, true);
     var statusSel = h("select", { id: "nstatus" });
     Object.keys(STATUS_TEXT).forEach(function (k) { statusSel.appendChild(h("option", { value: k, text: STATUS_TEXT[k] })); });
-    statusSel.value = "snart";
+    statusSel.value = "utkast";
     var laggTillBtn = h("button", { type: "submit", class: "primary", style: "margin-top:16px", text: "Lägg till laget", disabled: "" });
     var nFel = h("p", { class: "formerror", role: "alert", hidden: "" });
     function uppdateraKnapp() { laggTillBtn.disabled = !kryssEl.every(function (c) { return c.checked; }); }
@@ -613,7 +736,7 @@
     var namn = ["Alva", "Bo", "Cleo", "Dante", "Elsa", "Folke", "Greta", "Hugo"];
     (window.DEMO_LAG || []).forEach(function (l, li) {
       // Bara de värden som exempellaget faktiskt anger skriver över standardvärdena (undefined får inte göra det).
-      var egna = { slug: l.slug, namn: l.namn, kampanj: l.kampanj, status: l.status, swish: l.swish };
+      var egna = { slug: l.slug, namn: l.namn, kampanj: l.kampanj, status: l.status, swish: l.swish, kommentar: l.kommentar || "" };
       ["pris", "inkopspris", "minimum", "mal", "maxAntal", "kartong"].forEach(function (k) { if (l[k] !== undefined) egna[k] = l[k]; });
       lag[l.slug] = merge({ pris: K.standard.pris, inkopspris: K.standard.inkopspris, minimum: K.standard.minimum, mal: K.standard.mal,
         maxAntal: K.standard.maxAntal, kartong: 24 }, egna);
@@ -642,6 +765,19 @@
     o.betaltMinusFaktura = Math.round((o.betaltKr - o.faktura) * 100) / 100;
     return o;
   }
+  // Samma kontroll som servern gör innan en försäljning kan godkännas.
+  function demoSaknas(l) {
+    var m = [];
+    if (!l.kampanj) m.push("Vad ni säljer");
+    if (!l.swish.nummer) m.push("Swish-nummer");
+    if (!l.swish.namnPaKonto) m.push("Mottagarens namn i Swish");
+    if (!(l.pris > 0)) m.push("Pris");
+    if (!(l.minimum > 0) || !(l.mal > 0)) m.push("Minimum och mål");
+    if (m.length) return "Fyll i först: " + m.join(", ") + ".";
+    if (l.inkopspris > l.pris) return "Inköpspriset kan inte vara högre än priset.";
+    if (l.mal < l.minimum) return "Målet kan inte vara lägre än minimum.";
+    return null;
+  }
   function demoApi(p) {
     var s = demoState(), lag = p.lag !== "*" ? s.lag[p.lag] : null;
     var arSuper = p.key === "super";
@@ -652,6 +788,30 @@
     switch (p.op) {
       case "oversikt": svar = lag ? { ok: true, lag: klon(lag), oversikt: demoOversikt(lag, s.ordrar[lag.slug]) } : { ok: false, fel: "Okänt lag." }; break;
       case "lista": svar = lag ? { ok: true, lag: klon(lag), ordrar: klon(s.ordrar[lag.slug]).reverse() } : { ok: false, fel: "Okänt lag." }; break;
+      case "lagSpara":
+        if (!lag) { svar = { ok: false, fel: "Okänt lag." }; break; }
+        if (!arSuper && lag.status !== "utkast") { svar = { ok: false, fel: "Försäljningen är låst medan klubben granskar eller efter godkännandet. Be klubbens administratör ändra." }; break; }
+        var fs = p.falt || {};
+        ["kampanj"].forEach(function (k) { if (fs[k] !== undefined) lag[k] = String(fs[k]).trim(); });
+        if (fs.swishNummer !== undefined) lag.swish.nummer = String(fs.swishNummer).trim();
+        if (fs.mottagare !== undefined) lag.swish.namnPaKonto = String(fs.mottagare).trim();
+        if (fs.meddelande !== undefined) lag.swish.meddelande = String(fs.meddelande).trim();
+        ["pris", "inkopspris", "minimum", "mal", "maxAntal", "kartong"].forEach(function (k) { if (fs[k] !== undefined && fs[k] !== "") lag[k] = Number(String(fs[k]).replace(",", ".")); });
+        svar = { ok: true, lag: klon(lag) }; break;
+      case "skickaGodkannande":
+        if (!lag) { svar = { ok: false, fel: "Okänt lag." }; break; }
+        if (lag.status === "granskas") { svar = { ok: false, fel: "Försäljningen väntar redan på godkännande." }; break; }
+        if (lag.status !== "utkast") { svar = { ok: false, fel: "Försäljningen är redan godkänd." }; break; }
+        if (p.bekraftat !== true) { svar = { ok: false, fel: "Bekräfta de två punkterna först." }; break; }
+        var sak = demoSaknas(lag);
+        if (sak) { svar = { ok: false, fel: sak }; break; }
+        lag.status = "granskas"; lag.kommentar = "";
+        svar = { ok: true, lag: klon(lag) }; break;
+      case "dragTillbaka":
+        if (!lag) { svar = { ok: false, fel: "Okänt lag." }; break; }
+        if (lag.status !== "granskas") { svar = { ok: false, fel: "Försäljningen väntar inte på godkännande." }; break; }
+        lag.status = "utkast";
+        svar = { ok: true, lag: klon(lag) }; break;
       case "hamtad":
         if (!lag) { svar = { ok: false, fel: "Okänt lag." }; break; }
         var oh = s.ordrar[lag.slug].filter(function (x) { return parseInt(x.id, 10) === parseInt(p.id, 10); })[0];
@@ -681,7 +841,17 @@
         if (p.op === "lagLista") svar = { ok: true, lag: Object.keys(s.lag).map(function (k) {
           var ov = demoOversikt(s.lag[k], s.ordrar[k]), ut = klon(s.lag[k]);
           ut.oversikt = { bestallt: ov.bestallt, betalt: ov.betalt, betaltKr: ov.betaltKr, obetalt: ov.obetalt, hamtat: ov.hamtat, attHamta: ov.attHamta }; return ut; }) };
-        else if (p.op === "lagUppdatera") {
+        else if (p.op === "godkann" || p.op === "skickaTillbaka") {
+          var gl = s.lag[p.slug];
+          if (!gl) { svar = { ok: false, fel: "Okänt lag." }; break; }
+          var kom = String(p.kommentar || "").trim();
+          if (p.op === "godkann" && ["snart", "pagar"].indexOf(p.till) < 0) { svar = { ok: false, fel: "Välj om försäljningen ska öppnas nu eller senare." }; break; }
+          if (p.op === "skickaTillbaka" && !kom) { svar = { ok: false, fel: "Skriv vad som behöver ändras." }; break; }
+          if (gl.status !== "granskas") { svar = { ok: false, fel: "Försäljningen väntar inte på godkännande." }; break; }
+          if (p.op === "godkann") { var gs = demoSaknas(gl); if (gs) { svar = { ok: false, fel: gs }; break; } gl.status = p.till; gl.kommentar = ""; }
+          else { gl.status = "utkast"; gl.kommentar = kom.slice(0, 300); }
+          svar = { ok: true, lag: klon(gl) };
+        } else if (p.op === "lagUppdatera") {
           var l = s.lag[p.slug]; if (!l) { svar = { ok: false, fel: "Okänt lag." }; break; }
           var f = p.falt || {};
           ["kampanj", "status", "mottagare", "meddelande"].forEach(function (k) { if (f[k] !== undefined) { if (k === "mottagare") l.swish.namnPaKonto = f[k]; else if (k === "meddelande") l.swish.meddelande = f[k]; else l[k] = f[k]; } });
@@ -693,7 +863,7 @@
           if (!dd.namn) { svar = { ok: false, fel: "Skriv lagets namn (2–20 tecken)." }; break; }
           var slug = String(dd.namn).toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "").replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
           if (s.lag[slug]) { svar = { ok: false, fel: "Det finns redan ett lag med adressen " + slug + "." }; break; }
-          s.lag[slug] = { slug: slug, namn: dd.namn, kampanj: dd.kampanj || "Lagförsäljning", status: dd.status || "snart",
+          s.lag[slug] = { slug: slug, namn: dd.namn, kampanj: dd.kampanj || "Lagförsäljning", status: dd.status || "utkast", kommentar: "",
             swish: { nummer: dd.swishNummer || "", namnPaKonto: dd.mottagare || "", meddelande: dd.meddelande || dd.namn + " försäljning" },
             pris: Number(dd.pris), inkopspris: Number(dd.inkopspris), minimum: Number(dd.minimum), mal: Number(dd.mal), maxAntal: Number(dd.maxAntal) || 50, kartong: Number(dd.kartong) || 0 };
           s.ordrar[slug] = [];

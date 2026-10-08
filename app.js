@@ -73,6 +73,8 @@
     setTopbar("", K.titel);
     document.title = K.namn + " – " + K.titel;
     var list = h("ul", { class: "teams", style: "padding:0;margin:16px 0 0" });
+    // Utkast och försäljningar som väntar på klubbens godkännande visas inte för föräldrar.
+    LAG = LAG.filter(function (l) { return l.status !== "utkast" && l.status !== "granskas"; });
     LAG.forEach(function (l) { list.appendChild(teamCard(l)); });
     app.textContent = "";
     app.appendChild(h("h2", { class: "title", text: "Välj ditt lag" }));
@@ -405,6 +407,7 @@
       if (!slug) return renderList(lista);
       var hit = lista.filter(function (l) { return l.slug === slug; })[0];
       if (!hit) return renderIngetLag();
+      if (hit.status === "utkast" || hit.status === "granskas") return renderInteOppen({ namn: hit.namn, status: "snart" });
       var cfg = bygg(hit);
       if (cfg.status !== "pagar") return renderInteOppen(cfg);
       renderTeam(cfg);

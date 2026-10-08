@@ -57,8 +57,8 @@ test("nytt lag: kontroller, standardvärden och slug", () => {
   const r = m.admin("*", sk, "lagNy", { data: { namn: "Flickor Å-Ö", pris: "35,5", inkopspris: 10, minimum: 100, mal: 150 } });
   assert.equal(r.ok, true, JSON.stringify(r));
   assert.equal(r.slug, "flickor-a-o");
-  assert.deepEqual(r.lag, { slug: "flickor-a-o", namn: "Flickor Å-Ö", kampanj: "Lagförsäljning", status: "snart",
-    swish: { nummer: "", namnPaKonto: "", meddelande: "Flickor Å-Ö försäljning" }, pris: 35.5, inkopspris: 10, minimum: 100, mal: 150, maxAntal: 50, kartong: 0 });
+  assert.deepEqual(r.lag, { slug: "flickor-a-o", namn: "Flickor Å-Ö", kampanj: "Lagförsäljning", status: "utkast",
+    swish: { nummer: "", namnPaKonto: "", meddelande: "Flickor Å-Ö försäljning" }, pris: 35.5, inkopspris: 10, minimum: 100, mal: 150, maxAntal: 50, kartong: 0, kommentar: "" });
   assert.match(m.admin("*", sk, "lagNy", { data: { namn: "Flickor Å-Ö", pris: 1, inkopspris: 0, minimum: 1, mal: 1 } }).fel, /finns redan/);
 });
 
@@ -276,6 +276,140 @@ test("setup lägger till kolumnen Hämtad i en äldre beställningsflik utan att
   m.setup();   // en andra körning ändrar inget
   assert.deepEqual(sh.data[0].slice(0, 9), ["Tid", "Order-ID", "Lag", "Barn", "Mobil", "Antal", "Belopp", "Betald", "Hämtad"]);
   assert.equal(sh.data[1][8], "JA");
+});
+
+// Ett lag som klubben skapat som utkast, så som lagföräldern får det.
+function utkast(m, sk, o = {}) {
+  const r = skapaLag(m, sk, { namn: "Lag A", status: "utkast", swishNummer: "", mottagare: "", kampanj: "", pris: 30, inkopspris: 14.5, minimum: 10, mal: 20, ...o });
+  return { ...r, slug: r.slug };
+}
+const komplett = { kampanj: "Chokladförsäljning", swishNummer: "070 123 45 67", mottagare: "Eskilsminne IF Lag A", pris: 30, inkopspris: 14.5, minimum: 10, mal: 20 };
+
+test("utkast och väntande försäljningar syns bara med namn för allmänheten, och går inte att beställa från", () => {
+  const { m, sk } = ny();
+  const a = utkast(m, sk);
+  skapaLag(m, sk, { namn: "Lag B", status: "granskas", swishNummer: "070 123 45 67", mottagare: "Hemlig mottagare", kommentar: "x" });
+  skapaLag(m, sk, { namn: "Lag C", status: "pagar" });
+  const lista = m.get({ action: "lag" }).lag;
+  assert.deepEqual(lista.find((l) => l.slug === "lag-a"), { slug: "lag-a", namn: "Lag A", status: "utkast" });
+  assert.deepEqual(Object.keys(lista.find((l) => l.slug === "lag-b")).sort(), ["namn", "slug", "status"]);
+  assert.ok("swish" in lista.find((l) => l.slug === "lag-c"), "ett öppet lag visas som förut");
+  assert.ok(!JSON.stringify(lista).includes("Hemlig mottagare"));
+  assert.match(bestall(m, "lag-a").fel, /inte öppen/);
+  assert.match(bestall(m, "lag-b").fel, /inte öppen/);
+  assert.equal(m.admin("lag-a", a.key, "oversikt").lag.status, "utkast", "lagföräldern kommer åt sitt utkast");
+});
+
+test("lagförälderns uppsättning: bara försäljningens uppgifter, bara som utkast", () => {
+  const { m, sk } = ny();
+  const a = utkast(m, sk);
+  let r = m.admin("lag-a", a.key, "lagSpara", { falt: { ...komplett, namn: "Kapat", status: "pagar", slug: "kapad", hash: "x", _rad: 9 } });
+  assert.equal(r.ok, true, JSON.stringify(r));
+  assert.deepEqual([r.lag.namn, r.lag.status, r.lag.slug], ["Lag A", "utkast", "lag-a"], "namn, status och adress kan inte ändras av laget");
+  assert.deepEqual([r.lag.kampanj, r.lag.swish.nummer, r.lag.swish.namnPaKonto, r.lag.pris], ["Chokladförsäljning", "070 123 45 67", "Eskilsminne IF Lag A", 30]);
+  assert.match(m.admin("lag-a", a.key, "lagSpara", { falt: { swishNummer: "12" } }).fel, /Swish/);
+  assert.match(m.admin("lag-a", a.key, "lagSpara", { falt: { inkopspris: 99 } }).fel, /Inköpspriset/);
+  assert.match(m.admin("lag-a", a.key, "lagSpara", { falt: { mal: 5 } }).fel, /Målet/);
+  assert.equal(m.admin("lag-a", a.key, "lagSpara", { falt: { kampanj: "=HYPERLINK" } }).lag.kampanj, "HYPERLINK", "formeltecken rensas");
+  const b = skapaLag(m, sk, { namn: "Lag B", status: "utkast" });
+  assert.match(m.admin("lag-a", b.key, "lagSpara", { falt: { pris: 1 } }).fel, /Fel lag eller nyckel/);
+  // ett lag som klubben redan godkänt kan inte ändras av laget, men av klubben
+  m.admin("*", sk, "lagUppdatera", { slug: "lag-a", falt: { status: "pagar" } });
+  assert.match(m.admin("lag-a", a.key, "lagSpara", { falt: { pris: 99 } }).fel, /låst/);
+  assert.equal(m.admin("lag-a", sk, "lagSpara", { falt: { pris: 31 } }).lag.pris, 31, "klubbens administratör får ändra");
+  assert.equal(m.admin("lag-a", a.key, "oversikt").lag.pris, 31);
+});
+
+test("skicka för godkännande: kräver bekräftelse och ifyllda uppgifter, och låser uppgifterna", () => {
+  const { m, sk } = ny();
+  const a = utkast(m, sk);
+  assert.match(m.admin("lag-a", a.key, "skickaGodkannande", { bekraftat: true }).fel, /Fyll i först: Vad ni säljer, Swish-nummer, Mottagarens namn i Swish/);
+  m.admin("lag-a", a.key, "lagSpara", { falt: komplett });
+  assert.match(m.admin("lag-a", a.key, "skickaGodkannande", {}).fel, /Bekräfta/);
+  assert.match(m.admin("lag-a", a.key, "skickaGodkannande", { bekraftat: "ja" }).fel, /Bekräfta/);
+  assert.equal(m.blad["Lag"].data[1][3], "utkast", "inget skickades");
+  const r = m.admin("lag-a", a.key, "skickaGodkannande", { bekraftat: true });
+  assert.deepEqual([r.ok, r.lag.status], [true, "granskas"]);
+  assert.match(m.admin("lag-a", a.key, "lagSpara", { falt: { pris: 99 } }).fel, /låst/);
+  assert.match(m.admin("lag-a", a.key, "skickaGodkannande", { bekraftat: true }).fel, /väntar redan/);
+  assert.equal(m.admin("lag-a", a.key, "oversikt").lag.pris, 30);
+  // dra tillbaka, ändra, skicka igen
+  assert.equal(m.admin("lag-a", a.key, "dragTillbaka").lag.status, "utkast");
+  assert.match(m.admin("lag-a", a.key, "dragTillbaka").fel, /väntar inte/);
+  assert.equal(m.admin("lag-a", a.key, "lagSpara", { falt: { pris: 35 } }).lag.pris, 35);
+  assert.equal(m.admin("lag-a", a.key, "skickaGodkannande", { bekraftat: true }).lag.status, "granskas");
+  const logg = m.blad["Logg"].data.slice(1).map((x) => x[2]);
+  assert.deepEqual(logg.filter((x) => /godkännande|tillbakadragen/.test(x)), ["skickad för godkännande", "tillbakadragen till utkast", "skickad för godkännande"]);
+});
+
+test("klubben godkänner: bara administratören, bara från väntar-på-godkännande, och först då går det att beställa", () => {
+  const { m, sk } = ny();
+  const a = utkast(m, sk);
+  m.admin("lag-a", a.key, "lagSpara", { falt: komplett });
+  assert.match(m.admin("*", sk, "godkann", { slug: "lag-a", till: "pagar" }).fel, /väntar inte/, "ett utkast kan inte godkännas");
+  m.admin("lag-a", a.key, "skickaGodkannande", { bekraftat: true });
+  assert.match(m.admin("lag-a", a.key, "godkann", { slug: "lag-a", till: "pagar" }).fel, /Bara klubbens administratör/);
+  assert.match(m.admin("lag-a", a.key, "skickaTillbaka", { slug: "lag-a", kommentar: "nej" }).fel, /Bara klubbens administratör/);
+  assert.match(m.admin("*", a.key, "godkann", { slug: "lag-a", till: "pagar" }).fel, /Fel lag eller nyckel/);
+  assert.match(m.admin("*", sk, "godkann", { slug: "lag-a", till: "avslutad" }).fel, /nu eller senare/);
+  assert.match(m.admin("*", sk, "godkann", { slug: "lag-a" }).fel, /nu eller senare/);
+  assert.match(m.admin("*", sk, "godkann", { slug: "finns-inte", till: "pagar" }).fel, /Okänt lag/);
+  assert.match(bestall(m, "lag-a").fel, /inte öppen/, "ingen beställning innan godkännande");
+  let r = m.admin("*", sk, "godkann", { slug: "lag-a", till: "snart" });
+  assert.deepEqual([r.ok, r.lag.status], [true, "snart"]);
+  assert.match(bestall(m, "lag-a").fel, /inte öppen/, "godkänd men inte öppnad än");
+  assert.match(m.admin("*", sk, "godkann", { slug: "lag-a", till: "pagar" }).fel, /väntar inte/, "redan godkänd");
+  m.admin("*", sk, "lagUppdatera", { slug: "lag-a", falt: { status: "pagar" } });
+  assert.equal(bestall(m, "lag-a").ok, true);
+  assert.ok("swish" in m.get({ action: "lag" }).lag[0], "när försäljningen är godkänd syns uppgifterna");
+  assert.ok(m.blad["Logg"].data.some((x) => x[2] === "godkänd av klubben" && x[4] === "snart"));
+});
+
+test("klubben kan skicka tillbaka med en kommentar som bara laget ser", () => {
+  const { m, sk } = ny();
+  const a = utkast(m, sk);
+  m.admin("lag-a", a.key, "lagSpara", { falt: komplett });
+  m.admin("lag-a", a.key, "skickaGodkannande", { bekraftat: true });
+  assert.match(m.admin("*", sk, "skickaTillbaka", { slug: "lag-a", kommentar: "  " }).fel, /Skriv vad som behöver ändras/);
+  assert.equal(m.blad["Lag"].data[1][3], "granskas", "oförändrad utan kommentar");
+  const r = m.admin("*", sk, "skickaTillbaka", { slug: "lag-a", kommentar: "=Sätt priset till 35 kr, och byt Swish-nummer" });
+  assert.deepEqual([r.ok, r.lag.status, r.lag.kommentar], [true, "utkast", "Sätt priset till 35 kr, och byt Swish-nummer"]);
+  assert.equal(m.admin("lag-a", a.key, "oversikt").lag.kommentar, "Sätt priset till 35 kr, och byt Swish-nummer", "laget ser kommentaren");
+  assert.ok(!JSON.stringify(m.get({ action: "lag" })).includes("Sätt priset"), "kommentaren är aldrig publik");
+  assert.match(m.admin("*", sk, "skickaTillbaka", { slug: "lag-a", kommentar: "igen" }).fel, /väntar inte/);
+  m.admin("lag-a", a.key, "skickaGodkannande", { bekraftat: true });
+  assert.equal(m.admin("lag-a", a.key, "oversikt").lag.kommentar, "", "kommentaren töms när laget skickar igen");
+  const lagLista = m.admin("*", sk, "lagLista").lag[0];
+  assert.deepEqual([lagLista.status, lagLista.kommentar], ["granskas", ""]);
+  assert.ok(m.blad["Logg"].data.some((x) => x[2] === "skickad tillbaka till laget" && /Sätt priset/.test(x[4])));
+  // även om klubben öppnar ett lag som har en gammal kommentar kvar syns den inte för allmänheten
+  m.admin("*", sk, "skickaTillbaka", { slug: "lag-a", kommentar: "Sätt priset till 35 kr" });
+  m.admin("*", sk, "lagUppdatera", { slug: "lag-a", falt: { status: "pagar" } });
+  const oppet = m.get({ action: "lag" }).lag[0];
+  assert.equal(oppet.status, "pagar");
+  assert.ok(!("kommentar" in oppet) && !JSON.stringify(oppet).includes("Sätt priset"));
+});
+
+test("godkännande kontrollerar uppgifterna en gång till om klubben ändrat dem", () => {
+  const { m, sk } = ny();
+  const a = utkast(m, sk);
+  m.admin("lag-a", a.key, "lagSpara", { falt: komplett });
+  m.admin("lag-a", a.key, "skickaGodkannande", { bekraftat: true });
+  m.admin("*", sk, "lagUppdatera", { slug: "lag-a", falt: { swishNummer: "" } });   // klubben tömmer numret
+  assert.match(m.admin("*", sk, "godkann", { slug: "lag-a", till: "pagar" }).fel, /Swish-nummer/);
+  assert.equal(m.blad["Lag"].data[1][3], "granskas");
+});
+
+test("setup lägger till kolumnen Klubbens kommentar i en äldre lagflik", () => {
+  const { m, sk } = ny();
+  utkast(m, sk);
+  const sh = m.blad["Lag"];
+  sh.data.forEach((rad) => { rad.length = Math.min(rad.length, 15); });   // så såg fliken ut innan kolumnen fanns
+  assert.equal(sh.data[0][15], undefined);
+  m.setup();
+  assert.equal(sh.data[0][15], "Klubbens kommentar");
+  assert.equal(sh.data[1][0], "lag-a");
+  assert.equal(m.admin("lag-a", m.admin("*", sk, "nyNyckel", { slug: "lag-a" }).key, "oversikt").lag.kommentar, "");
 });
 
 test("översikt: lag utan kartonger fakturerar det som beställts", () => {

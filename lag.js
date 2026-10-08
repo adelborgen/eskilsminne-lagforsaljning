@@ -110,5 +110,11 @@ var DEMO_LAG = [
     pris: 50, inkopspris: 20, minimum: 100, mal: 200, maxAntal: 20, kartong: 0,
     swish: { nummer: "", namnPaKonto: "Eskilsminne IF P2018", meddelande: "" }, demoBestallt: 61 },
   { slug: "f2016", namn: "F2016", kampanj: "Chokladförsäljning", status: "snart",
-    swish: { nummer: "", namnPaKonto: "Eskilsminne IF F2016", meddelande: "" } }
+    swish: { nummer: "", namnPaKonto: "Eskilsminne IF F2016", meddelande: "" } },
+  // Exempel på försäljningar som ännu inte är godkända. De syns inte för föräldrarna, bara i adminvyn.
+  { slug: "f2015", namn: "F2015", kampanj: "", status: "utkast",
+    swish: { nummer: "", namnPaKonto: "", meddelande: "" } },
+  { slug: "p2016", namn: "P2016", kampanj: "Våffelförsäljning", status: "granskas",
+    pris: 40, inkopspris: 18, minimum: 100, mal: 200, maxAntal: 20, kartong: 0,
+    swish: { nummer: "123 456 78 90", namnPaKonto: "Eskilsminne IF P2016", meddelande: "" } }
 ];
