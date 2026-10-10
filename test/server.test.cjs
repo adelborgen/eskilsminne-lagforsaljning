@@ -30,6 +30,16 @@ test("setup skapar flikarna och sparar bara hashen av superadmin-nyckeln", () =>
   assert.equal(m.props.get("SUPER_HASH"), forsta);
 });
 
+test("versionen visas när setup körs och kan frågas efter, och skriptet begränsas till sitt eget kalkylark", () => {
+  const { m } = ny();
+  const v = m.ctx.VERSION;
+  assert.match(v, /^\d{4}-\d{2}-\d{2}$/);
+  assert.ok(m.loggar.some((l) => l.includes("version " + v)), "setup skriver ut versionen");
+  assert.deepEqual(m.get({ action: "version" }), { ok: true, version: v });
+  const kod = require("node:fs").readFileSync(require("node:path").join(__dirname, "..", "Server.gs"), "utf8");
+  assert.match(kod.slice(0, 200), /@OnlyCurrentDoc/, "anteckningen ligger överst i filen");
+});
+
 test("laglistan är publik men innehåller aldrig nyckel, hash eller radnummer", () => {
   const { m, sk } = ny();
   assert.deepEqual(m.get({ action: "lag" }), { ok: true, lag: [] });

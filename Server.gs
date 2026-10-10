@@ -1,3 +1,7 @@
+/**
+ * @OnlyCurrentDoc
+ * Skriptet får bara läsa och skriva i det kalkylark det ligger i, inte i andra filer på kontot.
+ */
 /* ==========================================================================
    Eskilsminne IF Lagförsäljning: klubbens server (Google Apps Script). Se README.md.
 
@@ -13,6 +17,9 @@
    Nycklar: varje lag har en adminnyckel och klubben har en superadmin-nyckel.
    Bara hashen av nyckeln sparas. Nyckeln visas en enda gång när den skapas.
    ========================================================================== */
+// Versionen på den här filen. Visas när setup körs och på ?action=version, så att det går att se vilken version en klubb kör.
+var VERSION = "2026-10-10";
+
 var CFG = {
   MIN_TID_MS: 3000,     // snabbare än så från att sidan laddats = robot
   MAX_PER_MOBIL: 5,     // högst så många beställningar per mobilnummer ...
@@ -62,6 +69,7 @@ function setup() {
   o.getRange("E:E").setNumberFormat("@");
   sakraFlik(LOGG_FLIK, LOGG_RUBRIKER);
   if (!PropertiesService.getScriptProperties().getProperty("SUPER_HASH")) nySuperNyckel();
+  console.log("Lagförsäljning version " + VERSION + " är installerad.");
 }
 
 // Skapar en ny superadmin-nyckel och skriver ut den i körningsloggen (visas bara nu). Den gamla slutar fungera.
@@ -96,6 +104,7 @@ function doGet(e) {
   try {
     var p = (e && e.parameter) || {};
     if (p.action === "lag") return json({ ok: true, lag: publikLista() });
+    if (p.action === "version") return json({ ok: true, version: VERSION });
     if (p.action === "status") {   // äldre sidor frågar så här: samma siffra som följer med laglistan
       var slug = String(p.lag || "").toLowerCase();
       var l = publikLista().filter(function (x) { return x.slug === slug; })[0];
