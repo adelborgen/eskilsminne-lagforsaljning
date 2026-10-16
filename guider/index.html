@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="sv">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#16191d">
+<title>Guider om lagförsäljning – Skramlat</title>
+<meta name="description" content="Vad gäller för lagförsäljning? Lotter, Swish, vem som ansvarar för pengarna och hur länge uppgifterna får sparas.">
+<link rel="icon" href="../logga/skramlat-ikon-mork.svg" type="image/svg+xml">
+<link rel="stylesheet" href="../fonts/fonts.css">
+<style>
+  /* Skramlats egna sidor: grafit, krämvita kort, mint som detaljfärg. Se brand-manualen. */
+  :root { --grafit: #16191d; --upphojd: #20252b; --kram: #fff8d6; --mint: #6fe3b4; --black: #0f1a33; --text: #ece8d8; --dampad: #a9b0b8; --dampad-kort: #4a5575; --linje-kort: #d4c98a; --mint-text: #187a54;
+    --display: Archivo, "Arial Black", system-ui, sans-serif;
+    --body: "Atkinson Hyperlegible Next", system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--grafit); color: var(--text); font: 17px/1.55 var(--body); }
+  a { color: var(--mint); }
+  :focus-visible { outline: 3px solid var(--mint); outline-offset: 3px; border-radius: 6px; }
+  .sida { max-width: 760px; margin: 0 auto; padding: calc(env(safe-area-inset-top, 0px) + 32px) max(16px, env(safe-area-inset-right, 0px)) calc(env(safe-area-inset-bottom, 0px) + 56px) max(16px, env(safe-area-inset-left, 0px)); display: flex; flex-direction: column; gap: 28px; }
+  .topp img { height: 40px; width: auto; display: block; }
+  .etikett { font: 800 13px/1.2 var(--display); font-stretch: 125%; letter-spacing: .12em; text-transform: uppercase; color: var(--mint); margin: 0; }
+  h1 { margin: 6px 0 0; font: 900 clamp(40px, 9vw, 64px)/.95 var(--display); font-stretch: 112%; letter-spacing: -.01em; color: var(--kram); text-wrap: balance; }
+  .ingress { margin: 14px 0 0; font-size: 19px; color: var(--text); max-width: 60ch; }
+  .innehall { display: flex; flex-wrap: wrap; gap: 10px; margin: 0; padding: 0; list-style: none; }
+  .innehall a { display: block; background: var(--upphojd); color: var(--text); text-decoration: none; border-radius: 999px; padding: 10px 16px; font-weight: 700; font-size: 15px; }
+  .innehall a:hover { background: #2b3138; }
+  .guide { background: var(--kram); color: var(--black); border-radius: 22px; padding: 26px 24px; box-shadow: 0 5px 0 #050b1c; scroll-margin-top: 16px; }
+  .guide h2 { margin: 0; font: 900 clamp(26px, 5.5vw, 34px)/1.05 var(--display); font-stretch: 108%; text-wrap: balance; }
+  .kort { margin: 16px 0 0; background: var(--mint); border-radius: 14px; padding: 14px 16px; font-weight: 700; }
+  .kort strong { font: 800 12px/1.2 var(--display); font-stretch: 125%; letter-spacing: .12em; text-transform: uppercase; display: block; margin-bottom: 4px; }
+  .guide h3 { margin: 22px 0 6px; font: 800 18px/1.25 var(--display); font-stretch: 105%; }
+  .guide p, .guide li { max-width: 62ch; }
+  .guide ul { padding-left: 20px; margin: 8px 0 0; }
+  .guide li { margin: 6px 0; }
+  .guide a { color: var(--mint-text); font-weight: 700; }
+  .kallor { margin-top: 22px; padding-top: 14px; border-top: 2px solid var(--linje-kort); font-size: 14.5px; color: var(--dampad-kort); }
+  .kallor ul { padding-left: 18px; }
+  .skramlat { margin-top: 18px; background: var(--grafit); color: var(--text); border-radius: 14px; padding: 14px 16px; }
+  .skramlat strong { color: var(--mint); }
+  .fot { color: var(--dampad); font-size: 14.5px; display: flex; flex-direction: column; gap: 8px; }
+  .fot a { color: var(--dampad); }
+</style>
+</head>
+<body>
+<main class="sida">
+  <a class="topp" href="../"><img src="../logga/skramlat-logga-mork.svg" alt="Skramlat, till framsidan"></a>
+
+  <header>
+    <p class="etikett">Guider</p>
+    <h1>Vad gäller egentligen för lagförsäljning?</h1>
+    <p class="ingress">Fyra frågor som lagföräldrar, klassföräldrar och kassörer ofta undrar över. Korta svar först, detaljerna och källorna under.</p>
+  </header>
+
+  <nav aria-label="Guider på sidan">
+    <ul class="innehall">
+      <li><a href="#lotter">Får laget sälja lotter?</a></li>
+      <li><a href="#swish">Förenings-Swish eller privat?</a></li>
+      <li><a href="#ansvar">Vem ansvarar för pengarna?</a></li>
+      <li><a href="#spara">Hur länge får uppgifterna sparas?</a></li>
+    </ul>
+  </nav>
+
+  <article class="guide" id="lotter">
+    <h2>Får laget sälja lotter?</h2>
+    <p class="kort"><strong>Kort svar</strong>Ja, om laget säljer färdiga lotter från ett lotteri som redan har licens, som Folkspels Bingolotter, genom en förening som är registrerad hos dem. Ett eget lotteri kräver oftast registrering hos kommunen.</p>
+
+    <h3>Färdiga lotter, till exempel Bingolotter</h3>
+    <ul>
+      <li>Föreningen behöver vara med i någon av de riksorganisationer som står bakom Folkspel, och vara registrerad hos Folkspel. Laget registreras under föreningen.</li>
+      <li>Enligt Folkspel kan skolklasser inte sälja deras lotter. En klass behöver alltså sälja något annat, eller sälja via en förening.</li>
+      <li>Den som köper lotter måste vara 18 år.</li>
+      <li>Sedan 1 maj 2026 får lotter inte betalas på kredit, till exempel med kreditkort, faktura eller delbetalning. Swish dras från köparens bankkonto.</li>
+    </ul>
+
+    <h3>Ett eget lotteri</h3>
+    <ul>
+      <li>En allmännyttig ideell förening kan registrera ett lotteri hos kommunen. Det får bara säljas i den eller de kommuner där föreningen är verksam.</li>
+      <li>Säljer ni lotter på nätet till människor utanför det området, till exempel via sociala medier och Swish, krävs licens från Spelinspektionen.</li>
+      <li>Ett litet lotteri behöver ingen registrering alls om lotten kostar högst 15 kronor, vinsterna är varor och den största vinsten är värd högst 9 866 kronor (siffror för 2026). Kommunerna tolkar reglerna lite olika, så fråga din kommun.</li>
+    </ul>
+
+    <div class="skramlat"><strong>Med Skramlat:</strong> lotterna säljs som vilken vara som helst, med ett lager per lag så att ingen kan beställa fler än laget har fått.</div>
+
+    <div class="kallor"><strong>Källor</strong>
+      <ul>
+        <li><a href="https://www.spelinspektionen.se/licens-o-tillstand/kommunala-lotterier/krav-och-villkor-for-registrering/">Spelinspektionen: krav och villkor för registrering</a></li>
+        <li><a href="https://www.spelinspektionen.se/licens-o-tillstand/sok-licens/lotterier/lotterier-och-andra-spel-som-inte-behover-licens-eller-kommunal-registrering/">Spelinspektionen: lotterier som inte behöver licens eller registrering</a></li>
+        <li><a href="https://produkter.folkspel.se/lag/fragor-svar/">Folkspel: frågor och svar om lagförsäljning</a></li>
+        <li><a href="https://www.riksdagen.se/sv/dokument-och-lagar/dokument/_HD01KrU3/">Riksdagen: ett nytt förbud mot spel på kredit</a></li>
+      </ul>
+    </div>
+  </article>
+
+  <article class="guide" id="swish">
+    <h2>Förenings-Swish eller privat?</h2>
+    <p class="kort"><strong>Kort svar</strong>Förenings-Swish. Bankernas villkor för Swish Privat säger att det bara får användas privat, inte för föreningsverksamhet.</p>
+
+    <h3>Varför spelar det någon roll?</h3>
+    <ul>
+      <li>Det är vanligt att en lagförälder tar emot betalningarna på sitt eget nummer. Men villkoren för Swish Privat hos bland andra Swedbank och Nordea säger att tjänsten bara får användas av privatpersoner, och inte i näringsverksamhet eller föreningsverksamhet.</li>
+      <li>Föreningar ska använda Swish Företag, som kopplas till föreningens bankkonto. Kostnaden skiljer sig mellan bankerna, oftast en månadsavgift och en avgift per betalning.</li>
+      <li>En förening kan ha många Swish-nummer på samma organisationsnummer. Varje lag kan alltså få ett eget nummer, kopplat till föreningens konto.</li>
+    </ul>
+
+    <h3>Och en skolklass?</h3>
+    <ul>
+      <li>En klasskassa som föräldrarna sköter är ofta ingen förening. Fråga banken vad som gäller, eller låt skolan eller en föräldraförening stå som mottagare.</li>
+    </ul>
+
+    <div class="skramlat"><strong>Med Skramlat:</strong> varje lag kan ha sitt eget nummer, eller så låser skolan ett gemensamt nummer för alla klasser. Ordernumret följer med i Swish-meddelandet, så att varje betalning går att para ihop med en beställning.</div>
+
+    <div class="kallor"><strong>Källor</strong>
+      <ul>
+        <li><a href="https://www.swedbank.se/foretag/betala-och-ta-betalt/swish/swish-foretag.html">Swedbank: Swish Företag</a></li>
+        <li><a href="https://www.nordea.se/Images/154-14437/swish-villkor.pdf">Nordea: allmänna villkor för Swish Privat</a></li>
+        <li><a href="https://www.swish.nu/insamling">Swish: insamling</a></li>
+      </ul>
+    </div>
+  </article>
+
+  <article class="guide" id="ansvar">
+    <h2>Vem ansvarar för pengarna?</h2>
+    <p class="kort"><strong>Kort svar</strong>I ett lag är det föreningen. Pengarna i lagkassan tillhör föreningen, inte lagföräldern. I en klass beror det på vem som står som mottagare: skolan, en föräldraförening eller föräldrarna själva.</p>
+
+    <h3>Lag i en förening</h3>
+    <ul>
+      <li>En allmännyttig ideell förening betalar normalt inte skatt på inkomster från lotterier och försäljning som av tradition används för att finansiera ideellt arbete. Det gäller så länge det inte blir en kommersiell verksamhet.</li>
+      <li>Pengarna ska in på föreningens konto och synas i föreningens bokföring. Fråga kassören hur hen vill ha underlaget.</li>
+    </ul>
+
+    <h3>Klass i en skola</h3>
+    <ul>
+      <li>Står skolan som mottagare och säljer klassen vid enstaka tillfällen räknas det som en del av utbildningen, och ingen behöver betala skatt eller avgifter för elevernas arbete.</li>
+      <li>Får varje elev en egen del av pengarna kan det räknas som inkomst för eleven. Pengar till hela klassens gemensamma resa eller aktivitet är något annat.</li>
+      <li>Det här bygger på Skatteverkets hållning som den återges av andra. Kontrollera med Skatteverket om ni säljer ofta eller stora belopp.</li>
+    </ul>
+
+    <h3>Oavsett vilket</h3>
+    <ul>
+      <li>Var två som tittar på siffrorna. Det skyddar både föräldrarna som betalar och den som tar emot pengarna.</li>
+      <li>Spara underlaget: vad som beställts, betalats och lämnats ut.</li>
+    </ul>
+
+    <div class="skramlat"><strong>Med Skramlat:</strong> mätaren visar alla hur mycket som är beställt, lagföräldern bockar av betalt och hämtat, och allt underlag kan tas ut till Excel eller CSV för kassören.</div>
+
+    <div class="kallor"><strong>Källor</strong>
+      <ul>
+        <li><a href="https://skatteverket.se/foreningar/deklarera/deklareraforideellforeningellerstiftelse.4.1927c51b15e7ee438721ff8.html">Skatteverket: deklarera och betala skatt i en ideell förening</a></li>
+        <li><a href="https://lagen.nu/dom/hfd/2013:56">HFD 2013:56 om försäljning som traditionell finansieringskälla</a></li>
+        <li><a href="https://www.kaffekassan.se/blogg/klasskassa-regler/">Kaffekassan: klasskassa och klassresa</a> (återger Skatteverkets hållning)</li>
+      </ul>
+    </div>
+  </article>
+
+  <article class="guide" id="spara">
+    <h2>Hur länge får uppgifterna sparas?</h2>
+    <p class="kort"><strong>Kort svar</strong>Så länge de behövs för försäljningen, inte längre. Det finns ingen fast tid i lagen, så bestäm en och säg den till föräldrarna.</p>
+
+    <h3>Vad gäller?</h3>
+    <ul>
+      <li>Enligt dataskyddsförordningen (GDPR) får personuppgifter bara sparas så länge de behövs för det ändamål de samlades in för. Den som ansvarar ska bestämma hur länge och berätta det.</li>
+      <li>Bokföringen har egna regler, och en förening som har bokföringsplikt ska spara sin räkenskapsinformation i sju år. Det gäller beloppen och verifikationerna, inte nödvändigtvis barnens namn och föräldrarnas nummer.</li>
+    </ul>
+
+    <h3>Ett rimligt upplägg</h3>
+    <ul>
+      <li>Ta bort namn och mobilnummer när försäljningen är avslutad och allt är betalt och utlämnat, till exempel efter tre månader.</li>
+      <li>Behåll ordernummer, antal och belopp om kassören behöver dem i bokföringen.</li>
+    </ul>
+
+    <div class="skramlat"><strong>Med Skramlat:</strong> bara barnets förnamn och förälderns mobilnummer sparas, och de ligger i föreningens eller skolans eget kalkylark, inte hos Skramlat.</div>
+
+    <div class="kallor"><strong>Källor</strong>
+      <ul>
+        <li><a href="https://www.imy.se/vanliga-fragor-och-svar/hur-lange-far-vi-spara-uppgifter/">IMY: hur länge får vi spara personuppgifter?</a></li>
+        <li><a href="https://www.imy.se/verksamhet/dataskydd/dataskydd-pa-olika-omraden/forening/det-har-behover-ni-gora">IMY: vad föreningar behöver göra enligt GDPR</a></li>
+      </ul>
+    </div>
+  </article>
+
+  <footer class="fot">
+    <p style="margin:0">Guiderna är allmän information och ingen juridisk rådgivning. Regler och belopp ändras, så kontrollera alltid med källorna, din kommun, din bank eller Skatteverket innan ni bestämmer något. Senast uppdaterad 16 oktober 2026.</p>
+    <p style="margin:0">Hittat något som inte stämmer? Skriv till hej@skramlat.se.</p>
+  </footer>
+</main>
+</body>
+</html>
