@@ -20,19 +20,24 @@ En klubbsida där föräldern väljer lag i en lista och beställer, i samma sti
 
 ## Filer
 
+Tjänsten heter **Skramlat** och ligger på `skramlat.se`. Varje klubb har en egen mapp, så att klubbens länkar aldrig behöver ändras när fler klubbar kommer till: Eskilsminne ligger på `skramlat.se/eskilsminne/`.
+
 | Fil | Innehåll |
 |---|---|
+| `index.html` (i roten) | Skramlats framsida med listan över klubbar. Gamla länkar med `?lag=` skickas vidare till `eskilsminne/`. |
+| `eskilsminne/` | Eskilsminnes sidor. Filerna nedan ligger i den här mappen. |
 | `index.html`, `app.js` | Laglistan och beställningssidan. `?lag=p2019` visar ett lag. |
 | `admin.html`, `admin.js` | Adminvyn för lagföräldrar och klubbens administratör. |
-| `Server.gs` | Servern: klistras in i Google Apps Script. Sköter lag, beställningar, nycklar och adminåtgärder. |
+| `Server.gs` (i roten) | Servern: klistras in i Google Apps Script. Sköter lag, beställningar, nycklar och adminåtgärder. |
 | `lag.js` | Klubbens gemensamma inställningar (namn, texter, adressen till servern) och texter som skiljer för ett visst lag. **Inte lagens siffror**, de läggs till i adminvyn. |
 | `util.js`, `style.css` | Delade hjälpfunktioner och utseende (Matchdag: blå bakgrund med ränder, krämfärgade kort, gula lagbrickor, vimplar). Samma utseende för förälder, lagförälder och klubbadministratör. |
-| `fonts/`, `assets/` | Typsnitten (Archivo och Atkinson Hyperlegible Next, självhostade) och klubbmärket. |
-| `test/` | Tester för servern. Se längst ned. |
+| `assets/` | Klubbmärket. |
+| `fonts/` (i roten) | Typsnitten (Archivo och Atkinson Hyperlegible Next, självhostade). Delas av framsidan och alla klubbar. |
+| `test/` (i roten) | Tester för servern. Se längst ned. |
 
 ## Prova utan att sätta upp något (demoläge)
 
-Så länge `endpoint` i `lag.js` är tom visar sidorna exempellag och exempeldata, och inget sparas eller skickas. Öppna `index.html` och `admin.html` i webbläsaren, eller kör `python3 -m http.server` i repots rot och gå till `http://localhost:8000/`.
+Så länge `endpoint` i `lag.js` är tom visar sidorna exempellag och exempeldata, och inget sparas eller skickas. Kör `python3 -m http.server` i repots rot och gå till `http://localhost:8000/eskilsminne/` (adminvyn på `…/eskilsminne/admin.html`).
 
 I adminvyn i demoläge är nyckeln `demo` för ett lags admin och `super` för klubbens administratör. *Starta en försäljning* fungerar också i demon och visar en påhittad nyckel i samma form som de riktiga (32 tecken), som fungerar för just det laget så länge sidan inte laddas om. Förälderns sida och adminsidan har varsitt demotillstånd som nollställs när sidan laddas om: en beställning som läggs på ena sidan syns inte på den andra.
 
@@ -105,12 +110,12 @@ P2019-sidan och dess skript (`Code.gs` i [P2019-repot](https://github.com/adelbo
 
 1. Lägg till P2019 i adminvyn med samma uppgifter. Produkten, enheten och belöningstexten skrivs in av lagföräldern i försäljningens uppgifter. Det finns inga färdiga produkter i `lag.js`.
 2. Exportera de gamla beställningarna om de ska sparas (Order-ID och belopp följer inte med automatiskt).
-3. Ersätt `index.html` i P2019-repot med en omdirigering till den här sidan (`?lag=p2019`), så att gamla länkar fortsätter fungera.
+3. Ersätt `index.html` i P2019-repot med en omdirigering till den här sidan (`skramlat.se/eskilsminne/?lag=p2019`), så att gamla länkar fortsätter fungera.
 
 ## Publicera
 
-- **GitHub Pages:** under *Settings → Pages* välj *Deploy from a branch*, gren `main`, mapp `/ (root)`. Sidan ligger då på `https://adelborgen.github.io/eskilsminne-lagforsaljning/` och adminvyn på `…/admin.html`. Pages på ett personligt konto kräver att repot är publikt.
-- **Egen domän:** ange domänen under *Settings → Pages → Custom domain* med en CNAME-post hos registratorn. Det ger också egen webbadress (ursprung), så att sidan inte delar adress med andra projektsidor under `adelborgen.github.io`.
+- **GitHub Pages:** under *Settings → Pages* välj *Deploy from a branch*, gren `main`, mapp `/ (root)`. Pages på ett personligt konto kräver att repot är publikt.
+- **Egen domän (`skramlat.se`):** verifiera först domänen för kontot (*Settings → Pages → Add a domain* under kontots inställningar, en TXT-post hos registratorn), så att ingen annan kan ta över den. Lägg sedan A-posterna för GitHub Pages hos registratorn, skriv `skramlat.se` under repots *Settings → Pages → Custom domain* och slå på *Enforce HTTPS*. Klubbens sidor ligger då på `https://skramlat.se/eskilsminne/` och adminvyn på `…/eskilsminne/admin.html`.
 - **Gärna under en GitHub-organisation** för klubben, så att repot inte hänger på ett privat konto.
 
 ## Beslut hittills (oktober 2026)

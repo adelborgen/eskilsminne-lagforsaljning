@@ -1,6 +1,6 @@
 /* Typsnitt för Kassaskrinet (arbetsnamn). Självhostade, så att inget anrop går till Google.
    Båda är SIL Open Font License 1.1 (se LICENSE-*.txt) och får användas, kopieras och ligga i repot.
-   Länkas före style.css i index.html och admin.html: <link rel="stylesheet" href="fonts/fonts.css">
+   Delas av alla sidor. Klubbsidorna länkar dem före style.css: <link rel="stylesheet" href="../fonts/fonts.css">
    Se README.md i den här mappen för hur typsnitten används. */
 
 /* Archivo: tavelsiffror och rubriker. Variabel tjocklek (100–900) och bredd (62–125 %). Bara latinska tecken (inkl. å, ä, ö, é). */
