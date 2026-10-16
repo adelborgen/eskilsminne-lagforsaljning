@@ -1,0 +1,17 @@
+Skramlat – logga (skiss, version 1)
+
+Färger
+  Grafit       #16191d   bakgrund
+  Krämvit      #fff8d6   linjer och text på mörk bakgrund, kort
+  Mint         #6fe3b4   mynten, glaset och detaljer
+  Mörk mint    #1c8a5f   skrammelstrecken på ljus bakgrund
+
+Filer
+  skramlat-logga-mork.svg / .png            symbol + namn, för mörk bakgrund
+  skramlat-logga-ljus.svg / .png            symbol + namn, för ljus bakgrund
+  skramlat-symbol-mork.svg / -ljus.svg      bara bössan (B)
+  skramlat-ikon-mork.svg / -ljus.svg        förenklad bössa (C), för små storlekar och webbläsarfliken
+  *-animerad.svg                            rörlig version: myntet faller ner, bössan skakar, det skramlar
+
+Namnet är omvandlat till kurvor (typsnittet Archivo, SIL Open Font License), så filerna fungerar utan att typsnittet är installerat.
+Den rörliga versionen står still för den som har valt minskade rörelser i telefonen eller datorn.

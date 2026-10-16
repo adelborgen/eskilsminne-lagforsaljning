@@ -1,0 +1,192 @@
+<!doctype html>
+<html lang="sv"><head><meta charset="utf-8">
+<style>
+@font-face{font-family:"Atkinson";src:url("file:///home/user/eskilsminne-lagforsaljning/fonts/atkinson-hyperlegible-next-latin-wght-normal.woff2") format("woff2");font-weight:200 800}
+@font-face{font-family:"Archivo";src:url("file:///home/user/eskilsminne-lagforsaljning/fonts/archivo-latin-wdth-normal.woff2") format("woff2");font-weight:100 900;font-stretch:62% 125%}
+:root{--g:#16191d;--g2:#20252b;--k:#fff8d6;--m:#6fe3b4;--ink:#0f1a33;--mut:#a9b0b8;--mut2:#4a5575;--line:#d4c98a;--ok:#17612b}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--g)}
+#v{position:relative;width:1080px;height:1920px;overflow:hidden;background:var(--g);color:var(--k);font-family:Atkinson,system-ui,sans-serif}
+.disp{font-family:Archivo,"Arial Black",sans-serif;font-weight:900;font-stretch:112%;letter-spacing:-.01em;line-height:.95}
+.eyebrow{font-family:Archivo,sans-serif;font-weight:800;font-stretch:125%;letter-spacing:.12em;text-transform:uppercase;color:var(--m);font-size:30px}
+.layer{position:absolute;inset:0}
+/* titlar */
+#intro,#inter{display:flex;flex-direction:column;justify-content:center;padding:0 96px;gap:28px}
+#intro h1,#inter h1{margin:0;font-size:132px}
+/* telefonen */
+#phone{position:absolute;left:230px;top:300px;width:620px;height:1240px;border-radius:72px;background:#0b0d10;padding:22px;box-shadow:0 30px 60px rgba(0,0,0,.45)}
+#glass{position:absolute;inset:22px;border-radius:52px;overflow:hidden;background:var(--g)}
+.screen{zoom:1.14;position:absolute;inset:0;background:var(--g);padding:64px 30px 30px;display:flex;flex-direction:column;gap:22px}
+.notch{position:absolute;z-index:2;left:50%;top:14px;width:150px;height:30px;margin-left:-75px;border-radius:999px;background:#0b0d10}
+.top{display:flex;align-items:center;gap:16px}
+.plate{width:84px;height:84px;border-radius:16px;background:var(--m);color:var(--g);display:flex;flex-direction:column;align-items:center;justify-content:center;font-family:Archivo,sans-serif;font-weight:900;line-height:1;box-shadow:0 4px 0 #050b1c}
+.plate b{font-size:38px}.plate i{font-style:normal;font-size:16px;font-weight:800;margin-top:2px}
+.ttl{font-family:Archivo,sans-serif;font-weight:900;font-stretch:110%;font-size:38px;line-height:1.05}
+.sub{font-size:22px;color:var(--mut)}
+.card{background:var(--k);color:var(--ink);border-radius:26px;padding:26px;display:flex;flex-direction:column;gap:18px;box-shadow:0 5px 0 #050b1c}
+.lbl{font-size:22px;font-weight:800}
+.field{height:68px;border:3px solid #7c7440;border-radius:16px;padding:0 18px;display:flex;align-items:center;font-size:28px;background:#fffdf0}
+.field.fokus{border-color:var(--g);box-shadow:0 0 0 4px var(--m)}
+.caret{display:inline-block;width:3px;height:32px;background:var(--ink);margin-left:2px}
+.antal{display:flex;align-items:center;gap:18px}
+.stp{width:68px;height:68px;border-radius:16px;border:3px solid var(--ink);display:grid;place-items:center;font-family:Archivo,sans-serif;font-weight:900;font-size:38px;background:#fffdf0}
+.num{font-family:Archivo,sans-serif;font-weight:900;font-size:48px;min-width:56px;text-align:center}
+.chk{display:flex;gap:14px;align-items:center;font-size:22px}
+.box{width:40px;height:40px;border-radius:10px;border:3px solid var(--ink);display:grid;place-items:center;background:#fffdf0}
+.btn{white-space:nowrap;height:84px;border-radius:18px;background:var(--m);color:var(--ink);border:3px solid var(--ink);display:grid;place-items:center;font-family:Archivo,sans-serif;font-weight:900;font-stretch:108%;font-size:32px;box-shadow:0 5px 0 #050b1c}
+.btn.tryck{transform:translateY(4px);box-shadow:0 1px 0 #050b1c}
+.row{display:flex;justify-content:space-between;align-items:center;gap:10px;font-size:21px;padding:14px 0;border-bottom:2px solid var(--line)}
+.row:last-child{border-bottom:0}
+.kop{font-size:20px;font-weight:800;border:3px solid var(--ink);border-radius:12px;padding:6px 12px}
+.meter{height:24px;border-radius:999px;background:var(--g2);overflow:hidden}
+.meter span{display:block;height:100%;background:var(--m);border-radius:999px}
+.stats{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.stat{background:var(--k);color:var(--ink);border-radius:22px;padding:18px 20px;box-shadow:0 5px 0 #050b1c}
+.stat b{display:block;white-space:nowrap;font-family:Archivo,sans-serif;font-weight:900;font-size:38px;line-height:1.05;font-variant-numeric:tabular-nums}
+.stat span{font-size:20px;color:var(--mut2)}
+.ord{display:grid;grid-template-columns:1fr auto auto;gap:8px;align-items:center;padding:16px 0;border-bottom:2px solid var(--line);font-size:21px;white-space:nowrap}
+.ord:last-child{border-bottom:0}
+.ord .n{font-weight:800}
+.tg{font-size:16px;font-weight:800;border-radius:999px;padding:6px 10px;border:3px solid var(--ink);display:flex;gap:6px;align-items:center;white-space:nowrap}
+.tg.ja{background:var(--ok);border-color:var(--ok);color:#fff8d6}
+.exp{height:64px;border-radius:16px;border:3px solid var(--k);display:grid;place-items:center;font-weight:800;font-size:24px;color:var(--k)}
+.exp.tryck{background:var(--k);color:var(--g)}
+/* bildtext */
+#cap{position:absolute;left:0;right:0;top:1600px;text-align:center;padding:0 80px}
+#cap .disp{font-size:64px}
+/* tryck */
+#tap{position:absolute;width:96px;height:96px;margin:-48px 0 0 -48px;border-radius:50%;border:6px solid var(--m);background:rgba(111,227,180,.25);pointer-events:none}
+/* slut */
+#end{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:48px;text-align:center}
+#end img{width:760px;height:auto}
+#end h1{margin:0;font-size:96px;color:var(--m)}
+#end p{margin:0;font-family:Archivo,sans-serif;font-weight:800;font-stretch:125%;letter-spacing:.12em;font-size:32px;text-transform:uppercase;color:var(--mut)}
+</style></head><body>
+<div id="v">
+  <div id="intro" class="layer"><span class="eyebrow">För föräldrar</span><h1 class="disp">Så enkelt beställer du.</h1></div>
+  <div id="inter" class="layer"><span class="eyebrow">För lagföräldern</span><h1 class="disp">Och sedan då?</h1></div>
+
+  <div id="phone"><div class="notch"></div><div id="glass">
+    <!-- beställning -->
+    <div id="sOrder" class="screen">
+      <div class="top"><span class="plate"><b>P</b><i>2019</i></span><div><div class="ttl">Bingolotter</div><div class="sub">30 kr per lott</div></div></div>
+      <div class="card">
+        <div class="lbl">Barnets namn</div><div id="fNamn" class="field"><span id="tNamn"></span><span id="cNamn" class="caret"></span></div>
+        <div class="lbl">Ditt mobilnummer</div><div id="fMob" class="field"><span id="tMob"></span><span id="cMob" class="caret"></span></div>
+        <div class="lbl">Antal lotter</div>
+        <div class="antal"><span class="stp">–</span><span id="num" class="num">1</span><span id="plus" class="stp">+</span></div>
+        <div class="chk"><span id="box" class="box"></span><span>Jag godkänner att uppgifterna sparas</span></div>
+      </div>
+      <div id="btn" class="btn"><span>Beställ ·<span id="btnKr">&nbsp;30 kr</span></span></div>
+    </div>
+    <!-- tack -->
+    <div id="sTack" class="screen">
+      <div class="top"><span class="plate"><b>P</b><i>2019</i></span><div><div class="ttl">Tack!</div><div class="sub">Ordernummer 0042</div></div></div>
+      <div class="card">
+        <div class="ttl" style="font-size:40px;white-space:nowrap">Swisha 90 kr nu</div>
+        <div class="row"><span>Nummer</span><b>123 456 78 90</b><span class="kop">Kopiera</span></div>
+        <div class="row"><span>Belopp</span><b>90 kr</b><span class="kop">Kopiera</span></div>
+        <div class="row"><span>Meddelande</span><b style="white-space:nowrap">P2019 0042</b><span id="kopMed" class="kop">Kopiera</span></div>
+      </div>
+      <div class="sub" style="font-size:24px">Laget har sålt</div>
+      <div style="display:flex;align-items:baseline;gap:12px"><span id="mNum" class="disp" style="font-size:76px;color:var(--m);font-variant-numeric:tabular-nums">183</span><span class="sub" style="font-size:26px">av 300 lotter</span></div>
+      <div class="meter"><span id="mBar" style="width:61%"></span></div>
+    </div>
+    <!-- lagföräldern -->
+    <div id="sAdmin" class="screen">
+      <div class="top"><span class="plate"><b>P</b><i>2019</i></span><div><div class="ttl">Översikt</div><div class="sub">Bingolotter · lagföräldern</div></div></div>
+      <div class="stats">
+        <div class="stat"><b id="sObet">4</b><span>obetalda</span></div>
+        <div class="stat"><b id="sKr">5 490 kr</b><span>betalt</span></div>
+      </div>
+      <div class="card" style="gap:0;padding:8px 24px">
+        <div class="ord"><span><span class="n">0042</span> · 90 kr</span><span id="tgBet" class="tg">Betald</span><span id="tgHam" class="tg">Hämtad</span></div>
+        <div class="ord"><span><span class="n">0041</span> · 60 kr</span><span class="tg ja">✓ Betald</span><span class="tg">Hämtad</span></div>
+        <div class="ord"><span><span class="n">0040</span> · 150 kr</span><span class="tg ja">✓ Betald</span><span class="tg ja">✓ Hämtad</span></div>
+        <div class="ord"><span><span class="n">0039</span> · 30 kr</span><span class="tg">Betald</span><span class="tg">Hämtad</span></div>
+      </div>
+      <div id="exp" class="exp">Exportera till CSV</div>
+    </div>
+  </div></div>
+
+  <div id="cap"><div id="capT" class="disp"></div></div>
+  <div id="tap"></div>
+  <div id="end" class="layer"><img src="skramlat-logga-mork.svg" alt=""><h1 class="disp">Har du skramlat?</h1><p>skramlat.se</p></div>
+</div>
+<script>
+const $ = (id) => document.getElementById(id);
+const clamp = (x) => Math.max(0, Math.min(1, x));
+const prog = (t, a, b) => clamp((t - a) / (b - a));
+const eo = (x) => 1 - Math.pow(1 - x, 3);
+const eio = (x) => x < .5 ? 4 * x * x * x : 1 - Math.pow(-2 * x + 2, 3) / 2;
+const fade = (t, a, b, c, d) => Math.min(eo(prog(t, a, b)), 1 - eo(prog(t, c, d)));
+const typ = (s, t, a, b) => s.slice(0, Math.round(s.length * prog(t, a, b)));
+const kr = (n) => n.toLocaleString("sv-SE").replace(/ /g, " ") + " kr";
+// Tryck: [tid, element-id]
+const TRYCK = [[2.5, "fNamn"], [3.9, "fMob"], [5.3, "plus"], [5.8, "plus"], [6.3, "box"], [6.9, "btn"], [9.0, "kopMed"], [12.7, "tgBet"], [13.9, "tgHam"], [16.2, "exp"]];
+const TEXTER = [[1.9, 3.7, "Skriv barnets namn"], [3.7, 6.2, "Välj hur många"], [6.2, 7.5, "Beställ"], [7.5, 10.0, "Swisha. Klart."], [11.8, 13.6, "Bocka av när Swishen kommit in"], [13.6, 15.9, "Siffrorna räknas ut av sig själva"], [15.9, 17.4, "Underlaget till Excel"]];
+function center(id) {
+  const r = $(id).getBoundingClientRect();
+  return [r.left + r.width / 2, r.top + r.height / 2];
+}
+function render(t) {
+  // titlar
+  $("intro").style.opacity = fade(t, 0, .4, 1.3, 1.7);
+  $("intro").style.transform = `translateY(${20 * (1 - eo(prog(t, 0, .5)))}px)`;
+  $("inter").style.opacity = fade(t, 10.2, 10.6, 11.2, 11.6);
+  $("end").style.opacity = eo(prog(t, 17.6, 18.2));
+  $("end").style.transform = `scale(${0.96 + 0.04 * eo(prog(t, 17.6, 18.4))})`;
+  // telefonen
+  const ph = fade(t, 1.6, 2.1, 9.9, 10.2) + fade(t, 11.5, 11.9, 17.4, 17.7);
+  $("phone").style.opacity = Math.min(1, ph);
+  const upp = t < 11 ? 1 - eo(prog(t, 1.6, 2.2)) : 1 - eo(prog(t, 11.5, 12.0));
+  $("phone").style.transform = `translateY(${120 * upp}px)`;
+  // vilken skärm
+  const tack = eio(prog(t, 7.3, 7.7));
+  $("sOrder").style.display = t < 11 ? "flex" : "none";
+  $("sTack").style.display = t < 11 ? "flex" : "none";
+  $("sAdmin").style.display = t >= 11 ? "flex" : "none";
+  $("sOrder").style.transform = `translateX(${-110 * tack}%)`;
+  $("sTack").style.transform = `translateX(${110 * (1 - tack)}%)`;
+  // formuläret
+  $("tNamn").textContent = typ("Alva", t, 2.6, 3.4);
+  $("tMob").textContent = typ("070 123 45 67", t, 4.0, 5.0);
+  $("fNamn").className = "field" + (t >= 2.5 && t < 3.9 ? " fokus" : "");
+  $("fMob").className = "field" + (t >= 3.9 && t < 5.2 ? " fokus" : "");
+  $("cNamn").style.visibility = t >= 2.5 && t < 3.9 && Math.floor(t * 3) % 2 === 0 ? "visible" : "hidden";
+  $("cMob").style.visibility = t >= 3.9 && t < 5.2 && Math.floor(t * 3) % 2 === 0 ? "visible" : "hidden";
+  const antal = t >= 5.8 ? 3 : t >= 5.3 ? 2 : 1;
+  $("num").textContent = antal;
+  $("btnKr").textContent = " " + kr(antal * 30);
+  $("box").innerHTML = t >= 6.3 ? '<svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#0f1a33" stroke-width="3.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12.5l5 5L20 6.5"/></svg>' : "";
+  $("btn").className = "btn" + (t >= 6.9 && t < 7.1 ? " tryck" : "");
+  // tack-sidan och mätaren
+  const m = eo(prog(t, 8.1, 8.8));
+  $("mNum").textContent = Math.round(183 + 3 * m);
+  $("mBar").style.width = (61 + 1 * m) + "%";
+  $("kopMed").textContent = t >= 9.0 ? "Kopierat" : "Kopiera";
+  $("kopMed").style.background = t >= 9.0 ? "#6fe3b4" : "transparent";
+  // lagföräldern
+  const betald = t >= 12.7, hamtad = t >= 13.9;
+  $("tgBet").className = "tg" + (betald ? " ja" : ""); $("tgBet").textContent = betald ? "✓ Betald" : "Betald";
+  $("tgHam").className = "tg" + (hamtad ? " ja" : ""); $("tgHam").textContent = hamtad ? "✓ Hämtad" : "Hämtad";
+  const k = eo(prog(t, 12.8, 13.3));
+  $("sObet").textContent = betald ? 3 : 4;
+  $("sKr").textContent = kr(Math.round(5490 + 90 * k));
+  $("exp").className = "exp" + (t >= 16.2 && t < 16.5 ? " tryck" : "");
+  // bildtext
+  const cap = TEXTER.find(([a, b]) => t >= a && t < b);
+  $("capT").textContent = cap ? cap[2] : "";
+  $("cap").style.opacity = cap ? fade(t, cap[0], cap[0] + .3, cap[1] - .25, cap[1]) : 0;
+  // tryckmarkering
+  const tr = TRYCK.find(([s]) => t >= s - .25 && t < s + .45);
+  if (tr) {
+    const [x, y] = center(tr[1]);
+    const p = (t - (tr[0] - .25)) / .7;
+    $("tap").style.left = x + "px"; $("tap").style.top = y + "px";
+    $("tap").style.opacity = p < .35 ? p / .35 : 1 - (p - .35) / .65;
+    $("tap").style.transform = `scale(${p < .35 ? 1.25 - .4 * (p / .35) : .85 + .5 * ((p - .35) / .65)})`;
+  } else $("tap").style.opacity = 0;
+}
+window.render = render; render(0);
+</script></body></html>

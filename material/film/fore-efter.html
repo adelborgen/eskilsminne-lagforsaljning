@@ -1,0 +1,134 @@
+<!doctype html>
+<html lang="sv"><head><meta charset="utf-8">
+<style>
+@font-face{font-family:"Atkinson";src:url("file:///home/user/eskilsminne-lagforsaljning/fonts/atkinson-hyperlegible-next-latin-wght-normal.woff2") format("woff2");font-weight:200 800}
+@font-face{font-family:"Archivo";src:url("file:///home/user/eskilsminne-lagforsaljning/fonts/archivo-latin-wdth-normal.woff2") format("woff2");font-weight:100 900;font-stretch:62% 125%}
+:root{--g:#16191d;--g2:#20252b;--g3:#2b3138;--k:#fff8d6;--m:#6fe3b4;--ink:#0f1a33;--mut:#a9b0b8;--mut2:#4a5575;--line:#d4c98a;--ok:#17612b}
+*{box-sizing:border-box}html,body{margin:0;background:var(--g)}
+#v{position:relative;width:1080px;height:1920px;overflow:hidden;background:var(--g);color:var(--k);font-family:Atkinson,sans-serif}
+.disp{font-family:Archivo,"Arial Black",sans-serif;font-weight:900;font-stretch:112%;letter-spacing:-.01em;line-height:.95}
+.eyebrow{font-family:Archivo,sans-serif;font-weight:800;font-stretch:125%;letter-spacing:.12em;text-transform:uppercase;color:var(--m);font-size:30px}
+.layer{position:absolute;inset:0;display:flex;flex-direction:column;justify-content:center;padding:0 96px;gap:28px}
+.layer h1{margin:0;font-size:132px}
+#phone{position:absolute;left:230px;top:300px;width:620px;height:1240px;border-radius:72px;background:#0b0d10;padding:22px;box-shadow:0 30px 60px rgba(0,0,0,.45)}
+#glass{position:absolute;inset:22px;border-radius:52px;overflow:hidden;background:var(--g)}
+.notch{position:absolute;z-index:3;left:50%;top:14px;width:150px;height:30px;margin-left:-75px;border-radius:999px;background:#0b0d10}
+.head{position:absolute;z-index:2;left:0;right:0;top:0;padding:66px 32px 18px;background:var(--g);display:flex;justify-content:space-between;align-items:baseline;border-bottom:2px solid var(--g3)}
+.head b{font-family:Archivo,sans-serif;font-weight:900;font-stretch:110%;font-size:38px}
+.head span{font-size:22px;color:var(--mut);font-variant-numeric:tabular-nums}
+.lista{position:absolute;left:0;right:0;top:150px;padding:0 26px}
+.rad{display:flex;align-items:center;gap:18px;height:104px;border-bottom:2px solid var(--g2)}
+.av{flex:none;width:58px;height:58px;border-radius:50%;background:var(--g3);display:grid;place-items:center;font-weight:800;font-size:24px;color:var(--mut)}
+.namn{flex:1;min-width:0}
+.namn div{font-size:27px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.namn small{display:block;font-size:20px;color:var(--mut)}
+.kr{font-family:Archivo,sans-serif;font-weight:800;font-size:28px;color:var(--m);white-space:nowrap}
+/* ordnad lista */
+.lista2{position:absolute;left:0;right:0;top:150px;padding:20px 22px}
+.kort{background:var(--k);color:var(--ink);border-radius:24px;padding:4px 22px;box-shadow:0 5px 0 #050b1c}
+.ord{display:grid;grid-template-columns:auto 1fr auto;gap:14px;align-items:center;height:96px;border-bottom:2px solid var(--line);font-size:24px}
+.ord:last-child{border-bottom:0}
+.ord .nr{font-family:Archivo,sans-serif;font-weight:900;font-size:24px}
+.ord small{display:block;font-size:19px;color:var(--mut2)}
+.tg{font-size:19px;font-weight:800;border-radius:999px;padding:8px 14px;border:3px solid var(--ink);white-space:nowrap}
+.tg.ja{background:var(--ok);border-color:var(--ok);color:#fff8d6}
+.matare{margin-top:24px;display:flex;flex-direction:column;gap:12px}
+.matare .rad1{display:flex;align-items:baseline;gap:12px}
+.matare .bar{height:24px;border-radius:999px;background:var(--g2);overflow:hidden}
+.matare .bar span{display:block;height:100%;background:var(--m);border-radius:999px}
+/* frågebubblor */
+.q{position:absolute;z-index:5;background:var(--k);color:var(--ink);border-radius:22px;padding:18px 26px;font-family:Archivo,sans-serif;font-weight:900;font-stretch:105%;font-size:40px;box-shadow:0 6px 0 #050b1c;white-space:nowrap}
+#cap{position:absolute;left:0;right:0;top:1600px;text-align:center;padding:0 80px}
+#cap .disp{font-size:62px}
+#end{align-items:center;text-align:center;gap:48px}
+#end img{width:760px}
+#end h1{color:var(--m);font-size:96px}
+#end p{margin:0;font-family:Archivo,sans-serif;font-weight:800;font-stretch:125%;letter-spacing:.12em;font-size:32px;text-transform:uppercase;color:var(--mut)}
+</style></head><body>
+<div id="v">
+  <div id="fore" class="layer"><span class="eyebrow">Före</span><h1 class="disp">47 Swishar. Vem har betalat vad?</h1></div>
+  <div id="efter" class="layer"><span class="eyebrow">Med Skramlat</span><h1 class="disp">Varje betalning har en beställning.</h1></div>
+
+  <div id="phone"><div class="notch"></div><div id="glass">
+    <div id="sKaos">
+      <div class="head"><b>Inkomna</b><span id="antal">0 st</span></div>
+      <div id="lista" class="lista"></div>
+    </div>
+    <div id="sOrdnad" style="display:none">
+      <div class="head"><b>Bingolotter</b><span>P2019</span></div>
+      <div class="lista2">
+        <div id="kort" class="kort"></div>
+        <div class="matare"><div class="rad1"><span id="mNum" class="disp" style="font-size:72px;color:var(--m);font-variant-numeric:tabular-nums">0</span><span style="font-size:26px;color:var(--mut)">av 47 betalda</span></div><div class="bar"><span id="mBar" style="width:0%"></span></div></div>
+      </div>
+    </div>
+  </div></div>
+
+  <div id="q1" class="q" style="left:60px;top:430px">Vem är "Kim"?</div>
+  <div id="q2" class="q" style="left:560px;top:640px">Vilket barn?</div>
+  <div id="q3" class="q" style="left:90px;top:930px">3 eller 5 lotter?</div>
+  <div id="q4" class="q" style="left:330px;top:1190px">Betalade hen två gånger?</div>
+
+  <div id="cap"><div id="capT" class="disp"></div></div>
+  <div id="end" class="layer"><img src="../logga/skramlat-logga/skramlat-logga-mork.svg" alt=""><h1 class="disp">Har du skramlat?</h1><p>skramlat.se</p></div>
+</div>
+<script>
+const $ = (id) => document.getElementById(id);
+const clamp = (x) => Math.max(0, Math.min(1, x));
+const prog = (t, a, b) => clamp((t - a) / (b - a));
+const eo = (x) => 1 - Math.pow(1 - x, 3);
+const eio = (x) => x < .5 ? 4 * x * x * x : 1 - Math.pow(-2 * x + 2, 3) / 2;
+const fade = (t, a, b, c, d) => Math.min(eo(prog(t, a, b)), 1 - eo(prog(t, c, d)));
+// Påhittade namn och belopp. Inga riktiga personer.
+const NAMN = ["Kim", "Anna B.", "Johan Ek", "Mamma Lisa", "Petra Nyström", "J. Holm", "Ali Karimi", "Familjen Berg", "Sofie", "Erik Strand", "Malin Ö.", "Nadia Haddad", "Per-Olov", "Kim", "Tove Lind", "M. Sandell", "Omar", "Linnea Falk", "Anders V.", "Karin & Jonas", "Sanna", "Ilse Brandt", "Hugo P.", "Mira", "Lars Dahl"];
+const KR = [300, 150, 450, 300, 90, 300, 600, 300, 150, 1050, 300, 120, 450, 300, 300, 750, 150, 300, 90, 600, 300, 450, 300, 150, 300];
+const DAG = ["idag", "idag", "igår", "14 okt", "14 okt", "13 okt", "13 okt", "12 okt", "12 okt", "11 okt"];
+const lista = $("lista");
+NAMN.forEach((n, i) => {
+  const r = document.createElement("div"); r.className = "rad";
+  r.innerHTML = `<span class="av">${n[0]}</span><span class="namn"><div></div><small>${DAG[Math.floor(i / 2.6)] || "10 okt"}</small></span><span class="kr">${KR[i]} kr</span>`;
+  r.querySelector(".namn div").textContent = n;
+  lista.appendChild(r);
+});
+const ORD = [["0047", "Alva", "3 lotter · 90 kr"], ["0046", "Viggo", "5 lotter · 150 kr"], ["0045", "Elsa", "10 lotter · 300 kr"], ["0044", "Noah", "2 lotter · 60 kr"], ["0043", "Saga", "10 lotter · 300 kr"], ["0042", "Liam", "4 lotter · 120 kr"], ["0041", "Maja", "15 lotter · 450 kr"], ["0040", "Ebbe", "10 lotter · 300 kr"]];
+const kort = $("kort");
+ORD.forEach((o, i) => {
+  const r = document.createElement("div"); r.className = "ord";
+  r.innerHTML = `<span class="nr">${o[0]}</span><span><span class="b"></span><small>${o[2]}</small></span><span class="tg" id="tg${i}">Betald</span>`;
+  r.querySelector(".b").textContent = o[1];
+  kort.appendChild(r);
+});
+const TEXTER = [[1.8, 7.2, "Namnen säger inget om vilket barn det gäller"], [9.4, 13.4, "Ordernumret följer med i Swish. Bocka av, klart."]];
+function render(t) {
+  $("fore").style.opacity = fade(t, 0, .4, 1.4, 1.8);
+  $("efter").style.opacity = fade(t, 7.6, 8.0, 8.8, 9.2);
+  $("end").style.opacity = eo(prog(t, 13.8, 14.4));
+  const ph = fade(t, 1.6, 2.0, 7.3, 7.7) + fade(t, 9.0, 9.4, 13.5, 13.9);
+  $("phone").style.opacity = Math.min(1, ph);
+  const kaos = t < 8.3;
+  $("sKaos").style.display = kaos ? "block" : "none";
+  $("sOrdnad").style.display = kaos ? "none" : "block";
+  // listan rullar allt snabbare
+  const s = prog(t, 2.0, 7.3);
+  lista.style.transform = `translateY(${-1500 * Math.pow(s, 1.6)}px)`;
+  $("antal").textContent = Math.round(47 * eo(prog(t, 2.0, 6.8))) + " st";
+  // frågorna dyker upp
+  [["q1", 2.8], ["q2", 3.6], ["q3", 4.4], ["q4", 5.2]].forEach(([id, a]) => {
+    const p = fade(t, a, a + .25, 7.0, 7.4);
+    $(id).style.opacity = p;
+    $(id).style.transform = `scale(${.85 + .15 * eo(prog(t, a, a + .3))}) rotate(${id === "q2" || id === "q4" ? 2 : -2}deg)`;
+  });
+  // ordnad: betalningar bockas av i tur och ordning
+  ORD.forEach((o, i) => {
+    const ja = t >= 10.0 + i * .35;
+    $("tg" + i).className = "tg" + (ja ? " ja" : "");
+    $("tg" + i).textContent = ja ? "✓ Betald" : "Betald";
+  });
+  const m = eo(prog(t, 10.0, 12.9));
+  $("mNum").textContent = Math.round(39 + 8 * m);
+  $("mBar").style.width = (83 + 17 * m) + "%";
+  const cap = TEXTER.find(([a, b]) => t >= a && t < b);
+  $("capT").textContent = cap ? cap[2] : "";
+  $("cap").style.opacity = cap ? fade(t, cap[0], cap[0] + .3, cap[1] - .3, cap[1]) : 0;
+}
+window.render = render; render(0);
+</script></body></html>
