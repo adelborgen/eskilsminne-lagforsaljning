@@ -18,7 +18,7 @@
    Bara hashen av nyckeln sparas. Nyckeln visas en enda gång när den skapas.
    ========================================================================== */
 // Versionen på den här filen. Visas när setup körs och på ?action=version, så att det går att se vilken version en klubb kör.
-var VERSION = "2026-10-10";
+var VERSION = "2026-10-16";
 
 var CFG = {
   MIN_TID_MS: 3000,     // snabbare än så från att sidan laddats = robot
@@ -154,11 +154,11 @@ function hanteraBestallning(d) {
 
   // Spärr per mobilnummer
   var cache = CacheService.getScriptCache();
-  var nyckel = "m" + mobil;
+  var nyckel = "m" + hash(mobil).slice(0, 24);   // numret sparas inte i klartext, inte ens i det tillfälliga
   var tidigare = Number(cache.get(nyckel) || 0);
   if (tidigare >= CFG.MAX_PER_MOBIL) return json({ ok: false, fel: "Många beställningar på kort tid. Vänta en stund eller hör av dig där du brukar prata med laget." });
 
-  var belopp = antal * lag.pris;   // räknas alltid här, aldrig från sidan
+  var belopp = avrunda(antal * lag.pris);   // räknas alltid här, aldrig från sidan. Avrundat till ören: 3 × 19,90 ska bli 59,70 och inte 59,699999…
   return medLas(function () {
     // En likadan beställning kan ha hunnit bli klar medan den här väntade på sin tur.
     var klar = kod ? kvittoFranKod(kod, lag.slug) : null;

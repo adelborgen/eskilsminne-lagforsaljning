@@ -146,7 +146,14 @@ Utseendet (Matchdag) är byggt: blå bakgrund med ränder, vimplar, klubbmärket
 Servern körs i Node mot låtsas-versioner av Googles tjänster, utan att något riktigt kalkylark rörs:
 
 ```
-node --test test/server.test.cjs
+npm test                 # servertester och attacktester
+npm run test:mutera      # bevis för att attacktesterna biter
+npm run test:xss         # XSS-attacker i en riktig webbläsare (kräver Playwright)
 ```
 
-Testerna täcker bland annat att ett lag inte kan se eller ändra ett annat lags beställningar, att priset räknas på servern, att nycklar och hashar aldrig syns i något svar, att bara klubbens administratör kan lägga till lag, spärren efter felaktiga försök, och att varje kontroll av indata avvisar fel värden. Sidorna är dessutom provkörda i en webbläsare mot den riktiga `Server.gs`.
+- **`test/server.test.cjs`** täcker bland annat att priset räknas på servern, att nycklar och hashar aldrig syns i något svar, spärren efter felaktiga försök, lager, dubbletter och att varje kontroll av indata avvisar fel värden.
+- **`test/attacker.test.cjs`** försöker göra det som inte ska gå: läsa eller ändra ett annat lags beställningar, ge sig själv klubbadministratörens behörighet, smyga in status eller nyckel när försäljningen sparas, beställa förbi knapparna, skicka ett eget belopp, formler och skript i texterna, och 20 beställningar på den sista lotten. `ATTACK_RAPPORT=rapport.md npm test` skriver en tabell över varje attack med anrop, svar och resultat.
+- **`test/mutera.cjs`** kopplar bort varje skydd i en kopia av `Server.gs`, ett i taget, och kontrollerar att rätt attack då lyckas. Ett test som går igenom även utan sitt skydd bevisar ingenting.
+- **`test/xss.webblasare.cjs`** fyller lagförälderns alla texter och klubbens kommentar med HTML och skript, öppnar föräldrasidan, Swish-sidan, lagförälderns vy och klubbens vy, och kontrollerar att inget skript körs och att texten syns som vanlig text.
+
+Det som bara kan bevisas i riktiga Google, till exempel många beställningar exakt samtidigt, behöver provas mot en riktig installation innan skarp drift.

@@ -408,14 +408,14 @@
           submit.disabled = false; submit.textContent = "Beställ och gå vidare till Swish";
           errBox.textContent = msg; errBox.hidden = false; errBox.scrollIntoView({ block: "center", behavior: "smooth" });
         }
-        if (demo) { setTimeout(function () { success(payload, "DEMO0001", payload.antal * cfg.pris); }, 400); return; }
+        if (demo) { setTimeout(function () { success(payload, "DEMO0001", Math.round(payload.antal * cfg.pris * 100) / 100); }, 400); return; }
         // Går föräldern fort fram väntar sidan själv de sekunder som saknas, så att hen aldrig ser ett fel för det.
         setTimeout(function () {
           payload.t = Date.now() - loadedAt;
           fetch(cfg.endpoint, { method: "POST", headers: { "Content-Type": "text/plain;charset=utf-8" }, body: JSON.stringify(payload) })
             .then(function (r) { return r.json(); })
             .then(function (d) {
-              if (d && d.ok) success(payload, d.id, typeof d.belopp === "number" ? d.belopp : payload.antal * cfg.pris);
+              if (d && d.ok) success(payload, d.id, typeof d.belopp === "number" ? d.belopp : Math.round(payload.antal * cfg.pris * 100) / 100);
               else if (d && typeof d.kvar === "number" && cfg.lager > 0) {
                 // Någon annan hann före: visa hur många som verkligen finns kvar, och behåll det föräldern skrivit
                 state.bestallt = Math.max(0, cfg.lager - d.kvar); state.antal = Math.min(state.antal, d.kvar);

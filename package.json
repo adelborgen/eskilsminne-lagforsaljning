@@ -2,5 +2,9 @@
   "name": "eskilsminne-lagforsaljning",
   "private": true,
   "description": "Lagförsäljning för Eskilsminne IF: laglista, beställning och adminvy (prototyp).",
-  "scripts": { "test": "node --test test/server.test.cjs" }
+  "scripts": {
+    "test": "node --test test/server.test.cjs test/attacker.test.cjs",
+    "test:mutera": "node test/mutera.cjs",
+    "test:xss": "node test/xss.webblasare.cjs"
+  }
 }
