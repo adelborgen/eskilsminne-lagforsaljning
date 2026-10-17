@@ -31,13 +31,15 @@ database_name = "skramlat"
 database_id = "0d0f5dc9-72e6-4294-9a04-f4cd01e68a10"
 migrations_dir = "migrations"
 
-# E-posten (inloggningslänkar) slås på när avsändardomänen är uppsatt och kontot har Workers Paid. Ta då bort # på de två raderna nedan.
-# Utan den svarar servern som vanligt på en begäran om länk, men inget mejl skickas.
-# [[send_email]]
-# name = "EMAIL"
+# E-posten (inloggningslänkar). Utan Workers Paid går utskicken bara till adresser som är verifierade mottagare i Email Routing på
+# kontot (gratis på alla nivåer enligt Cloudflares prissida): bra för att testa med sin egen adress. För att skicka till klubbarnas
+# administratörer behövs Workers Paid och Cloudflare Email Service (npx wrangler email sending enable skramlat.se).
+# Går ett utskick inte fram svarar servern ändå som vanligt (samma svar, inget mejl).
+[[send_email]]
+name = "EMAIL"
 
 [vars]
-SIDA_ORIGIN = "https://skramlat.se"          # inloggningslänken i mejlet pekar hit, aldrig på värdadressen i förfrågan
+SIDA_ORIGIN = "https://skramlat.adelborg.workers.dev"   # inloggningslänken i mejlet pekar hit, aldrig på värdadressen i förfrågan. Byt till https://skramlat.se när domänen har flyttat till Cloudflare.
 EPOST_FRAN = "inloggning@skramlat.se"
 
 # Inga loggar: servern loggar aldrig uppgifter om personer, och Workers Logs ska vara avstängt.

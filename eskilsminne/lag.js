@@ -65,6 +65,10 @@ var KLUBB = {
   }
 };
 
+// Sidorna som Cloudflare serverar (skramlat.<konto>.workers.dev) pratar med servern på samma adress. Samma filer på GitHub Pages
+// (skramlat.se) visar demo, eftersom servern inte finns där. Sätt endpoint till "/api" ovan när domänen har flyttat till Cloudflare.
+if (/\.workers\.dev$/.test(location.hostname)) KLUBB.endpoint = "/api";
+
 /* --------------------------------------------------------------------------
    Texter och produkt som skiljer för ett visst lag, med lagets slug som nyckel.
    Lagets siffror (pris, mål, Swish) hanteras i adminvyn, inte här.
