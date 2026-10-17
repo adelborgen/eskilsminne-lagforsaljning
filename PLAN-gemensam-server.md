@@ -290,13 +290,10 @@ Testerna har attacker för det nya: lagföräldern gör klubbens jobb, klubben �
 
 `skramlat.se/kom-igang/` har ett formulär: klubb eller skola, förening eller skola, namn, e-post, telefon (valfritt), ungefär hur många lag och ett meddelande. Servern mejlar förfrågan till ägaren och sparar ingenting i databasen, bara en räknare mot spam med en hash av IP-numret (5 per IP-nummer och 30 totalt i timmen). Mottagaren är hemligheten `FORFRAGAN_TILL` hos Cloudflare. Förfrågan finns alltså bara i ägarens inkorg, och den som frågar får veta det på sidan. Formuläret är inte Fas 2:s ansökan, där klubben skapar sitt konto själv. Den kommer senare.
 
-### Ett lag eller en klass utan klubb (beslut 17 oktober 2026)
+### Ett lag eller en klass utan klubb (öppen fråga, 17 oktober 2026)
 
-Ägarens beslut: ett lag eller en klass ska kunna använda Skramlat utan att hela klubben eller skolan är med (gratisnivån, "för ett lag eller en klass" på prissidan). I stället för klubbens administratör godkänner en **andra förälder**, till exempel lagets kassör, försäljningarna. Principen att två personer tittar finns alltså kvar. Inte byggt än.
+**Inte bestämt.** Ska ett lag eller en klass kunna använda Skramlat utan att hela klubben eller skolan är med? Prissidan säger att gratisnivån är "för ett lag eller en klass", men idag måste en klubbadministratör godkänna varje försäljning. Det diskuteras med ägaren. Inget är byggt.
 
-Förslag på genomförande:
-- `klubb.typ`: `klubb` (förening eller skola, som idag) eller `lag` (ett lag eller en klass utan klubb). Samma inloggning, godkännande, notiser och ändringsgranskning som för en klubb.
-- Orden i sidorna och mejlen följer typen: "klubben" blir till exempel "kassören" eller "den som granskar". Det hör ihop med *Ord per kund* (förening eller skola) inför Sally Bauerskolorna, så de byggs tillsammans.
-- Pengasteget (skicka till klubbens bankgiro) visas inte för ett lag utan klubb, eftersom pengarna redan går till lagets eget nummer.
-- Den som godkänner måste vara en annan person än lagföräldern. Det går inte att kontrollera tekniskt (lagföräldern har ingen e-post i systemet), så det kontrolleras när laget läggs upp, och står i villkoren.
-- Gratisnivåns gräns (1–3 försäljningar samtidigt) kan kontrolleras när en försäljning startas.
+Alternativ:
+- **En andra förälder godkänner**, till exempel lagets kassör, i stället för klubben. Principen att två personer tittar finns kvar. Kräver `klubb.typ` (klubb eller lag), andra ord i sidorna och mejlen ("klubben" blir till exempel "kassören"), och att pengasteget till klubbens bankgiro inte visas. Hör ihop med *Ord per kund* inför Sally Bauerskolorna. Den som godkänner måste vara en annan person än lagföräldern, vilket bara kan kontrolleras när laget läggs upp.
+- **Klubben måste vara med**, som idag. Då skrivs prissidan om så att den inte lovar mer än produkten gör.
