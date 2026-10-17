@@ -1,0 +1,11 @@
+/* Demoklubben i Skramlats färger, ovanpå klubbsidornas utseende (eskilsminne/style.css): grafit i stället för klubbens blå,
+   mint i stället för gult, krämvita kort som vanligt. Se brand-manualen. */
+:root {
+  --yellow: #6fe3b4; --blue: #16191d; --sky: #a9b0b8; --hard: #050608;
+  --bg-a: #16191d; --bg-b: #1a1e23; --fg2: #c4cad0;
+}
+@media (prefers-color-scheme: dark) {
+  :root { --bg-a: #16191d; --bg-b: #1a1e23; --hard: #050608; --fg2: #c4cad0; }
+}
+/* Bössan är redan ljus mot den mörka bakgrunden och behöver ingen klistermärkeskant */
+.crest { width: 52px; filter: none; }

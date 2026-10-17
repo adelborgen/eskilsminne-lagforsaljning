@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="sv">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#16191d">
+<title>Demo – Skramlat</title>
+<meta name="description" content="Prova Skramlat som förälder och som lagförälder. Ett påhittat lag, ingen inloggning, och inget sparas.">
+<link rel="icon" href="../logga/skramlat-ikon-mork.svg" type="image/svg+xml">
+<link rel="stylesheet" href="../fonts/fonts.css">
+<style>
+  /* Skramlats egna sidor: grafit, krämvita kort, mint som detaljfärg. Se brand-manualen. */
+  :root { --grafit: #16191d; --upphojd: #20252b; --kram: #fff8d6; --mint: #6fe3b4; --black: #0f1a33; --text: #ece8d8; --dampad: #a9b0b8;
+    --display: Archivo, "Arial Black", system-ui, sans-serif;
+    --body: "Atkinson Hyperlegible Next", system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--grafit); color: var(--text); font: 17px/1.55 var(--body); }
+  a { color: var(--mint); }
+  :focus-visible { outline: 3px solid var(--mint); outline-offset: 3px; border-radius: 6px; }
+  [hidden] { display: none !important; }
+  .sida { max-width: 1080px; margin: 0 auto; padding: calc(env(safe-area-inset-top, 0px) + 28px) max(16px, env(safe-area-inset-right, 0px)) calc(env(safe-area-inset-bottom, 0px) + 56px) max(16px, env(safe-area-inset-left, 0px)); display: flex; flex-direction: column; gap: 36px; }
+  .topp { display: flex; justify-content: space-between; align-items: center; gap: 16px; flex-wrap: wrap; }
+  .topp img { height: 40px; width: auto; display: block; }
+  .topp nav { display: flex; gap: 6px; flex-wrap: wrap; }
+  .topp nav a { color: var(--text); text-decoration: none; font-weight: 700; padding: 10px 14px; border-radius: 999px; }
+  .topp nav a:hover, .topp nav a[aria-current] { background: var(--upphojd); }
+  .etikett { font: 800 13px/1.2 var(--display); font-stretch: 125%; letter-spacing: .12em; text-transform: uppercase; color: var(--mint); margin: 0; }
+  h1 { margin: 6px 0 0; font: 900 clamp(40px, 8vw, 72px)/.95 var(--display); font-stretch: 112%; letter-spacing: -.01em; color: var(--kram); text-wrap: balance; max-width: 16ch; }
+  .ingress { margin: 16px 0 0; font-size: 20px; max-width: 54ch; }
+
+  /* Två vyer: bredvid varandra på en stor skärm, en i taget med flikar i mobilen */
+  .vaxla { display: none; gap: 6px; background: var(--upphojd); padding: 5px; border-radius: 999px; }
+  .vaxla button { flex: 1; min-height: 48px; border: 0; border-radius: 999px; background: transparent; color: var(--text); font: 800 17px/1 var(--display); font-stretch: 108%; cursor: pointer; }
+  .vaxla button[aria-selected="true"] { background: var(--mint); color: var(--black); }
+  .vyer { display: grid; grid-template-columns: 1fr 1fr; gap: 32px; align-items: start; }
+  .vy { display: flex; flex-direction: column; gap: 18px; min-width: 0; }
+  .vy h2 { margin: 0; font: 900 32px/1.05 var(--display); font-stretch: 110%; color: var(--kram); }
+  .vy p { margin: 6px 0 0; color: var(--dampad); max-width: 46ch; }
+  .prova { margin: 12px 0 0; padding: 0; list-style: none; counter-reset: steg; display: flex; flex-direction: column; gap: 8px; }
+  .prova li { counter-increment: steg; display: flex; gap: 10px; align-items: baseline; }
+  .prova li::before { content: counter(steg); flex: none; width: 26px; height: 26px; border-radius: 8px; background: var(--upphojd); color: var(--mint); display: grid; place-items: center; font: 900 15px/1 var(--display); }
+  .telefon { width: 100%; max-width: 400px; height: 780px; margin: 0 auto; border: 10px solid #0b0d10; border-radius: 44px; background: #0b0d10; box-shadow: 0 0 0 2px var(--upphojd), 0 18px 40px rgba(0,0,0,.45); overflow: hidden; }
+  .telefon iframe { display: block; width: 100%; height: 100%; border: 0; border-radius: 34px; background: var(--grafit); }
+  .borjaom { display: flex; flex-wrap: wrap; gap: 12px 18px; align-items: center; justify-content: center; color: var(--dampad); font-size: 15.5px; text-align: center; }
+  .borjaom button { min-height: 48px; padding: 0 20px; border-radius: 14px; border: 3px solid var(--kram); background: transparent; color: var(--kram); font: 900 17px/1 var(--display); font-stretch: 106%; cursor: pointer; }
+  .klubben { background: var(--upphojd); border-radius: 22px; padding: 26px 24px; display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 18px 28px; }
+  .klubben h2 { grid-column: 1 / -1; margin: 0; font: 900 28px/1.1 var(--display); font-stretch: 108%; color: var(--kram); }
+  .klubben b { display: block; color: var(--mint); font-weight: 800; }
+  .klubben span { color: var(--dampad); font-size: 15.5px; }
+  .kontakt { background: var(--mint); color: var(--black); border-radius: 22px; padding: 26px 24px; display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 16px; box-shadow: 0 5px 0 #050b1c; }
+  .kontakt h2 { margin: 0; font: 900 clamp(26px, 5vw, 36px)/1.05 var(--display); font-stretch: 108%; max-width: 18ch; }
+  .kontakt b { font: 900 24px/1 var(--display); background: var(--grafit); color: var(--kram); border-radius: 14px; padding: 14px 18px; }
+  @media (max-width: 880px) {
+    .vaxla { display: flex; position: sticky; top: calc(env(safe-area-inset-top, 0px) + 8px); z-index: 2; box-shadow: 0 6px 18px rgba(0,0,0,.4); }
+    .vyer { grid-template-columns: 1fr; }
+    .vyer[data-visa="foralder"] #vy-lag, .vyer[data-visa="lag"] #vy-foralder { display: none; }
+    /* I mobilen blir telefonen själva skärmen: ingen ram, så hög som det går */
+    .telefon { max-width: none; height: calc(100svh - 120px); min-height: 560px; border: 0; border-radius: 22px; box-shadow: 0 0 0 2px var(--upphojd); }
+    .telefon iframe { border-radius: 22px; }
+  }
+</style>
+</head>
+<body>
+<main class="sida">
+  <header class="topp">
+    <a href="../"><img src="../logga/skramlat-logga-mork.svg" alt="Skramlat, till framsidan"></a>
+    <nav aria-label="Huvudmeny"><a href="../pris/">Pris</a><a href="../guider/">Guider</a><a href="./" aria-current="page">Demo</a></nav>
+  </header>
+
+  <header>
+    <p class="etikett">Demo</p>
+    <h1>Prova som förälder och lagförälder</h1>
+    <p class="ingress">P2015 i Demoklubben säljer kanelbullar. Beställ som förälder och se beställningen dyka upp hos lagföräldern. Allt är på låtsas: ingen inloggning, inget skickas och inget sparas.</p>
+  </header>
+
+  <div class="vaxla" role="tablist" aria-label="Välj vy">
+    <button type="button" role="tab" id="flik-foralder" aria-controls="vy-foralder" aria-selected="true">Förälder</button>
+    <button type="button" role="tab" id="flik-lag" aria-controls="vy-lag" aria-selected="false">Lagförälder</button>
+  </div>
+
+  <section class="vyer" data-visa="foralder" aria-label="Demo">
+    <article class="vy" id="vy-foralder" role="tabpanel" aria-labelledby="flik-foralder">
+      <div>
+        <h2>Förälder</h2>
+        <p>Beställer i mobilen och swishar direkt till laget. Ingen app och inget konto.</p>
+        <ol class="prova">
+          <li>Skriv ett påhittat namn och mobilnummer.</li>
+          <li>Välj antal påsar och beställ.</li>
+          <li>Se Swish-uppgifterna med belopp och meddelande.</li>
+        </ol>
+      </div>
+      <div class="telefon"><iframe id="ram-foralder" src="lag/?lag=p2015" title="Förälderns vy: beställningssidan för P2015"></iframe></div>
+    </article>
+
+    <article class="vy" id="vy-lag" role="tabpanel" aria-labelledby="flik-lag">
+      <div>
+        <h2>Lagförälder</h2>
+        <p>Den som är ansvarig för lagets försäljning. Ser alla beställningar, bockar av betalt och hämtat, och skickar pengarna till klubben när försäljningen är slut.</p>
+        <ol class="prova">
+          <li>Under Beställningar ligger din beställning överst. Tryck Betald.</li>
+          <li>Under Utlämning bockar du av den som hämtad.</li>
+          <li>Avsluta försäljningen i Översikt och se hur pengarna skickas till klubben.</li>
+        </ol>
+      </div>
+      <div class="telefon"><iframe id="ram-lag" src="lag/admin.html" title="Lagförälderns vy: översikt, beställningar och utlämning för P2015"></iframe></div>
+    </article>
+  </section>
+
+  <div class="borjaom">
+    <span>Allt du gör finns bara i den här fliken.</span>
+    <button type="button" id="borjaom">Börja om demon</button>
+  </div>
+
+  <section class="klubben">
+    <h2>Klubben eller skolan</h2>
+    <div><b>Godkänner varje försäljning</b><span>Lagföräldern skickar in försäljningen, och inget syns för föräldrarna förrän klubben har godkänt den.</span></div>
+    <div><b>Ser när något ändras</b><span>Byter någon Swish-nummer eller pris efter godkännandet stängs försäljningen tills klubben har godkänt den igen.</span></div>
+    <div><b>Får besked och pengarna</b><span>Klubben får mejl när något väntar, när en försäljning är slut och när laget har skickat pengarna.</span></div>
+  </section>
+
+  <section class="kontakt">
+    <h2>Vill din klubb eller skola vara med?</h2>
+    <b>hej@skramlat.se</b>
+  </section>
+</main>
+<script>
+  (function () {
+    var vyer = document.querySelector(".vyer");
+    var flikar = { foralder: document.getElementById("flik-foralder"), lag: document.getElementById("flik-lag") };
+    Object.keys(flikar).forEach(function (namn) {
+      flikar[namn].addEventListener("click", function () {
+        vyer.setAttribute("data-visa", namn);
+        Object.keys(flikar).forEach(function (n) { flikar[n].setAttribute("aria-selected", String(n === namn)); });
+      });
+    });
+    // Börja om: glöm demobeställningarna i fliken och ladda om båda vyerna
+    document.getElementById("borjaom").addEventListener("click", function () {
+      try { Object.keys(sessionStorage).forEach(function (k) { if (k.indexOf("demo-ordrar:demo:") === 0) sessionStorage.removeItem(k); }); } catch (e) {}
+      ["ram-foralder", "ram-lag"].forEach(function (id) { var f = document.getElementById(id); f.src = f.getAttribute("src"); });
+    });
+  })();
+</script>
+</body>
+</html>

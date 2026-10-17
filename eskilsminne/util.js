@@ -51,5 +51,17 @@
   // Gör ett element av en fast SVG-sträng i koden. Används aldrig med text från servern eller från användare.
   function ikon(svg) { var t = document.createElement("template"); t.innerHTML = svg.trim(); return t.content.firstChild; }
 
-  window.U = { nf: nf, kr: kr, h: h, merge: merge, hamtaLag: hamtaLag, ikon: ikon };
+  // Demoläget: en beställning på förälderns sida sparas bara i fliken (sessionStorage), så att lagförälderns vy i samma flik kan visa den.
+  // Inget lämnar webbläsaren, och allt försvinner när fliken stängs.
+  var DEMO_ORDRAR = "demo-ordrar:";
+  function demoNyckel(slug) { return DEMO_ORDRAR + window.KLUBB.slug + ":" + slug; }
+  function demoOrdrar(slug) {
+    try { var v = JSON.parse(sessionStorage.getItem(demoNyckel(slug)) || "[]"); return Array.isArray(v) ? v : []; } catch (e) { return []; }
+  }
+  function sparaDemoOrder(slug, o) {
+    var a = demoOrdrar(slug); a.push(o);
+    try { sessionStorage.setItem(demoNyckel(slug), JSON.stringify(a)); } catch (e) {}
+  }
+
+  window.U = { nf: nf, kr: kr, h: h, merge: merge, hamtaLag: hamtaLag, ikon: ikon, demoNyckel: demoNyckel, demoOrdrar: demoOrdrar, sparaDemoOrder: sparaDemoOrder };
 })();

@@ -26,6 +26,7 @@ Repot är fristående från P2019-sidan ([adelborgen/eskilsminne-p2019](https://
 | Fil eller mapp | Innehåll |
 |---|---|
 | `index.html`, `pris/`, `guider/` | Skramlats framsida, prissida och guider. |
+| `demo/` | Demosidan i Skramlats färger: förälderns och lagförälderns vy bredvid varandra, utan inloggning och utan server. `demo/lag/` är en påhittad klubb (Demoklubben, laget P2015) som använder samma `app.js`, `admin.js`, `util.js` och `style.css` som `eskilsminne/`, med egen `lag.js` (`visning: true`, exempelbeställningar) och `tema.css` (färgerna). En beställning på förälderns sida syns hos lagföräldern i samma flik (sessionStorage) och försvinner när fliken stängs. |
 | `eskilsminne/` | Eskilsminnes sidor: `index.html` + `app.js` (laglista och beställning, `?lag=p2019` visar ett lag), `admin.html` + `admin.js` (adminvyn), `lag.js` (klubbens namn, texter och `slug`/`endpoint`), `util.js`, `style.css`, `assets/`. |
 | `server/` | Servern. `worker.js` (ingången), `api.js` (adresser), `ops.js` (adminvyn), `bestall.js` (beställning och start), `auth.js` (nycklar, inloggning, session), `data.js` (databasen), `regler.js` (kontroller och uträkningar), `krypto.js`, `epost.js`. |
 | `migrations/` | Databasens schema (D1). |

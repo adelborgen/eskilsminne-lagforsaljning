@@ -27,7 +27,7 @@
 
   /* ---------- Inloggningen sparas bara i fliken (försvinner när fliken stängs) ---------- */
   // Klubbens administratörs inloggning ligger i en cookie hos servern. Här sparas bara att det är en sådan inloggning, så att sidan kan fråga servern efter en omladdning.
-  function sparaSession() { try { sessionStorage.setItem("admin", JSON.stringify({ lag: S.lag, key: S.key, klubbadmin: S.roll === "super" && !DEMO })); } catch (e) {} }
+  function sparaSession() { if (K.visning) return; try { sessionStorage.setItem("admin", JSON.stringify({ lag: S.lag, key: S.key, klubbadmin: S.roll === "super" && !DEMO })); } catch (e) {} }
   function lasSession() { try { return JSON.parse(sessionStorage.getItem("admin") || "null"); } catch (e) { return null; } }
   function raderaSession() { try { sessionStorage.removeItem("admin"); } catch (e) {} }
 
@@ -317,13 +317,14 @@
       [[tabO, oPanel, "o"], [tabB, bPanel, "b"], [tabU, uPanel, "u"]].forEach(function (t) {
         t[0].setAttribute("aria-selected", String(t[2] === w)); t[1].hidden = t[2] !== w;
       });
+      S.flik = w;   // samma flik visas när vyn ritas om
       window.scrollTo(0, 0);
     }
 
     var top = h("div", { class: "topactions" },
       S.roll === "super" ? h("button", { type: "button", class: "linkbtn", text: "← Alla lag", onclick: function () { S.valt = null; renderAdmin(); } })
         : d.visaOrdrar ? h("button", { type: "button", class: "linkbtn", text: "← Försäljningens uppgifter", onclick: function () { d.visaOrdrar = false; byggUppsattning(d); } }) : h("span"),
-      h("button", { type: "button", class: "linkbtn", text: "Logga ut", onclick: loggaUt }));
+      K.visning ? h("span") : h("button", { type: "button", class: "linkbtn", text: "Logga ut", onclick: loggaUt }));
     app.textContent = "";
     app.appendChild(top);
     if (S.roll === "super") tabU.hidden = true;   // klubben ser beställningarna men bockar inte av
@@ -627,6 +628,7 @@
     });
 
     ritaOversikt(); ritaLista(); ritaUtlamning();
+    if (S.flik && S.flik !== "o" && !(S.flik === "u" && tabU.hidden)) visaFlik(S.flik);
   }
 
   // Pengarna efter avslutad försäljning: lagföräldern skickar allt som är betalt till klubbens bankgiro och markerar det, och klubben
@@ -1075,7 +1077,7 @@
       if (!egen.swish.nummer && ["pagar", "snart", "avslutad"].indexOf(egen.status) >= 0) egen.swish.nummer = K.standard.demoSwish;
       egen.pengar = { skickatKr: 0, skickatTid: "", mottagetTid: "" }; egen.andringar = [];
       lag[l.slug] = egen;
-      ordrar[l.slug] = l.status === "pagar" ? namn.slice(0, 6 + li).map(function (n, i) {
+      ordrar[l.slug] = l.demoOrdrar ? JSON.parse(JSON.stringify(l.demoOrdrar)) : l.status === "pagar" ? namn.slice(0, 6 + li).map(function (n, i) {
         return { id: String(i + 1).padStart(4, "0"), tid: new Date(Date.now() - (9 - i) * 3600e3 * (li + 1)).toISOString(), barn: n,
           mobil: "07000000" + String(10 + i), antal: 5 + ((i * 3) % 11), belopp: 0, betald: i % 3 === 0 ? "JA" : i % 5 === 4 ? "AVBRUTEN" : "",
           hamtad: i === 3 ? "JA" : "" };
@@ -1083,8 +1085,23 @@
       ordrar[l.slug].forEach(function (o) { o.belopp = o.antal * lag[l.slug].pris; });
     });
     demo = { lag: lag, ordrar: ordrar, nycklar: {}, bankgiro: "" };
+    Object.keys(lag).forEach(demoHamtaNya);
     return demo;
   }
+  // Beställningar som har gjorts på förälderns sida i samma flik (se U.sparaDemoOrder). Ger sant om någon var ny.
+  function demoHamtaNya(slug) {
+    var finns = {}, ny = false;
+    demo.ordrar[slug].forEach(function (o) { finns[o.id] = 1; });
+    U.demoOrdrar(slug).forEach(function (o) { if (!finns[o.id]) { demo.ordrar[slug].push(o); ny = true; } });
+    return ny;
+  }
+  // Demosidan visar förälderns vy bredvid: en ny beställning där dyker upp här direkt
+  if (DEMO) window.addEventListener("storage", function (e) {
+    if (!demo || !e.key) return;
+    Object.keys(demo.lag).forEach(function (slug) {
+      if (e.key === U.demoNyckel(slug) && demoHamtaNya(slug) && S.roll) renderAdmin();
+    });
+  });
   function demoOversikt(l, ordrar) {
     var o = { bestallt: 0, betalt: 0, betaltKr: 0, obetalt: 0, obetaltKr: 0, avbrutna: 0, hamtat: 0, hamtatObetalt: 0, attHamta: 0 };
     ordrar.forEach(function (x) {
@@ -1322,6 +1339,8 @@
   /* ---------- Start ---------- */
   function start() {
     // Adminlänken har formen admin.html#lag=<slug>&k=<nyckel>. Nyckeln ligger efter # så att den inte skickas till webbservern.
+    // Demosidan: ingen inloggning, lagförälderns vy för exempellaget öppnas direkt
+    if (K.visning && DEMO && (window.DEMO_LAG || [])[0]) return loggaIn(window.DEMO_LAG[0].slug, "demo", visaFelSida);
     if (location.hash === "#starta") return visaStart();   // länk direkt till Starta en försäljning
     var hash = new URLSearchParams(location.hash.slice(1));
     if (hash.get("lank")) {   // länk från e-posten till klubbens administratör

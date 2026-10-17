@@ -37,7 +37,7 @@
   var foot = document.getElementById("foot");
   foot.appendChild(h("strong", { text: K.namn }));
   if (K.motto) foot.appendChild(h("div", { text: K.motto }));
-  foot.appendChild(h("div", { style: "margin-top:8px" }, h("a", { href: "admin.html", text: "Admin" })));
+  if (!K.visning) foot.appendChild(h("div", { style: "margin-top:8px" }, h("a", { href: "admin.html", text: "Admin" })));   // demosidan visar adminvyn bredvid
 
   var app = document.getElementById("app");
 
@@ -287,7 +287,7 @@
     }
 
     function loadStatus() {
-      if (demo) { state.bestallt = cfg.demoBestallt; renderMeters(); return; }
+      if (demo) { state.bestallt = cfg.demoBestallt + U.demoOrdrar(cfg.slug).reduce(function (n, o) { return n + o.antal; }, 0); renderMeters(); return; }
       if (typeof cfg.bestallt === "number") { state.bestallt = cfg.bestallt; renderMeters(); return; }   // följer med laglistan
       fetch(cfg.endpoint + "?action=status&klubb=" + encodeURIComponent(K.slug) + "&lag=" + encodeURIComponent(cfg.slug))
         .then(function (r) { return r.json(); })
@@ -408,7 +408,14 @@
           submit.disabled = false; submit.textContent = "Beställ och gå vidare till Swish";
           errBox.textContent = msg; errBox.hidden = false; errBox.scrollIntoView({ block: "center", behavior: "smooth" });
         }
-        if (demo) { setTimeout(function () { success(payload, "DEMO0001", Math.round(payload.antal * cfg.pris * 100) / 100); }, 400); return; }
+        if (demo) {
+          // Demo: beställningen sparas bara i fliken, så att lagförälderns vy kan visa den. Numret fortsätter efter lagets exempelbeställningar.
+          var nr = (cfg.demoOrdrar ? cfg.demoOrdrar.length : 100) + U.demoOrdrar(cfg.slug).length + 1;
+          var demoId = String(nr).padStart(4, "0"), demoBelopp = Math.round(payload.antal * cfg.pris * 100) / 100;
+          U.sparaDemoOrder(cfg.slug, { id: demoId, tid: new Date().toISOString(), barn: namn, mobil: String(tel).replace(/\D/g, ""), antal: payload.antal,
+            belopp: demoBelopp, betald: "", hamtad: "" });
+          setTimeout(function () { success(payload, demoId, demoBelopp); }, 400); return;
+        }
         // Går föräldern fort fram väntar sidan själv de sekunder som saknas, så att hen aldrig ser ett fel för det.
         setTimeout(function () {
           payload.t = Date.now() - loadedAt;
@@ -471,7 +478,7 @@
       }
 
       content.appendChild(h("div", { class: "card done", style: "margin-top:16px" },
-        h("p", { class: "okline", text: demo ? "Förhandsvisning (inget skickades)" : "Beställningen är mottagen" }),
+        h("p", { class: "okline", text: demo ? (K.visning ? "Demo: beställningen syns nu hos lagföräldern" : "Förhandsvisning (inget skickades)") : "Beställningen är mottagen" }),
         h("h2", { text: p.barn ? "Tack, " + p.barn + "!" : "Din beställning" }),
         h("div", { class: "sumrow" }, h("span", { class: "num", text: p.antal + " × " + cfg.produkt.namn }), h("span", { class: "num", text: kr(belopp) })),
         aterstalld ? h("p", { class: "notice", text: "Det här är din senaste beställning. Har du redan swishat är du klar." }) : null,
