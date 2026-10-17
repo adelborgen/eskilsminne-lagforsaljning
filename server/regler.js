@@ -21,6 +21,7 @@ export const SLUG_RE = /^[a-z0-9][a-z0-9-]{1,29}$/;
 export const SWISH_RE = /^(123\d{7}|07\d{8})$/;
 export const KOD_RE = /^[A-Za-z0-9:_-]{8,80}$/;
 export const EPOST_RE = /^[^\s@]{1,64}@[^\s@.]+(\.[^\s@.]+)+$/;
+export const BANKGIRO_RE = /^\d{3,4}-?\d{4}$/;   // 123-4567 eller 1234-5678
 
 export const STATUSAR = ["utkast", "granskas", "snart", "pagar", "avslutad"];
 // De fält lagföräldern själv får ändra (som utkast). Namn, status, adress, nyckel och räknare ändras aldrig den vägen.
@@ -31,6 +32,13 @@ export const LAG_KOLUMN = {
   namn: "namn", kampanj: "kampanj", status: "status", swishNummer: "swish_nummer", mottagare: "mottagare", meddelande: "meddelande",
   pris: "pris", inkopspris: "inkopspris", minimum: "minimum", mal: "mal", lager: "lager", maxAntal: "max_antal", kartong: "kartong",
   produkt: "produkt", detalj: "detalj", enhetEn: "enhet_en", enhet: "enhet", intro: "intro", utlamningsText: "utlamning_text", belonning: "belonning"
+};
+
+// Fältens namn som klubben ser dem, när en försäljning har ändrats sedan klubben godkände den
+export const FALT_NAMN = {
+  kampanj: "Rubrik", produkt: "Produkt", detalj: "Beskrivning", enhetEn: "Enhet (ental)", enhet: "Enhet (flertal)", intro: "Text om försäljningen",
+  utlamningsText: "Utlämning", belonning: "Belöning", swishNummer: "Swish-nummer", mottagare: "Mottagarens namn i Swish", meddelande: "Meddelande i Swish",
+  pris: "Pris", inkopspris: "Inköpspris", minimum: "Minimum", mal: "Mål", lager: "Antal i lager", maxAntal: "Max antal per beställning", kartong: "Antal per kartong"
 };
 
 export function avrunda(n) { return Math.round(n * 100) / 100; }
@@ -141,6 +149,25 @@ export function kanInteOppnas(l, status) {
   if (status !== "snart" && status !== "pagar") return null;
   const s = saknas(l);
   return s ? "Försäljningen kan inte vara " + (status === "pagar" ? "öppen" : "godkänd") + " än. " + s : null;
+}
+
+// Det som har ändrats sedan klubben godkände försäljningen. godkant: det klubben godkände (JSON-text från databasen, tom om den aldrig
+// har godkänts). nu: samma fält som de ser ut nu. Ger en lista med fältets namn, det gamla och det nya värdet.
+export function andringar(godkant, nu) {
+  let fore;
+  try { fore = godkant ? JSON.parse(godkant) : null; } catch (e) { fore = null; }
+  if (!fore || typeof fore !== "object") return [];
+  const lika = (a, b) => (typeof a === "number" || typeof b === "number") ? Number(a) === Number(b) : String(a == null ? "" : a) === String(b == null ? "" : b);
+  return LAG_EGNA_FALT.filter((f) => !lika(fore[f], nu[f])).map((f) => ({ falt: f, namn: FALT_NAMN[f], fore: fore[f] == null ? "" : fore[f], nu: nu[f] == null ? "" : nu[f] }));
+}
+
+// Bankgirot skrivs med bindestreck före de fyra sista siffrorna. Ger null om det inte är ett bankgiro, tom text om fältet är tomt.
+export function normBankgiro(v) {
+  const s = String(v == null ? "" : v).replace(/\s/g, "");
+  if (s === "") return "";
+  if (!BANKGIRO_RE.test(s)) return null;
+  const siffror = s.replace("-", "");
+  return siffror.slice(0, -4) + "-" + siffror.slice(-4);
 }
 
 // Siffrorna som lagföräldern behöver. ordrar: lagets beställningar med antal, belopp, betald och hamtad.

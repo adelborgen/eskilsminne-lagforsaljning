@@ -14,5 +14,15 @@ export const MIGRERINGAR = [
       "CREATE TABLE IF NOT EXISTS inloggningslank ( hash TEXT PRIMARY KEY, epost TEXT NOT NULL, giltig_till INTEGER NOT NULL, anvand INTEGER NOT NULL DEFAULT 0 )",
       "CREATE TABLE IF NOT EXISTS session ( hash TEXT PRIMARY KEY, epost TEXT NOT NULL, giltig_till INTEGER NOT NULL )"
     ]
+  },
+  {
+    "namn": "0002_pengar_och_notiser.sql",
+    "uttryck": [
+      "ALTER TABLE klubb ADD COLUMN bankgiro TEXT NOT NULL DEFAULT ''",
+      "ALTER TABLE lag ADD COLUMN godkant TEXT NOT NULL DEFAULT ''",
+      "ALTER TABLE lag ADD COLUMN pengar_skickat_kr REAL NOT NULL DEFAULT 0",
+      "ALTER TABLE lag ADD COLUMN pengar_skickat_tid TEXT NOT NULL DEFAULT ''",
+      "ALTER TABLE lag ADD COLUMN pengar_mottaget_tid TEXT NOT NULL DEFAULT ''"
+    ]
   }
 ];

@@ -277,3 +277,11 @@ Fas 1 är byggd (se *Läge efter Fas 1*). Eskilsminne kan gå live när Fas 1 oc
 - **Inloggningen gäller i 30 dagar**, och sidan frågar servern när den laddas, så administratören behöver en ny länk bara på en ny enhet eller efter en månad.
 
 Testerna har attacker för det nya: lagföräldern gör klubbens jobb, klubben ändrar försäljningens uppgifter, och lagföräldern öppnar något som klubben inte har godkänt (utkast, granskas, stoppad, ändrad). `npm test`: 119 tester, alla gröna. Mutationstestet har 45 skydd (kontrollerat att alla ändringar går att göra, inte kört färdigt).
+
+### Notiser, pengarna och utlämningen (17 oktober 2026, ägarens val)
+
+- **Mejl till klubbens administratörer** när en försäljning väntar på godkännande (med vilka fält som ändrats sedan förra godkännandet, till exempel Swish-numret), när den är avslutad (antal, kartonger att beställa från leverantören, betalt och obetalt) och när pengarna är skickade. Det klubben godkänner sparas (`lag.godkant`), så att granskningen visar exakt vad som ändrats, med gammalt och nytt värde i klubbens vy.
+- **Pengarna efter avslutad försäljning:** klubben skriver in sitt bankgiro en gång. Lagföräldern ser beloppet (allt som är betalt, räknat av servern) och bankgirot, skickar pengarna och markerar det. Klubben kvitterar. Så gick det till i P2019:s försäljning: laget tog emot all Swish, skickade pengarna till klubbens bankgiro, och klubben beställde från leverantören och fick fakturan.
+- **Klubben ser beställningarna men bockar inte av** (servern avvisar det).
+- **Först betald, sedan hämtad:** en obetald beställning kan inte markeras som hämtad, och en hämtad kan inte bli obetald. I utlämningen får en obetald beställning knappen *Betald nu* och sedan bocken för hämtad.
+- Migreringen `0002_pengar_och_notiser.sql` lägger till kolumnerna. Workern lägger in den själv. `npm test`: 125 tester, alla gröna. Mutationstestet: 49 skydd (kontrollerat, inte kört färdigt).

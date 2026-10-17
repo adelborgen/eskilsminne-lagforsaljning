@@ -134,31 +134,33 @@ const ATTACKER = [
 
   // ---------- Mer behörighet ----------
   { grupp: "Mer behörighet", namn: "Lagföräldern gör klubbens jobb",
-    hur: "Lagförälderns nyckel anropar klubbadministratörens åtgärder: godkänna, stoppa, skicka tillbaka, ny nyckel, ta bort lag och se alla lag.",
+    hur: "Lagförälderns nyckel anropar klubbadministratörens åtgärder: godkänna, stoppa, skicka tillbaka, ny nyckel, ta bort lag, se alla lag, kvittera pengarna och byta klubbens bankgiro.",
     async kor() {
       const { a } = await klubb();
       const u = await m.nyttLag(KL, lagData({ namn: "Lag U", status: "utkast" }));
       await m.db.prepare("UPDATE lag SET status = 'granskas' WHERE slug = 'lag-u'").run();
       const ops = [["godkann", { slug: "lag-u" }], ["stoppa", { slug: "lag-b", kommentar: "x" }], ["nyNyckel", { slug: "lag-b" }],
-        ["lagTaBort", { slug: "lag-u" }], ["lagLista", {}], ["skickaTillbaka", { slug: "lag-u", kommentar: "x" }]];
+        ["lagTaBort", { slug: "lag-u" }], ["lagLista", {}], ["skickaTillbaka", { slug: "lag-u", kommentar: "x" }],
+        ["pengarMottagna", { slug: "lag-a", ja: true }], ["klubbSpara", { bankgiro: "9999-9999" }]];
       const svar = [];
       for (const [op, x] of ops) svar.push(await m.admin(KL, "lag-a", a.key, op, x));
       const rader = await m.rader("lag"), st = (slug) => rader.find((r) => r.slug === slug).status;
       const ok = svar.every((s) => !s.ok) && rader.length === 3 && st("lag-u") === "granskas" && st("lag-b") === "pagar"
-        && (await m.admin(KL, "lag-u", u.key, "oversikt")).ok;
+        && (await m.admin(KL, "lag-u", u.key, "oversikt")).ok && (await m.rader("klubb"))[0].bankgiro === "";
       return { anrop: "POST {lag:'lag-a', key:<lagnyckel>, op:'godkann' | 'stoppa' | 'nyNyckel' | 'lagTaBort' | 'lagLista' | 'skickaTillbaka'}", svar: kort(svar[0]), stoppad: ok, bevis: svar[0].fel };
     } },
   { grupp: "Mer behörighet", namn: "Klubbens administratör ändrar försäljningens uppgifter",
-    hur: "Inloggad som klubbens administratör: byter Swish-nummer och pris i ett lags utkast, och öppnar, avslutar och öppnar för ändring i stället för lagföräldern.",
+    hur: "Inloggad som klubbens administratör: byter Swish-nummer och pris i ett lags utkast, öppnar, avslutar och öppnar för ändring i stället för lagföräldern, bockar av och tar bort beställningar, och markerar lagets pengar som skickade.",
     async kor() {
       const { sk } = await klubb();
       await m.nyttLag(KL, lagData({ namn: "Lag U", status: "utkast" }));
-      const fore = await m.rader("lag");
+      const fore = [await m.rader("lag"), await m.rader("bestallning")];
       const svar = [await sk("lagSpara", { falt: { swishNummer: "070 999 99 99", pris: 1 } }, "lag-u"), await sk("lagSpara", { slug: "lag-a", falt: { swishNummer: "070 999 99 99" } }, "lag-a"),
-        await sk("avsluta", {}, "lag-a"), await sk("andra", {}, "lag-b"), await sk("oppna", {}, "lag-u")];
-      const efter = await m.rader("lag");
+        await sk("avsluta", {}, "lag-a"), await sk("andra", {}, "lag-b"), await sk("oppna", {}, "lag-u"),
+        await sk("satt", { id: "0001", varde: "JA" }, "lag-a"), await sk("hamtadAlla", {}, "lag-a"), await sk("taBort", { id: "0001" }, "lag-b"), await sk("pengarSkickade", { ja: true }, "lag-a")];
+      const efter = [await m.rader("lag"), await m.rader("bestallning")];
       const orort = JSON.stringify(efter) === JSON.stringify(fore);
-      return { anrop: "POST {op:'lagSpara' | 'avsluta' | 'andra' | 'oppna'} med klubbadministratörens cookie", svar: kort(svar[0]), stoppad: svar.every((s) => !s.ok) && orort, bevis: svar[0].fel };
+      return { anrop: "POST {op:'lagSpara' | 'avsluta' | 'andra' | 'oppna' | 'satt' | 'taBort' | 'pengarSkickade'} med klubbadministratörens cookie", svar: kort(svar[0]), stoppad: svar.every((s) => !s.ok) && orort, bevis: svar[0].fel };
     } },
   { grupp: "Mer behörighet", namn: "Öppna en försäljning som klubben inte har godkänt",
     hur: "Lagföräldern väljer Öppna på ett utkast, på en försäljning som väntar på granskning och på en som klubben har stoppat, och på en som hen själv öppnat för ändring och bytt Swish-nummer i.",
@@ -288,6 +290,18 @@ const ATTACKER = [
       const svar = await Promise.all(Array.from({ length: 20 }, (_, i) => bestall("lag-l", { antal: 1, mobil: "070" + String(8100000 + i) })));
       const gick = svar.filter((s) => s.ok).length;
       return { anrop: "20 × POST {lag:'lag-l', antal:1} samtidigt när 1 finns kvar", svar: kort(svar.find((s) => !s.ok)), stoppad: gick === 1, bevis: gick + " av 20 gick igenom" };
+    } },
+  { grupp: "Förbi knapparna", namn: "Markera en obetald beställning som hämtad",
+    hur: "Lagföräldern skickar hämtad direkt till servern för en obetald beställning, och ångrar betalningen för en som redan är hämtad.",
+    async kor() {
+      const { a, order } = await klubb();
+      const s1 = await m.admin(KL, "lag-a", a.key, "hamtad", { id: "0001", varde: "JA" });
+      const forsta = await order("lag-a", "0001");
+      await m.admin(KL, "lag-a", a.key, "satt", { id: "0001", varde: "JA" }); await m.admin(KL, "lag-a", a.key, "hamtad", { id: "0001", varde: "JA" });
+      const s2 = await m.admin(KL, "lag-a", a.key, "satt", { id: "0001", varde: "" });
+      const andra = await order("lag-a", "0001");
+      return { anrop: "POST {op:'hamtad', id:'0001', varde:'JA'} när den är obetald, och {op:'satt', varde:''} när den är hämtad", svar: kort(s1),
+        stoppad: !s1.ok && forsta.hamtad === "" && !s2.ok && andra.betald === "JA" && andra.hamtad === "JA", bevis: s1.fel + " / " + s2.fel };
     } },
   { grupp: "Förbi knapparna", namn: "Beställa från en annan webbplats",
     hur: "En annan webbplats skickar beställningar i en besökares webbläsare (Origin pekar på en annan adress).",

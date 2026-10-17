@@ -4,7 +4,8 @@
    riktiga Cloudflare: provat 17 oktober 2026 med ett inloggningsmejl till en verifierad mottagare i Email Routing (gratisnivån).
    Till andra adresser krävs Workers Paid och Cloudflare Email Service (npx wrangler email sending enable skramlat.se).
 
-   Mejlen innehåller bara administratörens egen adress och en inloggningslänk, aldrig barnens uppgifter. */
+   Mejlen innehåller bara mottagarens egen adress, lagets namn, antal och belopp, och en länk. Aldrig barnens namn eller mobilnummer,
+   och aldrig Swish-nummer eller andra värden som lagföräldern skrivit in: notisen säger vilka fält som ändrats, och värdena syns i adminvyn. */
 
 export async function skickaInloggningslank(k, till, lank) {
   if (!k.env.EMAIL || typeof k.env.EMAIL.send !== "function") throw new Error("e-postbindningen saknas");
@@ -26,4 +27,17 @@ export async function skickaInloggningslank(k, till, lank) {
     subject: "Din inloggningslänk till Skramlat",
     text
   });
+}
+
+// En notis till klubbens administratörer, till exempel att en försäljning väntar på godkännande. rader: mejlets text, rad för rad.
+export async function skickaNotis(k, till, amne, rader) {
+  if (!k.env.EMAIL || typeof k.env.EMAIL.send !== "function") throw new Error("e-postbindningen saknas");
+  const text = ["Hej!", "", ...rader, "", "Skramlat"].join("\n");
+  // Var mottagare för sig: kommer mejlet inte fram till en av dem ska de andra ändå få sitt
+  let fel = 0;
+  for (const t of till) {
+    try { await k.env.EMAIL.send({ to: t, from: { email: k.env.EPOST_FRAN || "inloggning@skramlat.se", name: "Skramlat" }, subject: amne, text }); }
+    catch (e) { fel++; }
+  }
+  if (fel) throw new Error("notisen kom inte fram till alla");
 }

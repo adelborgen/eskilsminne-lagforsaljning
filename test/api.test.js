@@ -280,11 +280,17 @@ test("admin: betald, avbruten och ångra uppdaterar siffrorna", async () => {
   assert.ok(!(await lagAdmin("lag-a", a.key, "satt", { id: "abc", varde: "JA" })).ok);
 });
 
-test("hämtad: markera och ångra per order, en avbruten order kan inte hämtas, och bara i det egna laget", async () => {
+test("hämtad: först betald, sedan hämtad, ångra i omvänd ordning; en avbruten order kan inte hämtas, och bara i det egna laget", async () => {
   const { a, b } = await tvaLag();
+  assert.match((await lagAdmin("lag-b", b.key, "hamtad", { id: "0001", varde: "JA" })).fel, /betald först/);
+  await lagAdmin("lag-b", b.key, "satt", { id: "0001", varde: "JA" });
   const r = await lagAdmin("lag-b", b.key, "hamtad", { id: "0001", varde: "JA" });
-  assert.equal(r.order.hamtad, "JA"); assert.equal(r.oversikt.hamtat, 2); assert.equal(r.oversikt.hamtatObetalt, 2);   // beställningen är på 2 st
+  assert.equal(r.order.hamtad, "JA"); assert.equal(r.oversikt.hamtat, 2); assert.equal(r.oversikt.hamtatObetalt, 0);   // beställningen är på 2 st
+  assert.match((await lagAdmin("lag-b", b.key, "satt", { id: "0001", varde: "" })).fel, /Ångra hämtningen först/);
+  assert.match((await lagAdmin("lag-b", b.key, "satt", { id: "0001", varde: "AVBRUTEN" })).fel, /Ångra hämtningen först/);
+  assert.equal((await m.rader("bestallning")).find((o) => o.nr === 1 && o.barn === "Berit").betald, "JA");
   assert.equal((await lagAdmin("lag-b", b.key, "hamtad", { id: "0001", varde: "" })).oversikt.hamtat, 0);
+  assert.equal((await lagAdmin("lag-b", b.key, "satt", { id: "0001", varde: "" })).order.betald, "");
   await lagAdmin("lag-b", b.key, "satt", { id: "0002", varde: "AVBRUTEN" });
   assert.match((await lagAdmin("lag-b", b.key, "hamtad", { id: "0002", varde: "JA" })).fel, /avbruten/);
   assert.ok(!(await lagAdmin("lag-a", a.key, "hamtad", { id: "0002", varde: "JA" })).ok);
@@ -310,9 +316,9 @@ test("ta bort en beställning: bara om den inte är betald eller hämtad, och ba
   assert.ok(!(await lagAdmin("lag-a", a.key, "taBort", { id: "0002" })).ok);   // lag B:s
   await lagAdmin("lag-b", b.key, "satt", { id: "0001", varde: "JA" });
   assert.match((await lagAdmin("lag-b", b.key, "taBort", { id: "0001" })).fel, /betald/);
-  await lagAdmin("lag-b", b.key, "hamtad", { id: "0002", varde: "JA" });
-  assert.match((await lagAdmin("lag-b", b.key, "taBort", { id: "0002" })).fel, /hämtad/);
-  await lagAdmin("lag-b", b.key, "hamtad", { id: "0002", varde: "" });
+  await lagAdmin("lag-b", b.key, "satt", { id: "0002", varde: "JA" }); await lagAdmin("lag-b", b.key, "hamtad", { id: "0002", varde: "JA" });
+  assert.ok(!(await lagAdmin("lag-b", b.key, "taBort", { id: "0002" })).ok, "en hämtad beställning kan inte tas bort");
+  await lagAdmin("lag-b", b.key, "hamtad", { id: "0002", varde: "" }); await lagAdmin("lag-b", b.key, "satt", { id: "0002", varde: "" });
   const r = await lagAdmin("lag-b", b.key, "taBort", { id: "0002" });
   assert.ok(r.ok); assert.equal(r.borttagen, "0002"); assert.equal(r.oversikt.bestallt, 2);   // kvar: 0001 på 2 st
   assert.deepEqual((await lagAdmin("lag-b", b.key, "lista")).ordrar.map((o) => o.id), ["0001"]);
@@ -550,4 +556,115 @@ test("offentliga svar innehåller aldrig mobilnummer eller barnens namn", async 
   const alla = [await m.anrop("GET", "/api?action=lag&klubb=" + KL), await m.anrop("GET", "/api?action=status&klubb=" + KL + "&lag=lag-a"),
     await m.anrop("POST", "/api", { klubb: KL, lag: "lag-a", barn: "Hemligt Barn", mobil: "070 999 88 77", antal: 1, samtycke: true, website: "", t: 5000, kod: "kod-0123456789" })];
   for (const s of alla) for (const pu of ["Hemligt", "0709998877", "070 999 88 77"]) assert.ok(!s.text.includes(pu), s.text);
+});
+
+/* ---------- Klubben läser beställningarna, mejl till klubben och pengarna efter avslutad försäljning ---------- */
+test("klubben ser lagets beställningar men bockar inte av, markerar inte hämtat och tar inte bort", async () => {
+  await lagNy({ namn: "Lag A" });
+  await bestall("lag-a", { mobil: mobil(1) });
+  const l = await klubb("lista", {}, "lag-a");
+  assert.ok(l.ok); assert.equal(l.ordrar.length, 1);
+  assert.ok((await klubb("oversikt", {}, "lag-a")).ok);
+  for (const [op, x] of [["satt", { id: "0001", varde: "JA" }], ["hamtad", { id: "0001", varde: "JA" }], ["hamtadAlla", {}], ["taBort", { id: "0001" }]])
+    assert.match((await klubb(op, x, "lag-a")).fel || "", /lagföräldern/, op);
+  const rad = (await m.rader("bestallning"))[0];
+  assert.equal(rad.betald, ""); assert.equal(rad.hamtad, "");
+});
+
+const brevTill = (amne) => m.brev.filter((b) => b.subject.includes(amne));
+
+test("mejl till klubben när en försäljning väntar på godkännande, och vad som ändrats sedan klubben godkände den", async () => {
+  await m.db.prepare("INSERT INTO klubb_admin (klubb_id, epost, skapad) SELECT id, 'tva@testklubben.example', 'x' FROM klubb WHERE slug = ?1").bind(KL).run();
+  m.brev.length = 0;
+  const { a, slug } = await tillGranskning("Lag A");
+  await m.vanta();
+  let brev = brevTill("Lag A väntar på godkännande");
+  assert.deepEqual(brev.map((b) => b.to).sort(), [ADMIN_EPOST, "tva@testklubben.example"], "alla klubbens administratörer får mejlet");
+  assert.match(brev[0].text, /inte varit godkänd tidigare/);
+  assert.ok(brev[0].text.includes("https://skramlat.test/testklubben/admin.html"), brev[0].text);
+  // Godkänd och öppen. Lagföräldern ändrar Swish-numret och priset: försäljningen stängs, och klubben ser exakt vad som ändrats.
+  assert.ok((await klubb("godkann", { slug })).ok);
+  assert.deepEqual((await klubb("lagLista")).lag.find((l) => l.slug === slug).andringar, []);
+  assert.ok((await lagAdmin(slug, a.key, "andra")).ok);
+  assert.ok((await lagAdmin(slug, a.key, "lagSpara", { falt: { swishNummer: "070 999 99 99", pris: 35 } })).ok);
+  m.brev.length = 0;
+  assert.ok((await lagAdmin(slug, a.key, "skickaGodkannande", { bekraftat: true })).ok);
+  await m.vanta();
+  brev = brevTill("Lag A väntar på godkännande");
+  assert.equal(brev.length, 2);
+  assert.match(brev[0].text, /Ändrat sedan klubben godkände den senast: Swish-nummer, Pris\./);
+  assert.match(brev[0].text, /Swish-uppgifterna är ändrade/);
+  assert.ok(!brev[0].text.includes("999 99 99") && !brev[0].text.includes("123 45 67"), "mejlet innehåller inte själva numren");
+  const andr = (await klubb("lagLista")).lag.find((l) => l.slug === slug).andringar;
+  assert.deepEqual(andr.map((x) => [x.falt, String(x.fore), String(x.nu)]), [["swishNummer", "070 123 45 67", "070 999 99 99"], ["pris", "30", "35"]]);
+  // Godkänns den igen är det den nya versionen som gäller
+  assert.ok((await klubb("godkann", { slug })).ok);
+  assert.ok((await lagAdmin(slug, a.key, "andra")).ok);
+  assert.deepEqual((await lagAdmin(slug, a.key, "oversikt")).lag.andringar, []);
+});
+
+test("mejl till klubben när försäljningen är avslutad: antal, kartonger och belopp, men inga namn eller mobilnummer", async () => {
+  const a = await lagNy({ namn: "Lag A", pris: 30, inkopspris: 10, kartong: 4 });
+  await bestall("lag-a", { barn: "Hemligt Barn", mobil: "070 999 88 77", antal: 3 });
+  await bestall("lag-a", { antal: 2, mobil: mobil(1) });
+  await lagAdmin("lag-a", a.key, "satt", { id: "0001", varde: "JA" });
+  m.brev.length = 0;
+  assert.ok((await lagAdmin("lag-a", a.key, "avsluta")).ok);
+  await m.vanta();
+  const [b] = brevTill("Lag A har avslutat sin försäljning");
+  assert.ok(b, "mejlet skickades");
+  assert.match(b.text, /Beställt: 5 st\. Att beställa från leverantören: 8 st \(2 kartonger\)\./);
+  assert.match(b.text, /Betalt till laget: 90 kr\. Obetalt: 2 st \(60 kr\)\./);
+  assert.match(b.text, /Inköpspris enligt lagets uppgifter: 80 kr\./);
+  for (const pu of ["Hemligt", "0709998877", "070 999"]) assert.ok(!JSON.stringify(m.brev).includes(pu), "mejlet innehåller " + pu);
+});
+
+test("pengarna: lagföräldern markerar dem som skickade efter avslutad försäljning, klubben kvitterar, och bara de kan göra det", async () => {
+  const a = await lagNy({ namn: "Lag A", pris: 30 });
+  await bestall("lag-a", { antal: 3, mobil: mobil(1) }); await bestall("lag-a", { antal: 1, mobil: mobil(2) });
+  await lagAdmin("lag-a", a.key, "satt", { id: "0001", varde: "JA" });
+  assert.match((await lagAdmin("lag-a", a.key, "pengarSkickade", { ja: true })).fel, /Avsluta försäljningen först/);
+  // Klubbens bankgiro: bara klubben skriver in det, och lagföräldern ser det
+  assert.match((await klubb("klubbSpara", { bankgiro: "12" })).fel, /Bankgirot/);
+  assert.ok((await klubb("klubbSpara", { bankgiro: "1234 5678" })).ok);
+  assert.ok(!(await lagAdmin("lag-a", a.key, "klubbSpara", { bankgiro: "9999-9999" })).ok);
+  assert.equal((await lagAdmin("lag-a", a.key, "oversikt")).klubb.bankgiro, "1234-5678");
+  await lagAdmin("lag-a", a.key, "avsluta");
+  m.brev.length = 0;
+  assert.ok(!(await klubb("pengarSkickade", { ja: true }, "lag-a")).ok, "klubben markerar inte åt laget");
+  assert.match((await klubb("pengarMottagna", { slug: "lag-a", ja: true })).fel, /inte markerat/);
+  const s = await lagAdmin("lag-a", a.key, "pengarSkickade", { ja: true, belopp: 1 });
+  assert.ok(s.ok); assert.equal(s.lag.pengar.skickatKr, 90, "beloppet räknas av servern: det som är betalt");
+  assert.match((await lagAdmin("lag-a", a.key, "pengarSkickade", { ja: true })).fel, /redan/);
+  await m.vanta();
+  const [b] = brevTill("Lag A har skickat pengarna");
+  assert.ok(b && /90 kr är skickade till klubbens bankgiro 1234-5678/.test(b.text), b && b.text);
+  assert.ok(!(await lagAdmin("lag-a", a.key, "pengarMottagna", { slug: "lag-a", ja: true })).ok, "laget kvitterar inte själv");
+  assert.ok((await klubb("pengarMottagna", { slug: "lag-a", ja: true })).ok);
+  assert.match((await lagAdmin("lag-a", a.key, "pengarSkickade", { ja: false })).fel, /redan kvitterat/);
+  const p = (await lagAdmin("lag-a", a.key, "oversikt")).lag.pengar;
+  assert.equal(p.skickatKr, 90); assert.ok(p.skickatTid && p.mottagetTid);
+  // Klubben kan ångra sin kvittens, och då kan lagföräldern ångra sin markering
+  assert.ok((await klubb("pengarMottagna", { slug: "lag-a", ja: false })).ok);
+  assert.ok((await lagAdmin("lag-a", a.key, "pengarSkickade", { ja: false })).ok);
+  assert.equal((await lagAdmin("lag-a", a.key, "oversikt")).lag.pengar.skickatTid, "");
+  // Öppnas försäljningen igen redovisas pengarna på nytt när den är avslutad
+  await lagAdmin("lag-a", a.key, "pengarSkickade", { ja: true });
+  assert.ok((await lagAdmin("lag-a", a.key, "oppna")).ok);
+  assert.equal((await lagAdmin("lag-a", a.key, "oversikt")).lag.pengar.skickatTid, "");
+  const logg = JSON.stringify(await m.rader("logg"));
+  assert.ok(logg.includes("pengar skickade till klubben") && logg.includes("pengar mottagna av klubben"));
+});
+
+test("kommer mejlet till klubben inte fram görs åtgärden ändå, och felet innehåller ingen adress", async () => {
+  m.brev.length = 0; m.epostFel = true;
+  const orig = console.error, loggat = [];
+  console.error = (...x) => { loggat.push(x.join(" ")); };
+  try {
+    const { slug } = await tillGranskning("Lag A");
+    await m.vanta();
+    assert.equal((await m.rader("lag")).find((l) => l.slug === slug).status, "granskas");
+  } finally { console.error = orig; }
+  assert.equal(m.brev.length, 0);
+  assert.ok(loggat.length && loggat.every((l) => !l.includes("@")), loggat.join(" | "));
 });

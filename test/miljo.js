@@ -13,17 +13,12 @@ export const SERVER_DIR = process.env.SERVER_DIR || path.join(ROT, "server");
 const { hantera } = await import(pathToFileURL(path.join(SERVER_DIR, "api.js")).href);
 const regler = await import(pathToFileURL(path.join(SERVER_DIR, "regler.js")).href);
 const krypto = await import(pathToFileURL(path.join(SERVER_DIR, "krypto.js")).href);
+const { korMigreringar } = await import(pathToFileURL(path.join(SERVER_DIR, "migrera.js")).href);
 export const CFG = regler.CFG;
 
 export const ORIGIN = "https://skramlat.test";
 
-// SQL-filen delas upp i uttryck (kommentarer bort), eftersom D1 kör ett uttryck i taget
-function uttryck(sql) {
-  return sql.split("\n").map((r) => r.replace(/--.*$/, "")).join("\n").split(/;\s*(?:\n|$)/).map((s) => s.trim()).filter(Boolean);
-}
-const SCHEMA = fs.readdirSync(path.join(ROT, "migrations")).sort()
-  .map((f) => uttryck(fs.readFileSync(path.join(ROT, "migrations", f), "utf8"))).flat();
-const TABELLER = ["bestallning", "logg", "sparr", "inloggningslank", "session", "lag", "klubb_admin", "klubb"];   // barn före förälder
+const TABELLER = ["bestallning", "logg", "sparr", "inloggningslank", "session", "lag", "klubb_admin", "klubb", "d1_migrations"];   // barn före förälder
 
 export async function skapaMiljo() {
   const mf = new Miniflare({ modules: true, script: "export default { fetch() { return new Response(''); } }", d1Databases: { DB: "test-db" } });
@@ -37,7 +32,7 @@ export async function skapaMiljo() {
 
   m.nollstall = async () => {
     for (const t of TABELLER) await db.prepare("DROP TABLE IF EXISTS " + t).run();
-    for (const s of SCHEMA) await db.prepare(s).run();
+    await korMigreringar(db);   // samma migreringar och samma väg som Workern använder
     m.klocka = Date.UTC(2026, 9, 17, 12, 0, 0); m.brev.length = 0; m.vantande.length = 0; m.epostFel = false; m.dbFel = false;
   };
   m.stang = () => mf.dispose();

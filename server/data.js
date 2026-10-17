@@ -1,13 +1,15 @@
 /* Allt som läser och skriver i databasen (D1). Alla frågor har parametrar. Ingen text från en användare hamnar i själva SQL-texten.
    k är anropets sammanhang: { env, db, nu } (se api.js). */
 
+import { andringar } from "./regler.js";
+
 export function iso(k) { return new Date(k.nu()).toISOString(); }
 
 /* ---------- Klubb ---------- */
 export async function hittaKlubb(k, slug) {
   slug = String(slug || "").toLowerCase().slice(0, 40);
   if (!slug) return null;
-  return await k.db.prepare("SELECT id, slug, namn, motto, status FROM klubb WHERE slug = ?1").bind(slug).first();
+  return await k.db.prepare("SELECT id, slug, namn, motto, status, bankgiro FROM klubb WHERE slug = ?1").bind(slug).first();
 }
 
 // Klubben som besökare ser: bara en godkänd klubb finns för dem. En väntande eller avstängd klubb svarar som en okänd.
@@ -27,8 +29,18 @@ export function lagFranRad(r) {
     produkt: { namn: r.produkt, detalj: r.detalj, enhetEn: r.enhet_en, enhet: r.enhet },
     lager: r.lager, intro: r.intro, utlamningsText: r.utlamning_text, belonning: r.belonning,
     hash: r.nyckel_hash,
-    bestallt: r.bestallt
+    bestallt: r.bestallt,
+    godkant: r.godkant || "",
+    pengar: { skickatKr: r.pengar_skickat_kr || 0, skickatTid: r.pengar_skickat_tid || "", mottagetTid: r.pengar_mottaget_tid || "" }
   };
+}
+
+// Fälten som lagföräldern fyller i, platt och med samma namn som i API:t. Jämförs med det klubben godkände (se regler.andringar).
+export function egnaVarden(l) {
+  return { kampanj: l.kampanj, produkt: l.produkt.namn, detalj: l.produkt.detalj, enhetEn: l.produkt.enhetEn, enhet: l.produkt.enhet,
+    intro: l.intro, utlamningsText: l.utlamningsText, belonning: l.belonning,
+    swishNummer: l.swish.nummer, mottagare: l.swish.namnPaKonto, meddelande: l.swish.meddelande,
+    pris: l.pris, inkopspris: l.inkopspris, minimum: l.minimum, mal: l.mal, lager: l.lager, maxAntal: l.maxAntal, kartong: l.kartong };
 }
 
 const LAG_SQL = `SELECT l.*, COALESCE((SELECT SUM(b.antal) FROM bestallning b WHERE b.lag_id = l.id AND b.betald != 'AVBRUTEN'), 0) AS bestallt
@@ -113,10 +125,13 @@ export function publik(l) {
   return l.status === "utkast" || l.status === "granskas" ? { slug: l.slug, namn: l.namn, status: l.status } : offentlig(l);
 }
 
-// För inloggade i adminvyn: samma som offentlig plus klubbens kommentar. Kommentaren är aldrig publik.
+// För inloggade i adminvyn: samma som offentlig plus klubbens kommentar, pengarna efter avslutad försäljning, och det som har ändrats
+// sedan klubben godkände den (visas när den granskas igen). Inget av det är publikt.
 export function adminLag(l) {
   const u = offentlig(l);
   u.kommentar = l.kommentar;
+  u.pengar = l.pengar;
+  u.andringar = l.status === "utkast" || l.status === "granskas" ? andringar(l.godkant, egnaVarden(l)) : [];
   return u;
 }
 

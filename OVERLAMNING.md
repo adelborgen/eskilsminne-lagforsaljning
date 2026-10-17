@@ -4,7 +4,7 @@ Läs den här filen först när arbetet fortsätter i en ny session. Senast uppd
 
 ## Vad det här är
 
-**Skramlat** (skramlat.se) är en enkel tjänst för lagförsäljning i föreningar och skolor. Föräldrar beställer i mobilen och swishar direkt till laget eller skolan. Pengarna går aldrig via Skramlat. Lagföräldern lägger upp försäljningen och skickar den till klubben eller skolan, som godkänner (då öppnar den). Lagföräldern avslutar och öppnar igen, bockar av betalt och hämtat, och ändringar efter godkännandet granskas av klubben igen. Se *Rollerna efter genomgången med ägaren* i planen.
+**Skramlat** (skramlat.se) är en enkel tjänst för lagförsäljning i föreningar och skolor. Föräldrar beställer i mobilen och swishar direkt till laget eller skolan. Pengarna går aldrig via Skramlat. Lagföräldern lägger upp försäljningen och skickar den till klubben eller skolan, som godkänner (då öppnar den). Lagföräldern avslutar och öppnar igen, bockar av betalt och hämtat, och ändringar efter godkännandet granskas av klubben igen. När försäljningen är avslutad skickar lagföräldern pengarna till klubbens bankgiro och klubben kvitterar. Klubben får mejl när något väntar på den. Se *Rollerna efter genomgången med ägaren* och *Notiser, pengarna och utlämningen* i planen.
 
 - Sidorna är statiska filer. Idag ligger de på GitHub Pages och visar demo.
 - **Servern är byggd för Cloudflare** (en Worker med statiska filer och databasen D1, EU-jurisdiktion), en gemensam server för alla klubbar, så att en klubb kan onboarda sig själv utan Google. Den gamla Apps Script-servern (`Server.gs`) används inte längre och tas bort när Eskilsminne har flyttat. **Inget är uppsatt hos Cloudflare, och ingenting är köpt.**

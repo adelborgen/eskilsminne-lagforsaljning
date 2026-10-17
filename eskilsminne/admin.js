@@ -294,7 +294,7 @@
     app.textContent = ""; app.appendChild(h("p", { class: "loading", text: "Hämtar…" }));
     Promise.all([anropa("oversikt", null, slug), anropa("lista", null, slug)]).then(function (rs) {
       if (!rs[0].ok || !rs[1].ok) return visaFelSida(rs[0].fel || rs[1].fel);
-      byggLagVy({ lag: rs[0].lag, oversikt: rs[0].oversikt, ordrar: rs[1].ordrar });
+      byggLagVy({ lag: rs[0].lag, oversikt: rs[0].oversikt, ordrar: rs[1].ordrar, klubb: rs[0].klubb || {} });
     });
   }
 
@@ -326,6 +326,7 @@
       h("button", { type: "button", class: "linkbtn", text: "Logga ut", onclick: loggaUt }));
     app.textContent = "";
     app.appendChild(top);
+    if (S.roll === "super") tabU.hidden = true;   // klubben ser beställningarna men bockar inte av
     app.appendChild(h("div", { class: "tabs", role: "tablist", "aria-label": "Admin", style: "margin-top:4px" }, tabO, tabB, tabU));
     app.appendChild(h("div", { style: "margin-top:16px" }, oPanel, bPanel, uPanel));
 
@@ -342,6 +343,7 @@
         stat("Avbrutet", nf.format(o.avbrutna), E),
         stat("Hämtat", nf.format(o.hamtat), o.hamtatObetalt > 0 ? "varav " + nf.format(o.hamtatObetalt) + " obetalt" : E, o.hamtatObetalt > 0),
         stat("Kvar att dela ut", nf.format(o.attHamta), "betalt, ej hämtat")));
+      if (l.status === "avslutad") oPanel.appendChild(pengaKort(d));
 
       // Länken som föräldrarna använder. Dela den där du brukar prata med föräldrarna. I demoläget är sidans riktiga adress en intern adress, så där visas bara slutet.
       var lank = DEMO ? "[sidans adress]/?lag=" + slug : bestallningsLank(slug);
@@ -404,17 +406,20 @@
         b.addEventListener("click", function () { hamtadSatt(o, varde, row, err); });
         return b;
       }
-      if (s === "obetald") {
+      // Först betald, sedan hämtad, och ångra i omvänd ordning (servern kontrollerar det också). Klubben ser beställningarna men ändrar dem inte.
+      var las = S.roll === "super";
+      if (las) row = null;
+      else if (s === "obetald") {
         row.appendChild(knapp("✅ Betald", "JA", "go")); row.appendChild(knapp("Avbruten", "AVBRUTEN"));
         if (hamtad) row.appendChild(hamtaKnapp("Ångra hämtad", ""));
       } else if (s === "betald") {
         row.appendChild(hamtad ? hamtaKnapp("Ångra hämtad", "") : hamtaKnapp("📦 Hämtad", "JA", "go"));
-        row.appendChild(knapp("Ångra betald", ""));
+        if (!hamtad) row.appendChild(knapp("Ångra betald", ""));
       } else row.appendChild(knapp("Ångra", ""));
-      row.appendChild(h("a", { class: "mini", href: "tel:" + o.mobil, text: "Ring" }));
-      if (s === "obetald") row.appendChild(h("a", { class: "mini", href: smsLank(o), text: "SMS-påminnelse" }));
+      if (!las) row.appendChild(h("a", { class: "mini", href: "tel:" + o.mobil, text: "Ring" }));
+      if (!las && s === "obetald") row.appendChild(h("a", { class: "mini", href: smsLank(o), text: "SMS-påminnelse" }));
       // Betalda och hämtade beställningar kan inte tas bort (servern kontrollerar det också). Kräver ett andra tryck.
-      if (s !== "betald" && !hamtad) {
+      if (!las && s !== "betald" && !hamtad) {
         var tb = h("button", { type: "button", class: "mini", text: "Ta bort" }), redo = false, timer = null;
         tb.addEventListener("click", function () {
           if (!redo) {
@@ -510,7 +515,7 @@
     var skrivBtn = h("button", { type: "button", class: "ghost noprint", style: "margin-top:12px", text: "Skriv ut listan", onclick: function () { window.print(); } });
     uPanel.appendChild(h("h2", { class: "title", text: "Utlämning" }));
     uPanel.appendChild(h("p", { class: "printonly", text: d.lag.namn + " · Utlämningslista " + new Date().toLocaleDateString("sv-SE") }));
-    uPanel.appendChild(h("p", { class: "lead noprint", text: "Bocka av när någon hämtat sin beställning. Det sparas direkt." }));
+    uPanel.appendChild(h("p", { class: "lead noprint", text: "Bocka av när någon hämtat sin beställning. Är den inte betald trycker du Betald nu först, när pengarna har kommit. Det sparas direkt." }));
     [uStats, uVarning, uChips, uSokInp, uList, uTomt, uInfo, uFel, uBekrafta, allBtn, skrivBtn].forEach(function (e) { uPanel.appendChild(e); });
 
     function ritaUtStats() {
@@ -537,12 +542,35 @@
 
     function pickRad(o) {
       var id = "p" + o.id, betald = o.betald === "JA";
+      var huvud = h("span", { class: "p-main" }, h("span", { class: "p-name", text: "#" + o.id + " " + o.barn }), h("span", { class: "p-sub num", text: o.antal + " st · " + kr(o.belopp) + (betald ? "" : " · obetald") }));
+      // Obetald: först Betald nu (till exempel om föräldern swishar på plats), sedan kan den bockas av som hämtad
+      if (!betald && o.hamtad !== "JA") {
+        var bn = h("button", { type: "button", class: "mini go", text: "Betald nu" });
+        bn.addEventListener("click", function () { betaldNu(o, "JA", bn); });
+        return h("div", { class: "pick", role: "listitem" }, h("span"), huvud, bn);
+      }
       var cb = h("input", { type: "checkbox", id: id });
       cb.checked = o.hamtad === "JA";
       cb.addEventListener("change", function () { hamtaDirekt(o, cb.checked ? "JA" : "", cb); });
-      return h("label", { class: "pick", role: "listitem", for: id }, cb,
-        h("span", { class: "p-main" }, h("span", { class: "p-name", text: "#" + o.id + " " + o.barn }), h("span", { class: "p-sub num", text: o.antal + " st · " + kr(o.belopp) })),
-        h("span", { class: "badge " + (betald ? "live" : "unpaid"), text: betald ? "Betald" : "Obetald" }));
+      var hoger = h("span", { class: "badge " + (betald ? "live" : "unpaid"), text: betald ? "Betald" : "Obetald" });
+      // Markerades den nyss som betald här kan det ångras direkt, om det blev fel rad
+      if (o.nyssBetald && betald && o.hamtad !== "JA") {
+        var ab = h("button", { type: "button", class: "mini", text: "Ångra betald" });
+        ab.addEventListener("click", function (ev) { ev.preventDefault(); betaldNu(o, "", ab); });
+        hoger = ab;
+      }
+      return h("label", { class: "pick", role: "listitem", for: id }, cb, huvud, hoger);
+    }
+
+    // Betald nu (eller ångra) från utlämningslistan: väntar på servern och ritar sedan om.
+    function betaldNu(o, varde, knapp) {
+      knapp.disabled = true; uFel.textContent = ""; uInfo.textContent = "";
+      iKo(function () { return anropa("satt", { id: o.id, varde: varde }, slug).then(function (r) {
+        if (!r.ok) { knapp.disabled = false; uFel.textContent = "#" + o.id + " " + o.barn + ": " + (r.fel || "Det gick inte att spara."); return; }
+        Object.assign(o, r.order); o.nyssBetald = varde === "JA";
+        d.oversikt = r.oversikt;
+        ritaOversikt(); ritaLista(); ritaUtlamning();
+      }); });
     }
 
     // Slår om direkt och sparar sedan. Går något fel ställs rutan tillbaka och felet visas.
@@ -599,6 +627,49 @@
     });
 
     ritaOversikt(); ritaLista(); ritaUtlamning();
+  }
+
+  // Pengarna efter avslutad försäljning: lagföräldern skickar allt som är betalt till klubbens bankgiro och markerar det, och klubben
+  // kvitterar under Alla lag. Beloppet räknas av servern.
+  function pengaKort(d) {
+    var l = d.lag, o = d.oversikt, p = l.pengar || {}, kl = d.klubb || {}, fel = h("p", { class: "error", role: "alert" });
+    var kort = h("div", { class: "card", style: "margin-top:16px; border: 2px solid var(--yellow)" }, h("h3", { style: "margin:0 0 6px", text: "Pengarna till klubben" }));
+    function markera(ja, knapp) {
+      knapp.disabled = true; fel.textContent = "";
+      anropa("pengarSkickade", { ja: ja }, l.slug).then(function (r) { knapp.disabled = false; if (!r.ok) { fel.textContent = r.fel || "Det gick inte att spara."; return; } renderLag(l.slug); });
+    }
+    if (p.mottagetTid) {
+      kort.appendChild(h("p", { style: "margin:0", text: "Klubben har tagit emot " + kr(p.skickatKr) + " ✓ (" + datum(p.mottagetTid) + ")." }));
+      return kort;
+    }
+    if (p.skickatTid) {
+      kort.appendChild(h("p", { style: "margin:0", text: kr(p.skickatKr) + " är markerade som skickade (" + datum(p.skickatTid) + "). Klubben kvitterar när pengarna har kommit." }));
+      if (S.roll !== "super") {
+        var angra = h("button", { type: "button", class: "mini", text: "Ångra, de är inte skickade" });
+        angra.addEventListener("click", function () { markera(false, angra); });
+        kort.appendChild(h("div", { class: "btnrow" }, angra));
+      }
+      kort.appendChild(fel);
+      return kort;
+    }
+    if (S.roll === "super") {
+      kort.appendChild(h("p", { style: "margin:0", text: "Lagföräldern har inte markerat att pengarna är skickade än. Betalt hittills: " + kr(o.betaltKr) + "." }));
+      return kort;
+    }
+    kort.appendChild(h("p", { style: "margin:0", text: "Skicka allt som är betalt till klubbens bankgiro och tryck sedan på knappen, så får klubben besked." }));
+    kort.appendChild(kv("Att skicka", kr(o.betaltKr), "", true));
+    if (kl.bankgiro) {
+      var bgKnapp = h("button", { type: "button", class: "mini", text: "Kopiera" });
+      bgKnapp.addEventListener("click", function () { kopiera(kl.bankgiro, bgKnapp); });
+      kort.appendChild(h("div", { class: "keybox" }, h("code", { text: "Bankgiro " + kl.bankgiro + (kl.namn ? " · " + kl.namn : "") }), bgKnapp));
+      kort.appendChild(h("p", { class: "small", style: "margin:8px 0 0", text: "Skriv " + l.namn + " som meddelande, så att klubben ser vilket lag pengarna kommer från." }));
+    } else kort.appendChild(h("p", { class: "small", style: "margin:8px 0 0", text: "Klubben har inte skrivit in något bankgiro än. Fråga klubben vart pengarna ska." }));
+    if (o.obetalt > 0) kort.appendChild(h("p", { class: "small", style: "margin:8px 0 0", text: nf.format(o.obetalt) + " " + produktAv(l).enhet + " är inte betalda. Markera dem som betalda när pengarna har kommit, eller som avbrutna, innan du skickar." }));
+    var skickat = h("button", { type: "button", class: "mini go", text: "Pengarna är skickade" });
+    skickat.addEventListener("click", function () { markera(true, skickat); });
+    kort.appendChild(h("div", { class: "btnrow" }, skickat));
+    kort.appendChild(fel);
+    return kort;
   }
 
   // Lagföräldern öppnar, avslutar och ändrar sin godkända försäljning. Ändra gör den till ett utkast som klubben granskar igen.
@@ -785,10 +856,10 @@
   function renderSuper() {
     S.valt = null; setTopbar("", "Admin"); document.title = K.namn + " – Admin";
     app.textContent = ""; app.appendChild(h("p", { class: "loading", text: "Hämtar lag…" }));
-    anropa("lagLista").then(function (r) { if (!r.ok) return visaFelSida(r.fel); byggSuper(r.lag); });
+    anropa("lagLista").then(function (r) { if (!r.ok) return visaFelSida(r.fel); byggSuper(r.lag, r.klubb || {}); });
   }
 
-  function byggSuper(lista) {
+  function byggSuper(lista, klubb) {
     var nyckelPlats = h("div"), kogEl = h("div", { style: "margin-bottom:24px" }), listEl = h("div"), fel = h("p", { class: "error", role: "alert" });
     // Många lag: sökruta och filter på status. Visas först när det finns fler än så att korten ryms på en skärm.
     var MANGA = 6, sokTxt = "", statusFilter = "alla";
@@ -834,8 +905,24 @@
       return b;
     }
 
+    // Klubben kvitterar att lagets pengar har kommit (eller ångrar kvittensen)
+    function kvittera(l, ja, knapp) {
+      knapp.disabled = true; fel.textContent = "";
+      anropa("pengarMottagna", { slug: l.slug, ja: ja }).then(function (r) { knapp.disabled = false; if (!r.ok) fel.textContent = r.fel || "Det gick inte att spara."; else ladda(); });
+    }
+
     function lagKort(l, oppen) {
-      var ov = l.oversikt, godkand = ["snart", "pagar", "avslutad"].indexOf(l.status) >= 0;
+      var ov = l.oversikt, godkand = ["snart", "pagar", "avslutad"].indexOf(l.status) >= 0, p = l.pengar || {};
+      var pengar = null, pengaKnapp = null;
+      if (l.status === "avslutad") {
+        pengar = h("div", { class: "o-sub", style: "margin-top:6px", text: p.mottagetTid ? "Pengarna: " + kr(p.skickatKr) + " har kommit ✓"
+          : p.skickatTid ? "Pengarna: laget har skickat " + kr(p.skickatKr) + " (" + datum(p.skickatTid) + "). Kvittera när de har kommit."
+          : "Pengarna: inte skickade än. Betalt till laget: " + kr(ov.betaltKr) + "." });
+        if (p.skickatTid) {
+          pengaKnapp = h("button", { type: "button", class: "mini" + (p.mottagetTid ? "" : " go"), text: p.mottagetTid ? "Ångra kvittensen" : "Pengarna har kommit" });
+          pengaKnapp.addEventListener("click", function () { kvittera(l, !p.mottagetTid, pengaKnapp); });
+        }
+      }
       var bekrafta = h("div", { class: "notice", hidden: "", style: "margin-top:12px" },
         h("p", { style: "margin:0", text: "Den gamla länken för " + l.namn + " slutar fungera direkt." }),
         h("div", { class: "btnrow" },
@@ -859,8 +946,10 @@
         h("summary", null, h("span", { class: "o-name", text: l.namn + (l.kampanj ? " · " + l.kampanj : "") }), h("span", { class: "badge", text: STATUS_TEXT[l.status] || l.status })),
         h("div", { class: "o-sub num", text: l.status === "utkast" ? "Laget fyller i uppgifterna." + (l.kommentar ? " " + l.kommentar : "")
           : "Beställt " + nf.format(ov.bestallt) + " av " + nf.format(l.mal) + " · Betalt " + nf.format(ov.betalt) + " · Obetalt " + nf.format(ov.obetalt) + " · Hämtat " + nf.format(ov.hamtat || 0) }),
+        pengar,
         h("div", { class: "btnrow" },
-          h("button", { type: "button", class: "mini go", text: "Öppna admin", onclick: function () { S.valt = l.slug; renderAdmin(); } }),
+          pengaKnapp,
+          h("button", { type: "button", class: "mini" + (pengaKnapp && !p.mottagetTid ? "" : " go"), text: "Visa försäljningen", onclick: function () { S.valt = l.slug; renderAdmin(); } }),
           h("button", { type: "button", class: "mini", text: "Ny länk", onclick: function () { bekrafta.hidden = false; } }),
           godkand ? h("button", { type: "button", class: "mini", text: "Stoppa…", onclick: function () { stoppBox.hidden = false; stoppKom.focus(); } }) : null,
           l.status === "utkast" ? taBortKnapp(l) : null),
@@ -881,8 +970,16 @@
         kFel.textContent = "";
         anropa("skickaTillbaka", { slug: l.slug, kommentar: kom.value }).then(klar);
       });
+      // Har klubben godkänt försäljningen tidigare visas exakt vad lagföräldern har ändrat sedan dess, till exempel Swish-numret
+      var andrEl = null, andr = l.andringar || [];
+      if (andr.length) {
+        var visa = function (v) { v = String(v === "" || v == null ? "(tomt)" : v); return v.length > 80 ? v.slice(0, 79) + "…" : v; };
+        andrEl = h("div", { class: "notice", style: "margin-top:12px" }, h("p", { style: "margin:0 0 6px; font-weight:700", text: "Ändrat sedan klubben godkände den senast" }));
+        andr.forEach(function (a) { andrEl.appendChild(h("p", { style: "margin:4px 0 0", text: a.namn + ": " + visa(a.fore) + " → " + visa(a.nu) })); });
+      }
       return h("div", { class: "card teamadmin", style: "border: 2px solid var(--yellow)" },
         h("div", { class: "o-head" }, h("span", { class: "o-name", text: l.namn }), h("span", { class: "badge unpaid", text: STATUS_TEXT.granskas })),
+        andrEl,
         villkorKort(l),
         h("p", { class: "small", style: "margin:12px 0 0", text: "Kontrollera att Swish-numret ägs av någon som vet om det, att priserna stämmer och att laget bara säljer sådant som klubben har godkänt att laget får sälja." }),
         h("div", { class: "btnrow" },
@@ -899,7 +996,13 @@
         kogEl.appendChild(h("h3", { style: "margin:0 0 12px", text: "Väntar på godkännande (" + vantar.length + ")" }));
         vantar.forEach(function (l) { kogEl.appendChild(kogKort(l)); });
       }
-      var ovriga = lista.filter(function (l) { return l.status !== "granskas"; });
+      var attKvittera = function (l) { return l.status === "avslutad" && l.pengar && l.pengar.skickatTid && !l.pengar.mottagetTid; };
+      var kv2 = lista.filter(attKvittera);
+      if (kv2.length) {
+        kogEl.appendChild(h("h3", { style: "margin:" + (vantar.length ? "16px" : "0") + " 0 12px", text: "Pengar att kvittera (" + kv2.length + ")" }));
+        kv2.forEach(function (l) { kogEl.appendChild(lagKort(l, true)); });
+      }
+      var ovriga = lista.filter(function (l) { return l.status !== "granskas" && !attKvittera(l); });
       var manga = ovriga.length > MANGA;
       verktyg.hidden = !manga;
       if (manga) {
@@ -926,6 +1029,26 @@
       h("h3", { style: "margin:0 0 6px", text: "Länk för lagföräldrar som vill starta en försäljning" }),
       h("p", { style: "margin:0", text: "Lagföräldrarna startar sina försäljningar själva och skickar dem till dig för godkännande. Dela länken med lagens ansvariga, till exempel i ett utskick. Den innehåller inget lösenord." }),
       h("div", { class: "keybox" }, h("code", { text: startLank }), startKnapp)));
+
+    // Klubbens bankgiro: dit lagen skickar pengarna när en försäljning är avslutad. Lagföräldrarna ser det i sin vy.
+    var bgInp = h("input", { type: "text", id: "bankgiro", inputmode: "numeric", autocomplete: "off", placeholder: "1234-5678", maxlength: "12" });
+    bgInp.value = klubb.bankgiro || "";
+    var bgFel = h("p", { class: "error", role: "alert" }), bgOk = h("p", { class: "okline", role: "status" });
+    var bgKnapp = h("button", { type: "button", class: "mini go", text: "Spara" });
+    bgKnapp.addEventListener("click", function () {
+      bgKnapp.disabled = true; bgFel.textContent = ""; bgOk.textContent = "";
+      anropa("klubbSpara", { bankgiro: bgInp.value }).then(function (r) {
+        bgKnapp.disabled = false;
+        if (!r.ok) { bgFel.textContent = r.fel || "Det gick inte att spara."; return; }
+        klubb.bankgiro = (r.klubb && r.klubb.bankgiro) || ""; bgInp.value = klubb.bankgiro;
+        bgOk.textContent = klubb.bankgiro ? "Sparat." : "Bankgirot är borttaget.";
+      });
+    });
+    app.appendChild(h("div", { class: "card", style: "margin-top:16px" },
+      h("h3", { style: "margin:0 0 6px", text: "Klubbens bankgiro" }),
+      h("p", { style: "margin:0 0 10px", text: "Lagen skickar pengarna hit när en försäljning är avslutad. Lagföräldern ser numret i sin vy och markerar när pengarna är skickade. Du får ett mejl och kvitterar här när de har kommit." }),
+      h("label", { for: "bankgiro", text: "Bankgiro" }), bgInp,
+      h("div", { class: "btnrow" }, bgKnapp), bgOk, bgFel));
     ritaLag();
   }
 
@@ -950,6 +1073,7 @@
       // (utkast saknar det med flit, för att visa kontrollen).
       var egen = JSON.parse(JSON.stringify(l));
       if (!egen.swish.nummer && ["pagar", "snart", "avslutad"].indexOf(egen.status) >= 0) egen.swish.nummer = K.standard.demoSwish;
+      egen.pengar = { skickatKr: 0, skickatTid: "", mottagetTid: "" }; egen.andringar = [];
       lag[l.slug] = egen;
       ordrar[l.slug] = l.status === "pagar" ? namn.slice(0, 6 + li).map(function (n, i) {
         return { id: String(i + 1).padStart(4, "0"), tid: new Date(Date.now() - (9 - i) * 3600e3 * (li + 1)).toISOString(), barn: n,
@@ -958,7 +1082,7 @@
       }) : [];
       ordrar[l.slug].forEach(function (o) { o.belopp = o.antal * lag[l.slug].pris; });
     });
-    demo = { lag: lag, ordrar: ordrar, nycklar: {} };
+    demo = { lag: lag, ordrar: ordrar, nycklar: {}, bankgiro: "" };
     return demo;
   }
   function demoOversikt(l, ordrar) {
@@ -1005,6 +1129,21 @@
     ["pris", "inkopspris", "minimum", "mal", "lager", "maxAntal", "kartong"].forEach(function (k) { if (f[k] !== undefined && f[k] !== "") l[k] = Number(String(f[k]).replace(",", ".")); });
     l.titel = l.kampanj || l.produkt.namn;
   }
+  // Det klubben godkände, och vad som har ändrats sedan dess (servern gör samma jämförelse och har samma namn på fälten)
+  var DEMO_FALT = { kampanj: "Rubrik", produkt: "Produkt", detalj: "Beskrivning", enhetEn: "Enhet (ental)", enhet: "Enhet (flertal)", intro: "Text om försäljningen",
+    utlamningsText: "Utlämning", belonning: "Belöning", swishNummer: "Swish-nummer", mottagare: "Mottagarens namn i Swish", meddelande: "Meddelande i Swish",
+    pris: "Pris", inkopspris: "Inköpspris", minimum: "Minimum", mal: "Mål", lager: "Antal i lager", maxAntal: "Max antal per beställning", kartong: "Antal per kartong" };
+  function demoEgna(l) {
+    return { kampanj: l.kampanj, produkt: l.produkt.namn, detalj: l.produkt.detalj, enhetEn: l.produkt.enhetEn, enhet: l.produkt.enhet, intro: l.intro,
+      utlamningsText: l.utlamningsText, belonning: l.belonning, swishNummer: l.swish.nummer, mottagare: l.swish.namnPaKonto, meddelande: l.swish.meddelande,
+      pris: l.pris, inkopspris: l.inkopspris, minimum: l.minimum, mal: l.mal, lager: l.lager, maxAntal: l.maxAntal, kartong: l.kartong };
+  }
+  function demoAndringar(l) {
+    if (!l.godkant) return [];
+    var nu = demoEgna(l);
+    return Object.keys(DEMO_FALT).filter(function (f) { return String(l.godkant[f] == null ? "" : l.godkant[f]) !== String(nu[f] == null ? "" : nu[f]); })
+      .map(function (f) { return { falt: f, namn: DEMO_FALT[f], fore: l.godkant[f], nu: nu[f] }; });
+  }
   function demoApi(p) {
     var s = demoState(), lag = p.lag !== "*" ? s.lag[p.lag] : null;
     var arSuper = p.key === "super";
@@ -1013,14 +1152,17 @@
     var roll = arSuper ? "super" : "lag";
     var klon = function (x) { return JSON.parse(JSON.stringify(x)); };
     var svar;
+    var nej = { ok: false, fel: "Det här gör lagföräldern. Klubben ser försäljningen och beställningarna men ändrar dem inte." };
     switch (p.op) {
-      case "lagSpara": case "skickaGodkannande": case "dragTillbaka": case "oppna": case "avsluta": case "andra":
-        if (arSuper) { svar = { ok: false, fel: "Det här gör lagföräldern. Klubben ändrar inte försäljningens uppgifter." }; break; }
-        svar = demoLagOp(s, lag, p, klon); break;
+      case "lagSpara": case "skickaGodkannande": case "dragTillbaka": case "oppna": case "avsluta": case "andra": case "pengarSkickade":
+        svar = arSuper ? nej : demoLagOp(s, lag, p, klon); break;
+      case "satt": case "hamtad": case "hamtadAlla": case "taBort":
+        svar = arSuper ? nej : demoKlubbOp(s, p, arSuper, klon); break;
       default:
         svar = demoKlubbOp(s, p, arSuper, klon);
     }
     svar.roll = roll;
+    svar.klubb = { namn: K.namn, bankgiro: s.bankgiro };
     return svar;
   }
 
@@ -1041,6 +1183,7 @@
         var sak = demoSaknas(lag);
         if (sak) return { ok: false, fel: sak };
         lag.status = "granskas"; lag.kommentar = "";
+        lag.andringar = demoAndringar(lag);
         return { ok: true, lag: klon(lag) };
       case "dragTillbaka":
         if (lag.status !== "granskas") return { ok: false, fel: "Försäljningen väntar inte på godkännande." };
@@ -1048,13 +1191,22 @@
         return { ok: true, lag: klon(lag) };
       case "oppna":
         if (lag.status !== "snart" && lag.status !== "avslutad") return { ok: false, fel: lag.status === "pagar" ? "Försäljningen är redan öppen." : "Försäljningen måste godkännas av klubben innan den kan öppnas." };
-        lag.status = "pagar"; return { ok: true, lag: klon(lag) };
+        lag.status = "pagar"; lag.pengar = { skickatKr: 0, skickatTid: "", mottagetTid: "" }; return { ok: true, lag: klon(lag) };
       case "avsluta":
         if (lag.status !== "pagar" && lag.status !== "snart") return { ok: false, fel: "Försäljningen är inte öppen." };
         lag.status = "avslutad"; return { ok: true, lag: klon(lag) };
       case "andra":
         if (["snart", "pagar", "avslutad"].indexOf(lag.status) < 0) return { ok: false, fel: "Försäljningen går redan att ändra." };
+        if (!lag.godkant) lag.godkant = demoEgna(lag);   // exempellagen räknas som godkända som de ser ut från början
         lag.status = "utkast"; lag.kommentar = ""; return { ok: true, lag: klon(lag) };
+      case "pengarSkickade":
+        if (lag.status !== "avslutad") return { ok: false, fel: "Avsluta försäljningen först. Sedan skickar du pengarna till klubben." };
+        if (lag.pengar.mottagetTid) return { ok: false, fel: "Klubben har redan kvitterat pengarna." };
+        if (p.ja === false) { lag.pengar = { skickatKr: 0, skickatTid: "", mottagetTid: "" }; return { ok: true, lag: klon(lag) }; }
+        var betalt = demoOversikt(lag, s.ordrar[lag.slug]).betaltKr;
+        if (!(betalt > 0)) return { ok: false, fel: "Inga beställningar är markerade som betalda, så det finns inga pengar att skicka." };
+        lag.pengar = { skickatKr: betalt, skickatTid: new Date().toISOString(), mottagetTid: "" };
+        return { ok: true, lag: klon(lag) };
     }
     return { ok: false, fel: "Okänd åtgärd." };
   }
@@ -1081,6 +1233,7 @@
         if (!oh) { svar = { ok: false, fel: "Hittar ingen order " + p.id + "." }; break; }
         if (["JA", ""].indexOf(vh) < 0) { svar = { ok: false, fel: "Felaktigt värde." }; break; }
         if (vh === "JA" && oh.betald === "AVBRUTEN") { svar = { ok: false, fel: "Beställningen är avbruten och kan inte hämtas." }; break; }
+        if (vh === "JA" && oh.betald !== "JA") { svar = { ok: false, fel: "Markera beställningen som betald först." }; break; }
         oh.hamtad = vh;
         svar = { ok: true, order: klon(oh), oversikt: demoOversikt(lag, s.ordrar[lag.slug]) }; break;
       case "hamtadAlla":
@@ -1096,7 +1249,10 @@
         if (!lag) { svar = { ok: false, fel: "Okänt lag." }; break; }
         var o = s.ordrar[lag.slug].filter(function (x) { return parseInt(x.id, 10) === parseInt(p.id, 10); })[0];
         if (!o) { svar = { ok: false, fel: "Hittar ingen order " + p.id + "." }; break; }
-        o.betald = String(p.varde || "").toUpperCase();
+        var vs = String(p.varde || "").toUpperCase();
+        if (["JA", "AVBRUTEN", ""].indexOf(vs) < 0) { svar = { ok: false, fel: "Felaktigt värde." }; break; }
+        if (vs !== "JA" && o.hamtad === "JA") { svar = { ok: false, fel: "Beställningen är hämtad. Ångra hämtningen först." }; break; }
+        o.betald = vs;
         svar = { ok: true, order: klon(o), oversikt: demoOversikt(lag, s.ordrar[lag.slug]) }; break;
       default:
         if (!arSuper) return { ok: false, fel: "Bara klubbens administratör får göra det här." };
@@ -1109,7 +1265,10 @@
           var kom = String(p.kommentar || "").trim();
           if (p.op === "skickaTillbaka" && !kom) { svar = { ok: false, fel: "Skriv vad som behöver ändras." }; break; }
           if (gl.status !== "granskas") { svar = { ok: false, fel: "Försäljningen väntar inte på godkännande." }; break; }
-          if (p.op === "godkann") { var gs = demoSaknas(gl); if (gs) { svar = { ok: false, fel: gs }; break; } gl.status = "pagar"; gl.kommentar = ""; }
+          if (p.op === "godkann") {
+            var gs = demoSaknas(gl); if (gs) { svar = { ok: false, fel: gs }; break; }
+            gl.status = "pagar"; gl.kommentar = ""; gl.godkant = demoEgna(gl); gl.andringar = []; gl.pengar = { skickatKr: 0, skickatTid: "", mottagetTid: "" };
+          }
           else { gl.status = "utkast"; gl.kommentar = kom.slice(0, 300); }
           svar = { ok: true, lag: klon(gl) };
         } else if (p.op === "stoppa") {
@@ -1121,6 +1280,18 @@
         } else if (p.op === "nyNyckel") {
           if (s.lag[p.slug]) { s.nycklar[p.slug] = demoNyckel(); svar = { ok: true, slug: p.slug, key: s.nycklar[p.slug] }; }
           else svar = { ok: false, fel: "Okänt lag." };
+        }
+        else if (p.op === "pengarMottagna") {
+          var pl = s.lag[p.slug];
+          if (!pl) svar = { ok: false, fel: "Okänt lag." };
+          else if (p.ja !== true && p.ja !== false) svar = { ok: false, fel: "Felaktigt värde." };
+          else if (!pl.pengar.skickatTid) svar = { ok: false, fel: "Laget har inte markerat att pengarna är skickade." };
+          else { pl.pengar.mottagetTid = p.ja ? new Date().toISOString() : ""; svar = { ok: true, lag: klon(pl) }; }
+        }
+        else if (p.op === "klubbSpara") {
+          var bg = String(p.bankgiro || "").replace(/\s/g, "");
+          if (bg && !/^\d{3,4}-?\d{4}$/.test(bg)) svar = { ok: false, fel: "Bankgirot ska vara sju eller åtta siffror, till exempel 1234-5678." };
+          else { bg = bg.replace("-", ""); s.bankgiro = bg ? bg.slice(0, -4) + "-" + bg.slice(-4) : ""; svar = { ok: true }; }
         }
         else if (p.op === "lagTaBort") {
           var tl = s.lag[p.slug];
@@ -1143,7 +1314,7 @@
     if (s.lag[slug]) return { ok: false, fel: "Det finns redan en försäljning för " + namn + ". Hör av dig till den som startade den eller till klubben. Säljer laget något nytt kan du skriva till exempel " + namn + " Lotter." };
     var nytt = { slug: slug, namn: namn, status: "utkast", kommentar: "", kampanj: "", titel: "", intro: "", belonning: "", utlamningsText: "",
       produkt: { namn: "", detalj: "", enhetEn: "", enhet: "" }, swish: { nummer: "", namnPaKonto: "", meddelande: namn + " försäljning" },
-      pris: 0, inkopspris: 0, minimum: 0, mal: 0, lager: 0, maxAntal: 50, kartong: 0 };
+      pris: 0, inkopspris: 0, minimum: 0, mal: 0, lager: 0, maxAntal: 50, kartong: 0, pengar: { skickatKr: 0, skickatTid: "", mottagetTid: "" }, andringar: [] };
     s.lag[slug] = nytt; s.ordrar[slug] = []; s.nycklar[slug] = demoNyckel();
     return { ok: true, slug: slug, key: s.nycklar[slug], lag: JSON.parse(JSON.stringify(nytt)) };
   }

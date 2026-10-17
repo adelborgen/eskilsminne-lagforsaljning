@@ -131,7 +131,7 @@ test("Workern lägger in migreringarna själv i en tom databas, och tål att gö
   await korMigreringar(m.db);
   await korMigreringar(m.db);
   assert.deepEqual(await tabeller(), TABELLER);
-  assert.deepEqual((await m.db.prepare("SELECT name FROM d1_migrations").all()).results.map((r) => r.name), ["0001_start.sql"]);
+  assert.deepEqual((await m.db.prepare("SELECT name FROM d1_migrations").all()).results.map((r) => r.name), fs.readdirSync(path.join(ROT, "migrations")).filter((f) => f.endsWith(".sql")).sort());
   await m.nollstall();
 });
 

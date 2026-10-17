@@ -2,7 +2,7 @@
    Kräver Playwright och Chromium. Sidorna pratar med den riktiga servern (server/) och en riktig D1 lokalt, via en låtsasadress.
 
    Lagföräldern fyller alla texter som visas för föräldrarna med HTML och skript, och klubben skickar tillbaka försäljningen
-   med en kommentar som också innehåller skript. Sedan öppnas föräldrasidan, adminvyn och klubbens vy. Inget skript får köras,
+   med en kommentar som också innehåller skript. Ett lag ändras efter godkännandet, så att klubbens granskning visar skripten som ändringar. Sedan öppnas föräldrasidan, adminvyn och klubbens vy. Inget skript får köras,
    och texten ska synas som vanlig text. */
 import http from "node:http";
 import fs from "node:fs";
@@ -48,6 +48,14 @@ try {
   }
   assert.equal((await klubb("godkann", { slug: "lag-x" })).ok, true);
   assert.equal((await klubb("skickaTillbaka", { slug: "lag-y", kommentar: KOMMENTAR })).ok, true);
+  // Lag Z godkänns och ändras sedan med skript i texten: klubbens granskning visar det gamla och det nya värdet
+  const z = await ny("Lag Z", "utkast");
+  assert.equal((await m.admin(KL, "lag-z", z.key, "lagSpara", { falt: { ...LAST, swishNummer: "070 123 45 67" } })).ok, true);
+  assert.equal((await m.admin(KL, "lag-z", z.key, "skickaGodkannande", { bekraftat: true })).ok, true);
+  assert.equal((await klubb("godkann", { slug: "lag-z" })).ok, true);
+  assert.equal((await m.admin(KL, "lag-z", z.key, "andra")).ok, true);
+  assert.equal((await m.admin(KL, "lag-z", z.key, "lagSpara", { falt: { produkt: "<img src=x onerror=window.__x=12>", swishNummer: "070 765 43 21" } })).ok, true);
+  assert.equal((await m.admin(KL, "lag-z", z.key, "skickaGodkannande", { bekraftat: true })).ok, true);
   assert.equal((await m.post({ klubb: KL, lag: "lag-x", barn: "Emil", mobil: "070 123 45 67", antal: 2, samtycke: true, website: "", t: 5000 })).ok, true);
 
   server = http.createServer((req, res) => {
@@ -75,6 +83,7 @@ try {
 
   const resultat = [];
   async function kolla(namn, url, vanta, gor) {
+    await p.goto("about:blank");   // annars blir en ny adress som bara skiljer sig efter # ingen ny sidladdning
     await p.goto(BAS + url);
     await p.waitForSelector(vanta, { timeout: 10000 });
     if (gor) await gor();
