@@ -104,6 +104,14 @@ Därför blir ändringarna i `app.js`, `admin.js` och `util.js` små: adressen t
 
 En godkänd klubb kan stängas av direkt: försäljningarna döljs och inga beställningar tas emot.
 
+**Medan klubben väntar** kan klubbens administratör göra allt som bara syns för klubben själv: ändra namn, motto, färger och märke och bjuda in en andra administratör. Det enda som är låst tills du har godkänt är det som når föräldrar:
+- klubben syns inte i någon offentlig lista och sidan `skramlat.se/<klubb>/` visar ingenting
+- lagföräldrar kan inte starta försäljningar
+- ingen kan beställa
+- det uppladdade märket visas bara för klubbens administratörer
+
+Det ger en klubb som känns som att den onboardar sig själv, och spärren finns kvar där bedrägeriet skulle ske: när något blir synligt och när pengar kan flyttas.
+
 ### Eskilsminne IF
 
 Du har klubbens tillåtelse att använda märket (det står i `lag.js`), men att köra klubbens försäljning på Skramlat kräver mer:
@@ -113,11 +121,10 @@ Du har klubbens tillåtelse att använda märket (det står i `lag.js`), men att
 
 ## Kom igång-flödet för en klubb
 
-1. Klubben fyller i ansökan (se ovan) och bekräftar sin e-post med inloggningslänken.
-2. Klubben får status *väntar*. Du kontrollerar och godkänner. Klubben får besked med e-post.
-3. Klubbens administratör väljer namn, motto, färger och märke, och godkänner **biträdesavtalet**. Godkännandets tidpunkt och version sparas.
-4. Klubbens administratör bjuder in en andra administratör.
-5. Lagföräldrar startar sina försäljningar som idag. Klubben godkänner som idag.
+1. Klubben fyller i ansökan (se ovan), godkänner **biträdesavtalet** (tidpunkt och version sparas) och bekräftar sin e-post med inloggningslänken.
+2. Klubben får status *väntar* och kan **sätta upp allt direkt**: namn, motto, färger, märke och inbjudan av en andra administratör. Klubbens administratör ser sin egen sida i en förhandsvisning med en tydlig banderoll: *Väntar på godkännande*.
+3. Du kontrollerar och godkänner (se *Vem får skapa en klubb?*). Klubben blir *aktiv* och får besked med e-post.
+4. Lagföräldrar startar sina försäljningar som idag. Klubben godkänner som idag.
 
 Kräver att Skramlat skickar e-post från `skramlat.se`. `hej@skramlat.se` tar idag bara emot.
 
@@ -196,7 +203,7 @@ Jag är inte jurist. Det här är underlag för ett samtal med någon som är de
 
 - **Sidorna.** `app.js` (563 rader), `admin.js` (1 115), `util.js`, `style.css` och alla texter. Demoläget behålls.
 - **Reglerna.** Pris räknas på servern, namn och mobilnummer kontrolleras, spärrar, honeypot och tidsspärr, lager, dubbletter, rensning av text. All logik i `Server.gs` flyttas över.
-- **Testerna.** Testerna anropar servern via `post`, `get` och `admin` i `test/harness.cjs`. Behåller den nya servern samma anrop går scenarierna att köra om mot den, med klubbens adress och administratörsinloggning som tillägg. `test/xss.webblasare.cjs` går att behålla nästan som den är. `test/mutera.cjs` ändrar texten i `Server.gs` och måste skrivas om, men idén (koppla bort ett skydd i taget) behålls. Nya tester behövs för inloggningen: länk som används två gånger, utgången länk, fel adress, spärr, och en klubbadministratör som försöker nå en annan klubb.
+- **Testerna.** Testerna anropar servern via `post`, `get` och `admin` i `test/harness.cjs`. Behåller den nya servern samma anrop går scenarierna att köra om mot den, med klubbens adress och administratörsinloggning som tillägg. `test/xss.webblasare.cjs` går att behålla nästan som den är. `test/mutera.cjs` ändrar texten i `Server.gs` och måste skrivas om, men idén (koppla bort ett skydd i taget) behålls. Nya tester behövs för inloggningen: länk som används två gånger, utgången länk, fel adress, spärr, och en klubbadministratör som försöker nå en annan klubb. Och för väntande klubbar: en klubb som väntar syns inte i listan, kan inte starta eller öppna en försäljning, kan inte ta emot beställningar och visar inte sitt märke offentligt, även om anropen skickas direkt till API:t.
 - **Det som inte går att bevisa lokalt.** Riktig samtidighet mot en riktig D1 kräver lasttestet i Fas 1 (se ovan). Det är samma ärlighet som README har idag om riktiga Google.
 
 ## Faser
