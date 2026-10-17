@@ -133,13 +133,44 @@ Kräver att Skramlat skickar e-post från `skramlat.se`. `hej@skramlat.se` tar i
 
 `skramlat.se/<klubb>/` ska peka på samma sidor för alla klubbar. Det löses med omskrivning på Cloudflare Pages. Eskilsminnes adress `skramlat.se/eskilsminne/` och gamla `?lag=`-länkar fortsätter fungera. **Att kontrollera:** att Cloudflare Pages kan skriva om adresser på det sätt vi behöver. Sidorna flyttas från GitHub Pages i Fas 2.
 
+## Lagring bara i EU
+
+Kravet är att personuppgifterna (barnets förnamn, mobilnummer, administratörernas e-postadresser) **bara lagras i EU**. Så här ser det ut med Cloudflare, utifrån det jag kunde kontrollera 17 oktober 2026.
+
+**Vad vi kan garantera**
+- **Lagring i databasen.** D1 skapas med jurisdiktion `eu`. Då körs och lagras databasen bara inom EU, och läsrepliker skapas bara inom EU. En platstips är svagare och räcker inte: det ska vara jurisdiktion.
+
+**Vad vi inte kan garantera på den här nivån**
+- **Att koden körs i EU.** Workers och Pages Functions körs i något av Cloudflares datacenter runt om i världen. Det finns ingen inställning för "bara EU" för Workers. Det som är gjort för det är Regional Services och Customer Metadata Boundary, som enligt de källor jag hittade ingår i Enterprise-paketet Data Localization Suite. Uppgifterna kan vara föråldrade, och pris får Cloudflare svara på.
+- **Cloudflares egna loggar.** De lagras som standard i datacenter i både USA och Europa och innehåller bland annat IP-nummer. De kan inte flyttas utan Enterprise.
+- **Att inga regler om tredjeland gäller.** Cloudflare är ett amerikanskt bolag. Lagring i EU ändrar inte att behandling och åtkomst kan omfattas av reglerna om överföring till tredjeland. Det är en juridisk fråga för biträdesavtalet, inte något tekniken löser.
+
+**Därför lovar vi bara det vi kan hålla:** *Uppgifterna lagras i EU.* Inte *Uppgifterna lämnar aldrig EU.*
+
+**Regler som gör det sant**
+1. D1 skapas med `--jurisdiction=eu`. Det kontrolleras i panelen eller via API:t innan första raden skrivs, eftersom en felskapad databas måste göras om och flyttas.
+2. **Allt som sparas går till D1**: beställningar, sessioner, inloggningslänkar, spärrräknare och märken. Inget KV (som enligt vad jag vet replikeras globalt), inget cache-API för persondata, inga köer och inga Durable Objects.
+3. **Inget cachas.** Alla svar från `/api/` med persondata skickas med `Cache-Control: no-store`, så att inget hamnar i Cloudflares cache runt om i världen.
+4. **Inga loggar med persondata.** Workers Logs och Logpush är avstängda. Servern loggar aldrig barnets namn, mobilnummer eller e-postadresser, bara ordernummer och felkoder.
+5. **E-post** innehåller bara administratörens adress och en länk, aldrig barnens uppgifter. Var Email Service lagrar meddelanden hittade jag ingen uppgift om. Det frågas Cloudflare om innan skarp drift, och kan de inte svara byts den mot en leverantör i EU.
+6. **Säkerhetskopior.** Jag hittade ingen uppgift om att D1:s Time Travel stannar inom jurisdiktionen. Det frågas Cloudflare om, och policyn påstår inget förrän det är bekräftat.
+7. **Riktiga uppgifter lämnar aldrig D1 till utvecklingsmiljöer.** Test, lasttest och demo använder påhittade uppgifter.
+8. **Turnstile** används bara på ansökningssidan för klubbar, inte där föräldrar beställer.
+
+**Vaktprov** (så att reglerna inte bara är en önskan)
+- Ett test som kontrollerar att varje svar från `/api/` med persondata har `Cache-Control: no-store`.
+- Ett test som läser serverns källkod och fallerar om den använder KV, `caches`, R2, Durable Objects eller `console.log`.
+- Ett skript som frågar Cloudflares API efter databasens jurisdiktion och fallerar om den inte är `eu`. Finns inte fältet i svaret kontrolleras det för hand och dokumenteras.
+
+**Strängare spår, om en kund kräver att även behandlingen sker i EU** (till exempel en kommun eller skola): API:t körs på en server i EU, med trafiken direkt dit och utan att passera Cloudflares nätverk. De statiska sidorna ligger kvar på Cloudflare Pages, eftersom de inte innehåller persondata. Det kostar några euro i månaden men innebär att du driftar en server (uppdateringar och säkerhetskopior). Det byggs inte nu, men eftersom API:t har ett fast format går servern att byta ut senare.
+
 ## Personuppgifter: det som flyttar till dig
 
 Idag ligger barnets förnamn och förälderns mobilnummer i klubbens eget Google-konto. Efter bytet håller Skramlat dem åt alla klubbar. Då är klubben personuppgiftsansvarig och Skramlat personuppgiftsbiträde.
 
 Det här måste vara klart **innan en riktig klubb använder tjänsten**:
 - **Biträdesavtal** som klubben godkänner när den skapar kontot. Texten bör granskas av någon som kan, jag är inte jurist.
-- **Data i EU.** D1 skapas med jurisdiktion `eu`. Det gäller lagring och körning av databasen, men Workers kan nå den från hela världen, så anropen behandlas i Cloudflares globala nätverk. **Att kontrollera:** om det räcker, eller om Cloudflares Regional Services behövs, och i så fall vad det kostar. Policyn ska säga hur det fungerar.
+- **Data i EU:** se *Lagring bara i EU* ovan. Policyn ska säga exakt det vi kan hålla: lagring i EU, och att anropen går genom Cloudflares globala nätverk.
 - **Underbiträden:** Cloudflare och, om Email Service byts ut, den leverantören.
 - **Automatisk radering 60 dagar efter att försäljningen avslutats.** Loggen behåller bara ordernummer, antal och belopp, som idag. Försäljningar som glöms öppna ska klubbens administratör påminnas om (bestäms i Fas 3).
 - **Integritetspolicy** (står redan på att-göra-listan).
@@ -174,7 +205,7 @@ Storleken är relativ (S, M, L). Jag vill inte gissa antal dagar innan vi har pr
 
 | Fas | Innehåll | Storlek |
 |---|---|---|
-| **1. Servern** | D1 med EU-jurisdiktion, beställning med atomärt lager, lagförälderns och klubbens åtgärder, inloggning med e-postlänk för klubbens administratör, testerna flyttade och körda, lasttest mot riktiga D1. Eskilsminne som första klubb. Sidorna pekar på nya servern. | L |
+| **1. Servern** | D1 med EU-jurisdiktion, beställning med atomärt lager, lagförälderns och klubbens åtgärder, inloggning med e-postlänk för klubbens administratör, testerna flyttade och körda, vaktproven för EU-reglerna, lasttest mot riktiga D1. Eskilsminne som första klubb. Sidorna pekar på nya servern. | L |
 | **2. Kom igång** | Ansökan, din kontroll och ditt godkännande, utseende (färger och märke), fler administratörer, adresser `skramlat.se/<klubb>`, e-post från skramlat.se, flytt av sidorna till Cloudflare Pages. | M |
 | **3. Juridik och drift** | Biträdesavtal i flödet, automatisk radering efter 60 dagar, integritetspolicy, säkerhetskopior, övervakning, en andra person med åtkomst. Görs parallellt med Fas 2. | M |
 | **4. Skolor** | Förening eller skola (ord per kund), samlad lista över obetalda för skolans administratör, Swish per kund (låst nummer för alla klasser). | M |
@@ -200,7 +231,7 @@ Eskilsminne kan gå live när Fas 1 och Fas 3 är klara, och när styrelsens skr
 ## Kvar att göra eller kontrollera
 
 - Biträdesavtalets text granskas av någon som kan.
-- Om Cloudflares Regional Services behövs för att behandlingen ska stanna i EU.
+- **Frågor till Cloudflare:** stannar D1:s Time Travel inom jurisdiktionen? Var lagrar Email Service meddelanden och hur länge? Var finns Cloudflares biträdesavtal, underbiträdeslista och överföringsmekanism för tredjeland? Pris och tillgänglighet för Regional Services, om en kund kräver att även behandlingen sker i EU.
 - Att Cloudflare Pages kan skriva om adresser som vi behöver.
 - Att Email Service fungerar tillräckligt stabilt (beta), annars en annan leverantör.
 - Styrelsens skriftliga ok och namnet på klubbens administratör i Eskilsminne.
