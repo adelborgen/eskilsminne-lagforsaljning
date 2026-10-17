@@ -21,9 +21,12 @@
   .sida { max-width: 1080px; margin: 0 auto; padding: calc(env(safe-area-inset-top, 0px) + 28px) max(16px, env(safe-area-inset-right, 0px)) calc(env(safe-area-inset-bottom, 0px) + 56px) max(16px, env(safe-area-inset-left, 0px)); display: flex; flex-direction: column; gap: 36px; }
   .topp { display: flex; justify-content: space-between; align-items: center; gap: 16px; flex-wrap: wrap; }
   .topp img { height: 40px; width: auto; display: block; }
-  .topp nav { display: flex; gap: 6px; flex-wrap: wrap; }
-  .topp nav a { color: var(--text); text-decoration: none; font-weight: 700; padding: 10px 14px; border-radius: 999px; }
-  .topp nav a:hover, .topp nav a[aria-current] { background: var(--upphojd); }
+  .topp nav { display: flex; gap: 8px; flex-wrap: wrap; }
+  /* Menyn som knappar: kant, bakgrund och skugga, så att det syns att de går att trycka på. Sidan du är på är mint. */
+  .topp nav a { display: inline-flex; align-items: center; min-height: 46px; padding: 0 18px; border-radius: 999px; background: var(--upphojd); border: 2px solid #3d454e;
+    color: var(--kram); text-decoration: none; font: 800 16px/1 var(--display); font-stretch: 106%; box-shadow: 0 3px 0 #050608; }
+  .topp nav a:hover { border-color: var(--mint); }
+  .topp nav a[aria-current] { background: var(--mint); border-color: var(--mint); color: var(--black); }
   .etikett { font: 800 13px/1.2 var(--display); font-stretch: 125%; letter-spacing: .12em; text-transform: uppercase; color: var(--mint); margin: 0; }
   h1 { margin: 6px 0 0; font: 900 clamp(40px, 8vw, 72px)/.95 var(--display); font-stretch: 112%; letter-spacing: -.01em; color: var(--kram); text-wrap: balance; max-width: 16ch; }
   .ingress { margin: 16px 0 0; font-size: 20px; max-width: 54ch; }
@@ -33,13 +36,14 @@
   .vaxla button { flex: 1; min-height: 48px; border: 0; border-radius: 999px; background: transparent; color: var(--text); font: 800 17px/1 var(--display); font-stretch: 108%; cursor: pointer; }
   .vaxla button[aria-selected="true"] { background: var(--mint); color: var(--black); }
   .vyer { display: grid; grid-template-columns: 1fr 1fr; gap: 32px; align-items: start; }
-  .vy { display: flex; flex-direction: column; gap: 18px; min-width: 0; }
+  .vy { display: flex; flex-direction: column; gap: 20px; min-width: 0; background: var(--upphojd); border: 2px solid #3d454e; border-radius: 26px; padding: 24px; }
   .vy h2 { margin: 0; font: 900 32px/1.05 var(--display); font-stretch: 110%; color: var(--kram); }
   .vy p { margin: 6px 0 0; color: var(--dampad); max-width: 46ch; }
   .prova { margin: 12px 0 0; padding: 0; list-style: none; counter-reset: steg; display: flex; flex-direction: column; gap: 8px; }
   .prova li { counter-increment: steg; display: flex; gap: 10px; align-items: baseline; }
-  .prova li::before { content: counter(steg); flex: none; width: 26px; height: 26px; border-radius: 8px; background: var(--upphojd); color: var(--mint); display: grid; place-items: center; font: 900 15px/1 var(--display); }
-  .telefon { width: 100%; max-width: 400px; height: 780px; margin: 0 auto; border: 10px solid #0b0d10; border-radius: 44px; background: #0b0d10; box-shadow: 0 0 0 2px var(--upphojd), 0 18px 40px rgba(0,0,0,.45); overflow: hidden; }
+  .prova li::before { content: counter(steg); flex: none; width: 26px; height: 26px; border-radius: 8px; background: var(--grafit); color: var(--mint); display: grid; place-items: center; font: 900 15px/1 var(--display); }
+  /* Telefonen: svart kant och en krämvit ram runt, så att sidan i den inte flyter ihop med sidan runt omkring */
+  .telefon { width: 100%; max-width: 400px; height: 780px; margin: 0 auto; border: 10px solid #0b0d10; border-radius: 44px; background: #0b0d10; box-shadow: 0 0 0 4px var(--kram), 0 18px 40px rgba(0,0,0,.5); overflow: hidden; }
   .telefon iframe { display: block; width: 100%; height: 100%; border: 0; border-radius: 34px; background: var(--grafit); }
   .borjaom { display: flex; flex-wrap: wrap; gap: 12px 18px; align-items: center; justify-content: center; color: var(--dampad); font-size: 15.5px; text-align: center; }
   .borjaom button { min-height: 48px; padding: 0 20px; border-radius: 14px; border: 3px solid var(--kram); background: transparent; color: var(--kram); font: 900 17px/1 var(--display); font-stretch: 106%; cursor: pointer; }
@@ -53,10 +57,11 @@
   @media (max-width: 880px) {
     .vaxla { display: flex; position: sticky; top: calc(env(safe-area-inset-top, 0px) + 8px); z-index: 2; box-shadow: 0 6px 18px rgba(0,0,0,.4); }
     .vyer { grid-template-columns: 1fr; }
+    .vy { padding: 18px 10px 10px; }
     .vyer[data-visa="foralder"] #vy-lag, .vyer[data-visa="lag"] #vy-foralder { display: none; }
     /* I mobilen blir telefonen själva skärmen: ingen ram, så hög som det går */
-    .telefon { max-width: none; height: calc(100svh - 120px); min-height: 560px; border: 0; border-radius: 22px; box-shadow: 0 0 0 2px var(--upphojd); }
-    .telefon iframe { border-radius: 22px; }
+    .telefon { max-width: none; height: calc(100svh - 120px); min-height: 560px; border: 4px solid var(--kram); border-radius: 22px; box-shadow: none; }
+    .telefon iframe { border-radius: 18px; }
   }
 </style>
 </head>

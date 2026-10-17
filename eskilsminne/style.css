@@ -45,6 +45,8 @@ a { color: inherit; }
 .appname { font: 800 22px/1.15 var(--display); font-stretch: 112%; overflow-wrap: break-word; hyphens: auto; }
 .pill { display: inline-block; flex: none; background: var(--yellow); color: var(--ink); font: 800 15px/1 var(--display); font-stretch: 112%; letter-spacing: .04em;
   padding: 7px 13px; border-radius: 12px; transform: rotate(-3deg); box-shadow: 0 3px 0 var(--hard); }
+/* Smala skärmar (och telefonen på demosidan): klubbens namn får plats bredvid märket och lagets bricka */
+@media (max-width: 360px) { .topbar-in { gap: 10px; } .club { font-size: 12px; letter-spacing: .06em; } }
 .page { max-width: 560px; margin: 0 auto; padding: 14px 16px calc(env(safe-area-inset-bottom, 0px) + 40px); position: relative; }
 .page > * + * { margin-top: 16px; }
 .foot { margin-top: 40px; text-align: center; font-size: 14px; color: var(--fg2); }
