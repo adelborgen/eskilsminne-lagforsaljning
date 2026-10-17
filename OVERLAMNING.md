@@ -22,7 +22,7 @@ Fas 1 i planen är byggd, testad lokalt och ligger på `main` (publiceras hos Cl
 | `skramlat.se` | Framsidan (`index.html`): loggan, tre steg, Tryggt för alla, kunder, länkar. Har fortfarande `noindex`, fråga om den ska bort. |
 | `skramlat.se/pris/` | Gratis, Bas, Plus. Bas och Plus: "Kontakta oss för pris", gratis för pilotklubbar under pilotåret. |
 | `skramlat.se/demo/` | Demosidan (Skramlats färger): förälderns och lagförälderns vy för ett påhittat lag, utan inloggning. Länkad från framsidan. Publicerad 17 oktober 2026. |
-| `skramlat.se/kom-igang/` | Formulär för förfrågningar från klubbar och skolor. Servern mejlar dem till ägaren (hemligheten `FORFRAGAN_TILL` hos Cloudflare måste vara inlagd) och sparar inget i databasen. |
+| `skramlat.se/kom-igang/` | Formulär för förfrågningar från klubbar och skolor. Servern mejlar dem till ägaren (hemligheten `FORFRAGAN_TILL` hos Cloudflare, inlagd av ägaren 17 oktober 2026) och sparar inget i databasen. |
 | `skramlat.se/om/` | Om Skramlat: varför det finns, vad vi lovar, vem som står bakom (utan namn). Räknaren (17 340 kr swishat) finns här och på framsidan och uppdateras för hand i båda filerna. |
 | `skramlat.se/guider/` | Fyra guider med källor: lotter, förenings-Swish eller privat, vem som ansvarar för pengarna, hur länge uppgifter sparas. |
 | `skramlat.adelborg.workers.dev` | Cloudflare-versionen (Worker och D1), byggs automatiskt från `main`. `/api?action=version` visar serverns version. Databasen är tom. |
