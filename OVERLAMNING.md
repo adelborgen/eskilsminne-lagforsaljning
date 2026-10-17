@@ -80,7 +80,8 @@ Inför Sally Bauerskolorna, andra kunden:
 4. **Eskilsminne:** styrelsens skriftliga ok och en administratör i klubben (inte ägaren), sedan första klubben i databasen och `endpoint: "/api"`.
 5. **Fas 3:** biträdesavtal (granskat av någon som kan), integritetspolicy, automatisk radering efter 60 dagar (kräver `[triggers]` i `wrangler.toml` och en ändring av vaktprovet `test/eu.test.js`), rutin för incidenter, säkerhetskopior, en andra person med åtkomst.
 6. **Fas 2:** ansökan på `skramlat.se/kom-igang`, ägarens godkännande, utseende (färger och märke), `skramlat.se/<klubb>`, flytt av domänen från GitHub Pages till Cloudflare, e-post från skramlat.se.
-7. HTTPS och domänverifiering hos GitHub så länge sidorna ligger där. Testa hej@skramlat.se.
+7. HTTPS och domänverifiering hos GitHub så länge sidorna ligger där (17 oktober 2026: ägaren väntar på att GitHub skapar certifikatet, upp till ett dygn, och kryssar sedan i *Enforce HTTPS*). Testa hej@skramlat.se.
+8. **Prova formuläret på kom-igang hos riktiga Cloudflare.** Första försöket gav "Det gick inte att nå servern", troligen för att sidan låg på http:// eller att servern inte hunnit uppdateras. Servern tillåter nu http://skramlat.se och visar det riktiga felet (version `2026-10-17-forfragan-2`). Hemligheten `FORFRAGAN_TILL` är inlagd enligt ägaren, men inte bekräftad med ett mejl.
 
 ## Säkerhet och tester
 
