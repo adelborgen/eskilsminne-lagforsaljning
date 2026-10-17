@@ -45,10 +45,9 @@ I adminvyn i demoläge är nyckeln `demo` för ett lags admin. Klubbadministrat�
 
 ```
 npm install
-npx wrangler d1 migrations apply skramlat --local                       # skapar den lokala databasen
 node scripts/ny-klubb.js --slug eskilsminne --namn "Eskilsminne IF" --epost du@example.se > ny-klubb.sql
 npx wrangler d1 execute skramlat --local --file ny-klubb.sql            # första klubben och dess administratör
-npm run dev -- --var SIDA_ORIGIN:http://localhost:8787                  # bygger dist/ och startar Worker, sidor och lokal D1
+npm run dev -- --var SIDA_ORIGIN:http://localhost:8787                  # bygger och startar Worker, sidor och lokal D1 (tabellerna läggs in vid första anropet)
 ```
 
 Sätt `endpoint: "/api"` i `eskilsminne/lag.js` för att sidorna ska prata med servern (ändra tillbaka till `""` innan du publicerar på GitHub Pages: servern finns bara på Cloudflare). Inloggningsmejlet skickas inte på riktigt lokalt: det skrivs som en fil under `.wrangler/tmp/email/` och loggas i terminalen, och länken i det är den du öppnar.
@@ -58,10 +57,10 @@ Sätt `endpoint: "/api"` i `eskilsminne/lag.js` för att sidorna ska prata med s
 Görs av den som driver Skramlat. Kräver ett Cloudflare-konto med **Workers Paid** (5 $ i månaden): gratisnivån har dagstak som gör att anropen felar en dag med många föräldrar, och utgående e-post kräver betalnivån. Stegen står också överst i `wrangler.toml`.
 
 1. **Databasen, med EU-jurisdiktion.** `npx wrangler d1 create skramlat --jurisdiction=eu`. Jurisdiktionen kan bara sättas när databasen skapas. Klistra in databasens id i `wrangler.toml`.
-2. **Schemat.** `npx wrangler d1 migrations apply skramlat --remote`.
+2. **Schemat.** Läggs in av Workern själv vid första anropet (`server/migrera.js`, från `migrations/` via `server/schema.js`). Bokföringen är densamma som wranglers (`d1_migrations`), så `npx wrangler d1 migrations apply skramlat --remote` fungerar också.
 3. **E-post.** `npx wrangler email sending enable skramlat.se`. Cloudflares e-posttjänst är i beta, och fältnamnen i `server/epost.js` är hämtade från en tredjepartsbeskrivning: kontrollera mot Cloudflares egen dokumentation.
 4. **Första klubben.** `node scripts/ny-klubb.js --slug eskilsminne --namn "Eskilsminne IF" --epost <administratörens adress> > ny-klubb.sql`, sedan `npx wrangler d1 execute skramlat --remote --file ny-klubb.sql`. Radera filen efteråt. Administratören ska vara en person i klubben, inte den som driver Skramlat.
-5. **Publicera.** `npm run bygg && npx wrangler deploy`. Sätt `endpoint: "/api"` i `eskilsminne/lag.js` först.
+5. **Publicera.** `npx wrangler deploy` (bygger själv först, se `[build]` i `wrangler.toml`), eller automatiskt från GitHub (se *Publicera*). Sätt `endpoint: "/api"` i `eskilsminne/lag.js` först.
 6. **Kontrollera jurisdiktionen.** `CLOUDFLARE_ACCOUNT_ID=… CLOUDFLARE_API_TOKEN=… node scripts/kontrollera-eu.js`. Kan skriptet inte avgöra det (svaret nämner ingen jurisdiktion) kontrolleras det för hand i Cloudflares panel och skrivs ner.
 7. **Lasttest mot en testdatabas** innan skarp drift: `scripts/lasttest.js`.
 
@@ -144,7 +143,7 @@ Det som bara kan bevisas hos riktiga Cloudflare, till exempel många beställnin
 ## Publicera
 
 - **Idag:** sidorna ligger på GitHub Pages (*Settings → Pages*, gren `main`, mapp `/`), och `skramlat.se` pekar dit. Eskilsminne visar demo.
-- **Cloudflare:** Workern `skramlat` är kopplad till GitHub och byggs om automatiskt från `main` (bygg: `npm run bygg`, publicering: `npx wrangler d1 migrations apply skramlat --remote && npx wrangler deploy`, så att ändringar i databasen läggs in före koden; byggets API-token behöver *D1 Edit*). Migreringarna i `migrations/` tål att köras på en databas där en del redan finns (`IF NOT EXISTS`). Adress: **https://skramlat.adelborg.workers.dev**. **Allt som pushas till `main` publiceras alltså på båda ställena.**
+- **Cloudflare:** Workern `skramlat` är kopplad till GitHub och byggs om automatiskt från `main` (publicering: `npx wrangler deploy`, som bygger själv). Workern lägger in nya migreringar i databasen själv vid första anropet efter en publicering, så bygget behöver ingen behörighet till databasen. Migreringarna i `migrations/` ska tåla att köras igen (`IF NOT EXISTS`), och `server/schema.js` skapas från dem av `npm run bygg`. Adress: **https://skramlat.adelborg.workers.dev**. **Allt som pushas till `main` publiceras alltså på båda ställena.**
 - **Med Cloudflare (Fas 2):** sidorna och servern ligger i samma Worker, och domänen flyttas dit. Då får varje klubb sin adress `skramlat.se/<klubb>/` utan en egen mapp i repot, och en klubb skapas på `skramlat.se/kom-igang`. Se planen.
 
 ## Flytta P2019 hit

@@ -1,9 +1,12 @@
-/* Samlar de publika filerna i dist/, som Cloudflare serverar som statiska sidor. Körs av: npm run bygg
+/* Samlar de publika filerna i dist/, som Cloudflare serverar som statiska sidor, och skriver server/schema.js.
+   Körs av: npm run bygg, och av wrangler före varje publicering ([build] i wrangler.toml).
    Bara det som ska vara publikt tas med: inte tester, material, server eller anteckningar. */
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { skrivSchema } from "./schema.js";
 
+skrivSchema();   // migrationerna som Workern lägger in själv (server/schema.js)
 const rot = path.join(path.dirname(fileURLToPath(import.meta.url)), "..");
 const ut = path.join(rot, "dist");
 const MED = ["index.html", "eskilsminne", "guider", "pris", "logga", "fonts"];

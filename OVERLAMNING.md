@@ -71,7 +71,7 @@ Inför Sally Bauerskolorna, andra kunden:
 
 ## Nästa steg, i ordning
 
-1. **Cloudflare:** kontot finns (gratisnivån), och D1-databasen `skramlat` är skapad med **jurisdiktion EU** (kontrollerat för hand i panelen 17 oktober 2026, id:t i `wrangler.toml`). Kvar: schemat (`wrangler d1 migrations apply skramlat --remote`), publicering, e-posten, första klubben, och Workers Paid (5 $ i månaden) innan inloggningsmejlen ska skickas på riktigt. En andra person ska ha åtkomst. Se README, *Sätt upp Cloudflare*.
+1. **Cloudflare:** kontot finns (gratisnivån), och D1-databasen `skramlat` är skapad med **jurisdiktion EU** (kontrollerat för hand i panelen 17 oktober 2026, id:t i `wrangler.toml`). Workern `skramlat` är kopplad till GitHub och byggs från `main`, och den lägger in tabellerna själv vid första anropet. Kvar: e-posten, första klubben, och Workers Paid (5 $ i månaden) innan inloggningsmejlen ska skickas på riktigt. En andra person ska ha åtkomst. Se README, *Sätt upp Cloudflare*.
 2. **Frågor till Cloudflare** (se planen): stannar D1:s Time Travel inom jurisdiktionen? Var lagrar e-posttjänsten meddelanden? Var finns biträdesavtalet, underbiträdeslistan och överföringsmekanismen? Verifiera fältnamnen i `server/epost.js` mot deras dokumentation.
 3. **Lasttest och kontroll av jurisdiktionen** mot en testdatabas (`scripts/lasttest.js`, `scripts/kontrollera-eu.js`).
 4. **Eskilsminne:** styrelsens skriftliga ok och en administratör i klubben (inte ägaren), sedan första klubben i databasen och `endpoint: "/api"`.

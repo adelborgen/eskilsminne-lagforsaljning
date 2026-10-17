@@ -2,9 +2,9 @@
 # Uppsättning, i ordning (en gång):
 #   1. npx wrangler d1 create skramlat --jurisdiction=eu     (EU-jurisdiktion kan bara sättas när databasen skapas)
 #   2. Klistra in databasens id nedan.
-#   3. npx wrangler d1 migrations apply skramlat --remote
+#   3. (Tabellerna läggs in av Workern själv vid första anropet. Det går också med npx wrangler d1 migrations apply skramlat --remote.)
 #   4. npx wrangler email sending enable skramlat.se         (så att inloggningsmejlen kan skickas), och slå på [[send_email]] nedan
-#   5. npm run bygg && npx wrangler deploy
+#   5. npx wrangler deploy                                   (bygger själv först, se [build])
 #   6. node scripts/kontrollera-eu.js                        (kontrollerar att databasen har jurisdiktion eu)
 # Se README.md och PLAN-gemensam-server.md.
 #
@@ -14,6 +14,11 @@
 name = "skramlat"
 main = "server/worker.js"
 compatibility_date = "2026-08-01"
+
+# wrangler bygger själv före varje publicering och vid wrangler dev: dist/ (sidorna) och server/schema.js (migreringarna,
+# som Workern lägger in i databasen själv vid första anropet). Då spelar det ingen roll vad som står som byggkommando i panelen.
+[build]
+command = "node scripts/bygg.js"
 
 [assets]
 directory = "./dist"

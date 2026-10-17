@@ -12,6 +12,8 @@ import fs from "node:fs";
 import path from "node:path";
 import { skapaMiljo, lagData, ADMIN_EPOST, ORIGIN, ROT, SERVER_DIR } from "./miljo.js";
 import { bedom, databasId } from "../scripts/kontrollera-eu.js";
+import { schemaText } from "../scripts/schema.js";
+import { pathToFileURL } from "node:url";
 
 const KL = "testklubben";
 let m;
@@ -103,7 +105,7 @@ const rubrikerI = (t) => [...t.replace(/^\s*#.*$/gm, "").matchAll(/^\s*\[\[?([A-
 
 test("wrangler.toml lägger inte till lagring eller loggning: bara databasen, filerna, e-posten och inställningarna", () => {
   const t = toml();
-  const tillatet = ["assets", "d1_databases", "send_email", "vars", "observability"];
+  const tillatet = ["build", "assets", "d1_databases", "send_email", "vars", "observability"];
   const fel = rubrikerI(t).filter((r) => !tillatet.includes(r));
   assert.deepEqual(fel, [], "otillåtna avsnitt i wrangler.toml: " + fel.join(", "));
   const rent = t.replace(/^\s*#.*$/gm, "").replace(/#.*$/gm, "");
@@ -114,9 +116,27 @@ test("wrangler.toml lägger inte till lagring eller loggning: bara databasen, fi
   assert.match(rent, /run_worker_first\s*=\s*\[\s*"\/api"\s*,\s*"\/api\/\*"\s*\]/, "bara /api ska gå via koden");
 });
 
+const TABELLER = ["bestallning", "d1_migrations", "inloggningslank", "klubb", "klubb_admin", "lag", "logg", "session", "sparr"];
+const tabeller = async () => (await m.db.prepare("SELECT name FROM sqlite_master WHERE type = 'table' AND name NOT LIKE 'sqlite_%' AND name NOT LIKE '_cf_%' ORDER BY name").all()).results.map((r) => r.name);
+
 test("migrationerna skapar inga tabeller med personuppgifter utöver de som är avsedda", async () => {
-  const rader = (await m.db.prepare("SELECT name FROM sqlite_master WHERE type = 'table' AND name NOT LIKE 'sqlite_%' AND name NOT LIKE '_cf_%' ORDER BY name").all()).results.map((r) => r.name);
-  assert.deepEqual(rader, ["bestallning", "inloggningslank", "klubb", "klubb_admin", "lag", "logg", "session", "sparr"]);
+  await m.get({ action: "version" });   // första anropet lägger in migreringarna
+  assert.deepEqual(await tabeller(), TABELLER);
+});
+
+test("Workern lägger in migreringarna själv i en tom databas, och tål att göra det igen", async () => {
+  const { korMigreringar } = await import(pathToFileURL(path.join(SERVER_DIR, "migrera.js")).href);
+  for (const t of ["bestallning", "logg", "sparr", "inloggningslank", "session", "lag", "klubb_admin", "klubb", "d1_migrations"]) await m.db.prepare("DROP TABLE IF EXISTS " + t).run();   // barn före förälder
+  assert.deepEqual(await tabeller(), []);
+  await korMigreringar(m.db);
+  await korMigreringar(m.db);
+  assert.deepEqual(await tabeller(), TABELLER);
+  assert.deepEqual((await m.db.prepare("SELECT name FROM d1_migrations").all()).results.map((r) => r.name), ["0001_start.sql"]);
+  await m.nollstall();
+});
+
+test("server/schema.js stämmer med migrations/ (skapas av npm run bygg)", () => {
+  assert.equal(fs.readFileSync(path.join(ROT, "server", "schema.js"), "utf8"), schemaText(), "kör npm run bygg");
 });
 
 /* ---------- 4. Var personuppgifter finns ---------- */
