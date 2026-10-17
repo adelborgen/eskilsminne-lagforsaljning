@@ -299,4 +299,5 @@ Testerna har attacker för det nya: lagföräldern gör klubbens jobb, klubben �
 - **När klubben senare vill vara med börjar laget om i klubben.** Lagets gamla försäljningar ligger kvar tills de raderas, och nya startas i klubben. Ingen flytt behöver byggas.
 - **Pris:** Bas 999 kr per år (10 försäljningar samtidigt), Plus 1 999 kr per år (20 samtidigt). Gratisnivån (1–3 samtidigt) finns kvar, och pilotklubbar är gratis under pilotåret. Visas på prissidan sedan 17 oktober 2026. Moms är inte nämnt: med enskild firma och en omsättning under gränsen för momsbefrielse tas ingen moms ut, men det behöver kontrolleras innan första fakturan.
 - **Nästa steg:** Eskilsminne på riktigt.
+- **I villkor och biträdesavtal (ägarens val 17 oktober 2026):** förfrågningar från kom-igang sparas högst sex månader, incidenter meddelas klubben utan onödigt dröjsmål, fakturan har 30 dagars betalningsvillkor, och ett betalt år återbetalas inte vid uppsägning.
 - **Leverantörstips:** guiderna börjar neutrala, utan namn på leverantörer. Tips kan läggas till senare om lagföräldrarna efterfrågar det. Ingen provision.
