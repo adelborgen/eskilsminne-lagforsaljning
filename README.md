@@ -25,7 +25,8 @@ Repot är fristående från P2019-sidan ([adelborgen/eskilsminne-p2019](https://
 
 | Fil eller mapp | Innehåll |
 |---|---|
-| `index.html`, `pris/`, `guider/` | Skramlats framsida, prissida och guider. |
+| `index.html`, `pris/`, `guider/`, `om/` | Skramlats framsida, prissida, guider och Om Skramlat. |
+| `skramlat.css`, `skramlat.js` | Delat för Skramlats egna sidor: menyn (knappar på datorn, knappen Meny i mobilen) och räknaren för det som har swishats. Siffran står i `index.html` och `om/index.html` (`data-varde` och texten bredvid), och uppdateras för hand tills servern räknar själv. |
 | `kom-igang/` | Formuläret där en klubb eller skola skickar en förfrågan. Servern (`server/forfragan.js`) mejlar den till Skramlat och sparar ingenting i databasen. Mottagaren är hemligheten `FORFRAGAN_TILL` hos Cloudflare (se *Sätt upp Cloudflare*). Sidan ligger på skramlat.se och anropar Cloudflare-adressen, så just den åtgärden tar emot anrop från skramlat.se (CORS). |
 | `demo/` | Demosidan i Skramlats färger: förälderns och lagförälderns vy bredvid varandra, utan inloggning och utan server. `demo/lag/` är en påhittad klubb (Demoklubben, laget P2015) som använder samma `app.js`, `admin.js`, `util.js` och `style.css` som `eskilsminne/`, med egen `lag.js` (`visning: true`, exempelbeställningar) och `tema.css` (färgerna). En beställning på förälderns sida syns hos lagföräldern i samma flik (sessionStorage) och försvinner när fliken stängs. |
 | `eskilsminne/` | Eskilsminnes sidor: `index.html` + `app.js` (laglista och beställning, `?lag=p2019` visar ett lag), `admin.html` + `admin.js` (adminvyn), `lag.js` (klubbens namn, texter och `slug`/`endpoint`), `util.js`, `style.css`, `assets/`. |

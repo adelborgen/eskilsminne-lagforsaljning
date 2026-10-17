@@ -8,6 +8,7 @@
 <meta name="description" content="Gratis att börja. Du betalar för verktyget, aldrig per köp, och Skramlat tar aldrig del av pengarna.">
 <link rel="icon" href="../logga/skramlat-ikon-mork.svg" type="image/svg+xml">
 <link rel="stylesheet" href="../fonts/fonts.css">
+<link rel="stylesheet" href="../skramlat.css">
 <style>
   /* Skramlats egna sidor: grafit, krämvita kort, mint som detaljfärg. Se brand-manualen. */
   :root { --grafit: #16191d; --upphojd: #20252b; --kram: #fff8d6; --mint: #6fe3b4; --black: #0f1a33; --text: #ece8d8; --dampad: #a9b0b8; --dampad-kort: #4a5575; --linje-kort: #d4c98a; --klart: #17612b;
@@ -18,14 +19,6 @@
   a { color: var(--mint); }
   :focus-visible { outline: 3px solid var(--mint); outline-offset: 3px; border-radius: 6px; }
   .sida { max-width: 1080px; margin: 0 auto; padding: calc(env(safe-area-inset-top, 0px) + 32px) max(16px, env(safe-area-inset-right, 0px)) calc(env(safe-area-inset-bottom, 0px) + 56px) max(16px, env(safe-area-inset-left, 0px)); display: flex; flex-direction: column; gap: 36px; }
-  .topp { display: flex; justify-content: space-between; align-items: center; gap: 16px; flex-wrap: wrap; }
-  .topp img { height: 40px; width: auto; display: block; }
-  .topp nav { display: flex; gap: 8px; flex-wrap: wrap; }
-  /* Menyn som knappar: kant, bakgrund och skugga, så att det syns att de går att trycka på. Sidan du är på är mint. */
-  .topp nav a { display: inline-flex; align-items: center; min-height: 46px; padding: 0 18px; border-radius: 999px; background: var(--upphojd); border: 2px solid #3d454e;
-    color: var(--kram); text-decoration: none; font: 800 16px/1 var(--display); font-stretch: 106%; box-shadow: 0 3px 0 #050608; }
-  .topp nav a:hover { border-color: var(--mint); }
-  .topp nav a[aria-current] { background: var(--mint); border-color: var(--mint); color: var(--black); }
   .etikett { font: 800 13px/1.2 var(--display); font-stretch: 125%; letter-spacing: .12em; text-transform: uppercase; color: var(--mint); margin: 0; }
   h1 { margin: 6px 0 0; font: 900 clamp(40px, 8vw, 72px)/.95 var(--display); font-stretch: 112%; letter-spacing: -.01em; color: var(--kram); text-wrap: balance; max-width: 16ch; }
   .ingress { margin: 16px 0 0; font-size: 20px; max-width: 52ch; }
@@ -63,7 +56,8 @@
 <main class="sida">
   <header class="topp">
     <a href="../"><img src="../logga/skramlat-logga-mork.svg" alt="Skramlat, till framsidan"></a>
-    <nav aria-label="Huvudmeny"><a href="../pris/" aria-current="page">Pris</a><a href="../guider/">Guider</a><a href="../demo/">Demo</a><a href="../kom-igang/">Kom igång</a></nav>
+    <button type="button" class="meny-knapp" aria-expanded="false" aria-controls="meny"><span class="meny-ikon" aria-hidden="true"></span>Meny</button>
+    <nav id="meny" class="meny" aria-label="Huvudmeny"><a href="../pris/" aria-current="page">Pris</a><a href="../guider/">Guider</a><a href="../demo/">Demo</a><a href="../om/">Om Skramlat</a><a class="cta" href="../kom-igang/">Kom igång</a></nav>
   </header>
 
   <header>
@@ -128,5 +122,6 @@
     <a href="../kom-igang/">Skicka en förfrågan →</a>
   </section>
 </main>
+<script src="../skramlat.js"></script>
 </body>
 </html>

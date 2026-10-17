@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="sv">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#16191d">
+<title>Om Skramlat</title>
+<meta name="description" content="Skramlat gör lagförsäljning enkel: föräldrar beställer i mobilen och swishar direkt till laget. Pengarna går aldrig via Skramlat.">
+<link rel="icon" href="../logga/skramlat-ikon-mork.svg" type="image/svg+xml">
+<link rel="stylesheet" href="../fonts/fonts.css">
+<link rel="stylesheet" href="../skramlat.css">
+<style>
+  /* Skramlats egna sidor: grafit, krämvita kort, mint som detaljfärg. Se brand-manualen. */
+  :root { --grafit: #16191d; --upphojd: #20252b; --kram: #fff8d6; --mint: #6fe3b4; --black: #0f1a33; --text: #ece8d8; --dampad: #a9b0b8; --dampad-kort: #4a5575;
+    --display: Archivo, "Arial Black", system-ui, sans-serif;
+    --body: "Atkinson Hyperlegible Next", system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--grafit); color: var(--text); font: 17px/1.55 var(--body); }
+  a { color: var(--mint); }
+  :focus-visible { outline: 3px solid var(--mint); outline-offset: 3px; border-radius: 6px; }
+  .sida { max-width: 1080px; margin: 0 auto; padding: calc(env(safe-area-inset-top, 0px) + 28px) max(16px, env(safe-area-inset-right, 0px)) calc(env(safe-area-inset-bottom, 0px) + 56px) max(16px, env(safe-area-inset-left, 0px)); display: flex; flex-direction: column; gap: 40px; }
+  .etikett { font: 800 13px/1.2 var(--display); font-stretch: 125%; letter-spacing: .12em; text-transform: uppercase; color: var(--mint); margin: 0; }
+  h1 { margin: 6px 0 0; font: 900 clamp(40px, 8vw, 72px)/.95 var(--display); font-stretch: 112%; letter-spacing: -.01em; color: var(--kram); text-wrap: balance; max-width: 15ch; }
+  h2 { margin: 0 0 18px; font: 900 clamp(28px, 5vw, 40px)/1.05 var(--display); font-stretch: 108%; color: var(--kram); text-wrap: balance; }
+  .ingress { margin: 18px 0 0; font-size: 20px; max-width: 54ch; }
+  .berattelse { margin-top: 14px; display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 20px 40px; }
+  .berattelse p { margin: 0; color: var(--dampad); font-size: 18px; max-width: 52ch; }
+  .berattelse p b { color: var(--kram); }
+  .loften { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 18px; }
+  .loften li { background: var(--kram); color: var(--black); border-radius: 22px; padding: 22px; box-shadow: 0 5px 0 #050b1c; display: flex; flex-direction: column; gap: 8px; }
+  .loften b { font: 900 22px/1.15 var(--display); font-stretch: 106%; }
+  .loften span { color: var(--dampad-kort); }
+  .vem { background: var(--upphojd); border: 2px solid #3d454e; border-radius: 22px; padding: 26px 24px; }
+  .vem h2 { margin-bottom: 10px; }
+  .vem p { margin: 0; max-width: 64ch; color: var(--dampad); font-size: 18px; }
+  .vem p + p { margin-top: 12px; }
+  .lankar { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 16px; }
+  .lank { display: block; background: var(--upphojd); border: 2px solid #3d454e; border-radius: 22px; padding: 22px; text-decoration: none; color: var(--text); }
+  .lank b { display: block; font: 900 24px/1.1 var(--display); font-stretch: 106%; color: var(--kram); margin-bottom: 6px; }
+  .lank span { color: var(--dampad); }
+  .lank:hover { border-color: var(--mint); }
+  .kontakt { background: var(--mint); color: var(--black); border-radius: 22px; padding: 26px 24px; display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 16px; box-shadow: 0 5px 0 #050b1c; }
+  .kontakt h2 { margin: 0; color: var(--black); max-width: 18ch; }
+  .kontakt a { display: inline-flex; align-items: center; min-height: 56px; font: 900 22px/1 var(--display); font-stretch: 106%; background: var(--grafit); color: var(--kram); border-radius: 14px; padding: 0 22px; text-decoration: none; box-shadow: 0 4px 0 #050b1c; }
+  .kontakt a:hover { color: var(--mint); }
+  @media (max-width: 720px) { .berattelse { grid-template-columns: 1fr; } }
+</style>
+</head>
+<body>
+<main class="sida">
+  <header class="topp">
+    <a href="../"><img src="../logga/skramlat-logga-mork.svg" alt="Skramlat, till framsidan"></a>
+    <button type="button" class="meny-knapp" aria-expanded="false" aria-controls="meny"><span class="meny-ikon" aria-hidden="true"></span>Meny</button>
+    <nav id="meny" class="meny" aria-label="Huvudmeny"><a href="../pris/">Pris</a><a href="../guider/">Guider</a><a href="../demo/">Demo</a><a href="../om/" aria-current="page">Om Skramlat</a><a class="cta" href="../kom-igang/">Kom igång</a></nav>
+  </header>
+
+  <header>
+    <p class="etikett">Om Skramlat</p>
+    <h1>Lagförsäljning som inte tar över kvällarna</h1>
+    <p class="ingress">Skramlat gör det enkelt att sälja för laget eller klassen. Föräldrar beställer i mobilen och swishar direkt till laget, och lagföräldern har koll på vem som har betalat och hämtat.</p>
+  </header>
+
+  <section class="matare" aria-label="Swishat med Skramlat">
+    <p class="matare-tal" data-varde="17340"><span class="siffra">17&nbsp;340</span><small>kr</small></p>
+    <p class="matare-text">har föräldrar swishat direkt till lagen med Skramlat.<span>Pengarna går aldrig via Skramlat, och siffran växer med varje försäljning.</span></p>
+  </section>
+
+  <section>
+    <p class="etikett">Varför Skramlat finns</p>
+    <div class="berattelse">
+      <p><b>Det började i ett fotbollslag.</b> Skramlat byggdes för en försäljning i P2019 i Eskilsminne IF. Föräldrarna beställde i mobilen och swishade direkt till laget, och lagföräldern kunde bocka av betalt och hämtat i stället för att jämföra listor med Swish-notiser.</p>
+      <p><b>Nu för fler lag och skolor.</b> Samma sätt att sälja ska fungera för hela klubbar och skolor, med en klubb eller skola som godkänner försäljningarna och har överblick. Därför testas Skramlat nu tillsammans med de första klubbarna och skolorna.</p>
+    </div>
+  </section>
+
+  <section>
+    <h2>Det här lovar vi</h2>
+    <ul class="loften">
+      <li><b>Pengarna går direkt till laget</b><span>Föräldrarna swishar till lagets eller skolans eget nummer. Skramlat tar aldrig emot pengar och tar ingen avgift per köp.</span></li>
+      <li><b>Så lite uppgifter som möjligt</b><span>Bara barnets förnamn och ett mobilnummer. Inget konto och ingen app, och beställningarna lagras inom EU.</span></li>
+      <li><b>Klubben har koll</b><span>Ingen försäljning öppnar utan att klubben eller skolan har godkänt den, och ändrar någon Swish-numret granskas den igen.</span></li>
+      <li><b>Enkelt för alla</b><span>En beställning tar en minut. Lagföräldern bockar av betalt och hämtat i mobilen, även i kansliet vid utlämningen.</span></li>
+    </ul>
+  </section>
+
+  <section class="vem">
+    <h2>Vem står bakom?</h2>
+    <p>Skramlat är ett litet projekt som drivs av en förälder i Eskilsminne IF. Det byggs tillsammans med lagföräldrar, klubbar och skolor som använder det, och det som de saknar är det som byggs härnäst.</p>
+    <p>Har du frågor eller idéer? Skriv till <a href="mailto:hej@skramlat.se">hej@skramlat.se</a>.</p>
+  </section>
+
+  <section class="lankar" aria-label="Läs mer">
+    <a class="lank" href="../demo/"><b>Demo</b><span>Prova som förälder och lagförälder, utan inloggning.</span></a>
+    <a class="lank" href="../pris/"><b>Pris</b><span>Gratis att börja. Inga avgifter per köp.</span></a>
+    <a class="lank" href="../guider/"><b>Guider</b><span>Vad gäller för lotter, Swish och personuppgifter?</span></a>
+  </section>
+
+  <section class="kontakt">
+    <h2>Vill din klubb eller skola vara med?</h2>
+    <a href="../kom-igang/">Skicka en förfrågan →</a>
+  </section>
+</main>
+<script src="../skramlat.js"></script>
+</body>
+</html>

@@ -1,0 +1,44 @@
+/* Delat för Skramlats egna sidor (framsidan, pris, guider, demo, kom igång, om): menyn högst upp och räknaren för det som har swishats.
+   Färgerna och typsnitten (--grafit, --mint, --kram, --display …) definieras i varje sida. Se brand-manualen. */
+
+/* ---------- Menyn ---------- */
+.topp { display: flex; justify-content: space-between; align-items: center; gap: 12px 16px; flex-wrap: wrap; }
+.topp img { height: 40px; width: auto; display: block; }
+.meny { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+/* Länkarna som knappar: kant, bakgrund och skugga, så att det syns att de går att trycka på */
+.meny a { display: inline-flex; align-items: center; justify-content: center; min-height: 46px; padding: 0 18px; border-radius: 999px; background: var(--upphojd);
+  border: 2px solid #3d454e; color: var(--kram); text-decoration: none; font: 800 16px/1 var(--display); font-stretch: 106%; box-shadow: 0 3px 0 #050608; }
+.meny a:hover { border-color: var(--mint); }
+.meny a[aria-current] { border-color: var(--mint); color: var(--mint); }   /* sidan du är på */
+.meny a.cta { background: var(--mint); border-color: var(--mint); color: var(--black); }   /* Kom igång */
+.meny a.cta[aria-current] { box-shadow: 0 0 0 3px var(--grafit), 0 0 0 5px var(--mint); }
+.meny-knapp { display: none; }
+
+/* I mobilen: en knapp Meny som fäller ut länkarna under loggan. Utan JavaScript syns länkarna som vanligt (klassen js-meny saknas). */
+@media (max-width: 760px) {
+  .js-meny .meny-knapp { display: inline-flex; align-items: center; gap: 10px; min-height: 46px; padding: 0 18px; border-radius: 999px; background: var(--upphojd);
+    border: 2px solid #3d454e; color: var(--kram); font: 800 16px/1 var(--display); font-stretch: 106%; box-shadow: 0 3px 0 #050608; cursor: pointer; }
+  .js-meny .meny-knapp[aria-expanded="true"] { border-color: var(--mint); }
+  .meny-ikon, .meny-ikon::before, .meny-ikon::after { display: block; width: 18px; height: 2.5px; border-radius: 2px; background: currentColor; transition: transform .2s; }
+  .meny-ikon { position: relative; }
+  .meny-ikon::before, .meny-ikon::after { content: ""; position: absolute; left: 0; }
+  .meny-ikon::before { top: -6px; } .meny-ikon::after { top: 6px; }
+  [aria-expanded="true"] .meny-ikon { background: transparent; }
+  [aria-expanded="true"] .meny-ikon::before { transform: translateY(6px) rotate(45deg); }
+  [aria-expanded="true"] .meny-ikon::after { transform: translateY(-6px) rotate(-45deg); }
+  .js-meny .meny { display: none; flex-basis: 100%; flex-direction: column; align-items: stretch; gap: 8px; background: var(--upphojd); border: 2px solid #3d454e;
+    border-radius: 20px; padding: 10px; }
+  .js-meny .meny[data-oppen] { display: flex; }
+  .js-meny .meny a { min-height: 52px; font-size: 18px; box-shadow: none; background: var(--grafit); }
+  .js-meny .meny a.cta { background: var(--mint); }
+}
+@media (prefers-reduced-motion: reduce) { .meny-ikon, .meny-ikon::before, .meny-ikon::after { transition: none; } }
+
+/* ---------- Räknaren: så mycket har föräldrar swishat till lagen med Skramlat ---------- */
+.matare { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 8px 28px; align-items: center; background: var(--upphojd); border: 2px solid #3d454e;
+  border-radius: 26px; padding: 26px 28px; }
+.matare-tal { margin: 0; font: 900 clamp(52px, 11vw, 104px)/.9 var(--display); font-stretch: 108%; color: var(--mint); white-space: nowrap; font-variant-numeric: tabular-nums; }
+.matare-tal small { font-size: .42em; color: var(--kram); margin-left: .15em; }
+.matare-text { margin: 0; font-size: 19px; color: var(--kram); max-width: 34ch; }
+.matare-text span { display: block; margin-top: 6px; font-size: 15.5px; color: var(--dampad); }
+@media (max-width: 640px) { .matare { grid-template-columns: 1fr; padding: 22px 20px; } }
