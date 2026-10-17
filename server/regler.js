@@ -10,7 +10,7 @@ export const CFG = {
   FEL_MINUTER: 10,         // ... under så här många minuter
   MAX_STARTER_PER_TIMME: 10, // så många försäljningar kan lagföräldrar starta själva per timme och klubb
   LANK_GILTIG_MIN: 15,     // en inloggningslänk gäller så här länge och kan användas en gång
-  SESSION_DAGAR: 14,       // en inloggning gäller så här länge
+  SESSION_DAGAR: 30,       // en inloggning gäller så här länge (klubbens administratör behöver en ny länk bara på en ny enhet eller efter en månad)
   LANK_PER_EPOST_TIMME: 5, // högst så många inloggningslänkar per e-postadress ...
   LANK_PER_IP_TIMME: 20    // ... och per IP-nummer och timme
 };

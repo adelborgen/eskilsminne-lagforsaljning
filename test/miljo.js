@@ -12,6 +12,7 @@ export const ROT = path.join(HAR, "..");
 export const SERVER_DIR = process.env.SERVER_DIR || path.join(ROT, "server");
 const { hantera } = await import(pathToFileURL(path.join(SERVER_DIR, "api.js")).href);
 const regler = await import(pathToFileURL(path.join(SERVER_DIR, "regler.js")).href);
+const krypto = await import(pathToFileURL(path.join(SERVER_DIR, "krypto.js")).href);
 export const CFG = regler.CFG;
 
 export const ORIGIN = "https://skramlat.test";
@@ -66,6 +67,21 @@ export async function skapaMiljo() {
     return r.id;
   };
   m.rader = async (tabell) => (await db.prepare("SELECT * FROM " + tabell).all()).results;
+
+  // Ett lag direkt i databasen, med vilken status som helst. Klubben kan inte lägga till lag och lagföräldern startar alltid som utkast,
+  // så testerna lägger in färdiga lag här. Uppgifterna kontrolleras med serverns egna regler. Ger { ok, slug, key }.
+  m.nyttLag = async (klubb, data) => {
+    const r = regler.rensaLag(data, true);
+    if (r.fel) return { ok: false, fel: r.fel };
+    const kl = await db.prepare("SELECT id FROM klubb WHERE slug = ?1").bind(klubb).first();
+    const key = krypto.nyNyckelText();
+    await db.prepare(`INSERT INTO lag (klubb_id, slug, namn, kampanj, status, swish_nummer, mottagare, meddelande, pris, inkopspris, minimum, mal,
+        max_antal, kartong, nyckel_hash, produkt, detalj, enhet_en, enhet, intro, utlamning_text, belonning, lager)
+      VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15, ?16, ?17, ?18, ?19, ?20, ?21, ?22, ?23)`)
+      .bind(kl.id, r.slug, r.namn, r.kampanj, r.status, r.swishNummer, r.mottagare, r.meddelande, r.pris, r.inkopspris, r.minimum, r.mal,
+        r.maxAntal, r.kartong, await krypto.hashNyckel(key), r.produkt, r.detalj, r.enhetEn, r.enhet, r.intro, r.utlamningsText, r.belonning, r.lager).run();
+    return { ok: true, slug: r.slug, key };
+  };
 
   // Hela inloggningen som en klubbadministratör gör den: begär länk, läser den i brevlådan, bekräftar. Ger cookien.
   m.loggaIn = async (klubb, epost) => {

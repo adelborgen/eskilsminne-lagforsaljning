@@ -98,9 +98,10 @@ test("cookien: bara https, inte läsbar för skript, bara den egna sidan, och sp
 test("sessionen ger klubbens administratör behörighet, och utan den (eller med en påhittad) ger ingenting", async () => {
   await begar(ADMIN_EPOST);
   const kaka = kakaFran(await anvand(sistaToken()));
-  const r = await klubbAnrop(kaka, "lagNy", { data: lagData({ namn: "Lag A" }) });
-  assert.ok(r.ok); assert.equal(r.roll, "super");
-  assert.ok((await klubbAnrop(kaka, "lagLista")).ok);
+  await m.nyttLag(KL, lagData({ namn: "Lag A" }));
+  const r = await klubbAnrop(kaka, "lagLista");
+  assert.ok(r.ok); assert.equal(r.roll, "super"); assert.equal(r.lag.length, 1);
+  assert.ok((await klubbAnrop(kaka, "nyNyckel", { slug: "lag-a" })).ok);
   assert.ok((await m.admin(KL, "lag-a", "", "oversikt", {}, m.somAdmin(kaka))).ok, "klubbens administratör kommer in i varje lag");
   assert.ok(!(await klubbAnrop("", "lagLista", {}, KL, { Origin: ORIGIN })).ok);
   assert.ok(!(await klubbAnrop("__Host-session=" + "a".repeat(64), "lagLista")).ok);
@@ -121,7 +122,7 @@ test("förfrågan från en annan webbplats gäller inte, inte ens med rätt cook
   assert.equal((await m.anrop("POST", "/api", { klubb: KL, lag: "x" }, { Origin: "https://ond.example" })).json.fel, "Felaktig förfrågan.");
 });
 
-test("sessionen gäller i 14 dagar", async () => {
+test("sessionen gäller i 30 dagar", async () => {
   await begar(ADMIN_EPOST);
   const kaka = kakaFran(await anvand(sistaToken()));
   m.tid(CFG.SESSION_DAGAR * 86400000 - 1000);
@@ -178,14 +179,16 @@ test("en administratör i en klubb kommer inte in i en annan", async () => {
   await m.skapaKlubb("k2", "Klubb 2", { admins: ["annan@klubb2.example"] });
   await begar(ADMIN_EPOST);
   const kaka = kakaFran(await anvand(sistaToken()));
-  assert.ok((await klubbAnrop(kaka, "lagNy", { data: lagData({ namn: "Lag A" }) })).ok);
-  const nej = await klubbAnrop(kaka, "lagNy", { data: lagData({ namn: "Lag B" }) }, "k2");
+  await m.nyttLag(KL, lagData({ namn: "Lag A" })); await m.nyttLag("k2", lagData({ namn: "Lag B" }));
+  const hashFore = (await m.rader("lag")).find((r) => r.slug === "lag-b").nyckel_hash;
+  assert.ok((await klubbAnrop(kaka, "nyNyckel", { slug: "lag-a" })).ok);
+  const nej = await klubbAnrop(kaka, "nyNyckel", { slug: "lag-b" }, "k2");
   assert.equal(nej.ok, false); assert.equal(nej.fel, "Fel lag eller nyckel.");
   assert.equal((await m.admin("k2", "*", "", "lagLista", {}, { ...m.somAdmin(kaka) })).ok, false);
   // och en länk begärd för klubb 2 med den adressen skickas inte
   await m.anrop("POST", "/api", { action: "login", op: "begar", klubb: "k2", epost: ADMIN_EPOST }); await m.vanta();
   assert.equal(m.brev.length, 1, "bara det första mejlet");
-  assert.equal((await m.rader("lag")).length, 1);
+  assert.equal((await m.rader("lag")).find((r) => r.slug === "lag-b").nyckel_hash, hashFore, "klubb 2:s lag är orört");
 });
 
 test("en person som administrerar två klubbar har en inloggning för båda", async () => {
@@ -209,21 +212,20 @@ test("en avstängd klubb: administratören tappar åtkomsten direkt, och inga ny
   assert.deepEqual((await m.anrop("POST", "/api", { action: "login", op: "vem" }, m.somAdmin(kaka))).json.klubbar, []);
 });
 
-test("en klubb som väntar på godkännande: administratören kan sätta upp, men inget syns eller går att beställa från", async () => {
+test("en klubb som väntar på godkännande: administratören kan logga in och se klubben, men inget syns eller går att beställa från", async () => {
   await m.skapaKlubb("vantar", "Väntar", { status: "vantar", admins: [ADMIN_EPOST] });
   const beg = async () => { await m.anrop("POST", "/api", { action: "login", op: "begar", klubb: "vantar", epost: ADMIN_EPOST }); await m.vanta(); };
   await beg();
   const kaka = kakaFran(await anvand(sistaToken()));
-  const ny = await m.admin("vantar", "*", "", "lagNy", { data: lagData({ namn: "Lag V", status: "utkast" }) }, m.somAdmin(kaka));
-  assert.ok(ny.ok, "administratören kan skapa lag");
-  assert.ok((await m.admin("vantar", "*", "", "lagLista", {}, m.somAdmin(kaka))).lag.length === 1);
+  const ny = await m.nyttLag("vantar", lagData({ namn: "Lag V", status: "utkast" }));
+  assert.ok((await m.admin("vantar", "*", "", "lagLista", {}, m.somAdmin(kaka))).lag.length === 1, "administratören ser klubben");
   // inget syns för besökare
   assert.equal((await m.get({ action: "lag", klubb: "vantar" })).ok, false);
   // lagförälderns nyckel fungerar inte i en klubb som inte är godkänd
   assert.equal((await m.admin("vantar", "lag-v", ny.key, "oversikt")).ok, false);
   assert.equal((await m.post({ action: "starta", klubb: "vantar", namn: "Lag W", t: 5000, website: "" })).ok, false);
-  // även om administratören sätter försäljningen som öppen kan ingen beställa, och inget sparas
-  await m.admin("vantar", "*", "", "lagUppdatera", { slug: "lag-v", falt: { swishNummer: "070 123 45 67", mottagare: "x", pris: 30, inkopspris: 10, minimum: 10, mal: 50, produkt: "Kakor", enhetEn: "kaka", enhet: "kakor", status: "pagar" } }, m.somAdmin(kaka));
+  // även om försäljningen står som öppen (direkt i databasen) kan ingen beställa, och inget sparas
+  await m.db.prepare("UPDATE lag SET status = 'pagar' WHERE slug = 'lag-v'").run();
   const best = await m.post({ klubb: "vantar", lag: "lag-v", barn: "Emil", mobil: "070 123 45 67", antal: 1, samtycke: true, website: "", t: 5000 });
   assert.equal(best.ok, false); assert.equal((await m.rader("bestallning")).length, 0);
   // och direkt i databasen: själva sparandet kräver också en godkänd klubb
@@ -240,7 +242,7 @@ test("utgångna länkar, sessioner och räknare städas bort", async () => {
   await begar(ADMIN_EPOST);
   await anvand(sistaToken());
   assert.equal((await m.rader("session")).length, 1);
-  m.tid(15 * 86400000);
+  m.tid((CFG.SESSION_DAGAR + 1) * 86400000);
   await begar("annan@example.com");   // en begäran städar
   assert.equal((await m.rader("session")).length, 0);
   assert.equal((await m.rader("inloggningslank")).length, 0);

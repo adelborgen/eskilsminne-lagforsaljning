@@ -39,14 +39,14 @@ try {
   const li = await m.loggaIn(KL, ADMIN_EPOST);
   const H = m.somAdmin(li.kaka);
   const klubb = (op, extra) => m.admin(KL, "*", "", op, extra, H);
-  const ny = (namn, status) => klubb("lagNy", { data: { namn, status, pris: 30, inkopspris: 10, minimum: 10, mal: 100 } });
+  const ny = (namn, status) => m.nyttLag(KL, { namn, status, pris: 30, inkopspris: 10, minimum: 10, mal: 100 });
   const x = await ny("Lag X", "utkast"), y = await ny("Lag Y", "utkast");
   for (const [slug, key] of [["lag-x", x.key], ["lag-y", y.key]]) {
     const r = await m.admin(KL, slug, key, "lagSpara", { falt: { ...LAST, swishNummer: "070 123 45 67" } });
     assert.equal(r.ok, true, JSON.stringify(r));
     assert.equal((await m.admin(KL, slug, key, "skickaGodkannande", { bekraftat: true })).ok, true);
   }
-  assert.equal((await klubb("godkann", { slug: "lag-x", till: "pagar" })).ok, true);
+  assert.equal((await klubb("godkann", { slug: "lag-x" })).ok, true);
   assert.equal((await klubb("skickaTillbaka", { slug: "lag-y", kommentar: KOMMENTAR })).ok, true);
   assert.equal((await m.post({ klubb: KL, lag: "lag-x", barn: "Emil", mobil: "070 123 45 67", antal: 2, samtycke: true, website: "", t: 5000 })).ok, true);
 

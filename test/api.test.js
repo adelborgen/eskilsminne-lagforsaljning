@@ -15,9 +15,10 @@ beforeEach(async () => {
   H = m.somAdmin((await m.loggaIn(KL, ADMIN_EPOST)).kaka);
 });
 
-const klubb = (op, extra) => m.admin(KL, "*", "", op, extra, H);          // som klubbens administratör
+const klubb = (op, extra, lag = "*") => m.admin(KL, lag, "", op, extra, H);   // som klubbens administratör
 const lagAdmin = (slug, key, op, extra) => m.admin(KL, slug, key, op, extra);   // som lagförälder, med lagets nyckel
-const lagNy = (o) => klubb("lagNy", { data: lagData(o) });
+const lagNy = (o) => m.nyttLag(KL, lagData(o));   // ett färdigt lag direkt i databasen (klubben kan inte lägga till lag)
+const starta = (namn, o = {}) => m.post({ action: "starta", klubb: KL, namn, t: 5000, website: "", ...o });
 const bestall = (lag, o = {}) => m.post({ klubb: KL, lag, barn: "Emil", mobil: "070 123 45 67", antal: 2, samtycke: true, website: "", t: 5000, ...o });
 const lista = () => m.get({ action: "lag", klubb: KL });
 const mobil = (i) => "070" + String(8000000 + i);   // ett eget mobilnummer per beställning, så att spärren per nummer inte slår till
@@ -56,24 +57,25 @@ test("en klubb som inte finns eller inte är godkänd svarar som en okänd för 
 });
 
 /* ---------- Nytt lag ---------- */
-test("nytt lag: kontroller, standardvärden och slug", async () => {
-  const r = await lagNy({ namn: "P 2019", kampanj: "Bingolotter" });
+test("ny försäljning: namnregler, adress och standardvärden, och uppgifterna kontrolleras när de sparas", async () => {
+  const r = await starta("P 2019");
   assert.ok(r.ok); assert.equal(r.slug, "p-2019");
   assert.match(r.key, /^[0-9a-f]{4}(-[0-9a-f]{4}){7}$/);
-  const l = (await lista()).lag.find((x) => x.slug === "p-2019");
-  assert.equal(l.swish.meddelande, "P 2019 försäljning"); assert.equal(l.maxAntal, 20);
-  assert.match((await lagNy({ namn: "P 2019" })).fel, /redan ett lag/);
-  assert.match((await lagNy({ namn: "" })).fel, /namn/);
-  assert.match((await lagNy({ namn: "Lag X", swishNummer: "12345" })).fel, /Swish/);
-  assert.match((await lagNy({ namn: "Lag X", pris: 5, inkopspris: 9 })).fel, /Inköpspriset/);
-  assert.match((await lagNy({ namn: "Lag X", minimum: 50, mal: 10 })).fel, /Målet/);
-  assert.match((await lagNy({ namn: "Lag X", pris: "abc" })).fel, /Priset/);
+  assert.equal(r.lag.swish.meddelande, "P 2019 försäljning"); assert.equal(r.lag.maxAntal, 50); assert.equal(r.lag.status, "utkast");
+  assert.match((await starta("P 2019")).fel, /redan en försäljning/);
+  assert.match((await starta("")).fel, /namn/);
+  const spara = (falt) => lagAdmin("p-2019", r.key, "lagSpara", { falt });
+  assert.match((await spara({ swishNummer: "12345" })).fel, /Swish/);
+  assert.match((await spara({ pris: 5, inkopspris: 9 })).fel, /Inköpspriset/);
+  assert.match((await spara({ minimum: 50, mal: 10 })).fel, /Målet/);
+  assert.match((await spara({ pris: "abc" })).fel, /Priset/);
 });
 
 test("både privata Swish-nummer och Swish Handel-nummer godtas, och formateras lika", async () => {
-  await lagNy({ namn: "Lag A", swishNummer: "0701234567" });
-  await lagNy({ namn: "Lag B", swishNummer: "1234567890" });
-  const l = (await lista()).lag;
+  const a = await lagNy({ namn: "Lag A", status: "utkast" }), b = await lagNy({ namn: "Lag B", status: "utkast" });
+  await lagAdmin("lag-a", a.key, "lagSpara", { falt: { swishNummer: "0701234567" } });
+  await lagAdmin("lag-b", b.key, "lagSpara", { falt: { swishNummer: "1234567890" } });
+  const l = (await klubb("lagLista")).lag;
   assert.equal(l.find((x) => x.slug === "lag-a").swish.nummer, "070 123 45 67");
   assert.equal(l.find((x) => x.slug === "lag-b").swish.nummer, "123 456 78 90");
 });
@@ -85,11 +87,14 @@ test("text som börjar med formeltecken rensas innan den sparas", async () => {
   assert.equal(l.produkt.namn, "IMPORTXML(\"x\")"); assert.equal(l.produkt.detalj, "cmd"); assert.equal(l.intro, "SUM(1+1)"); assert.equal(l.belonning, "2+3");
 });
 
-test("bara klubbens administratör kan lägga till lag", async () => {
+test("ingen kan lägga till lag eller ändra en försäljning via klubbens vy: lagföräldern startar själv", async () => {
   const a = await lagNy({ namn: "Lag A" });
-  assert.ok(!(await lagAdmin("lag-a", a.key, "lagNy", { data: lagData({ namn: "Lag B" }) })).ok);
-  assert.ok(!(await m.admin(KL, "*", "", "lagNy", { data: lagData({ namn: "Lag B" }) })).ok);   // varken nyckel eller inloggning
-  assert.equal((await lista()).lag.length, 1);
+  for (const op of ["lagNy", "lagUppdatera"]) {
+    assert.equal((await klubb(op, { data: lagData({ namn: "Lag B" }), slug: "lag-a", falt: { pris: 1 } })).fel, "Okänd åtgärd.", op + " som klubb");
+    assert.equal((await lagAdmin("lag-a", a.key, op, { data: lagData({ namn: "Lag B" }), slug: "lag-a", falt: { pris: 1 } })).fel, "Okänd åtgärd.", op + " som lag");
+  }
+  assert.match((await klubb("lagSpara", { falt: { pris: 1 } }, "lag-a")).fel, /lagföräldern/);
+  assert.equal((await lista()).lag.length, 1); assert.equal((await lista()).lag[0].pris, 30);
 });
 
 /* ---------- Beställning ---------- */
@@ -207,22 +212,29 @@ test("lager: 30 beställningar samtidigt på större antal släpper aldrig igeno
   assert.equal(svar.filter((s) => s.ok).length, (await m.rader("bestallning")).length);
 });
 
-test("lager syns i listan och översikten, och bara laget (som utkast) eller klubben får ändra det", async () => {
+test("lager syns i listan och översikten, och bara laget får ändra det, som utkast", async () => {
   const a = await lagNy({ namn: "Lag A", lager: 5, minimum: 0, status: "utkast" });
   await lagAdmin("lag-a", a.key, "lagSpara", { falt: { lager: 8 } });
   assert.equal((await lagAdmin("lag-a", a.key, "oversikt")).lag.lager, 8);
-  await klubb("lagUppdatera", { slug: "lag-a", falt: { status: "pagar" } });
+  await lagAdmin("lag-a", a.key, "skickaGodkannande", { bekraftat: true });
+  await klubb("godkann", { slug: "lag-a" });
   assert.ok(!(await lagAdmin("lag-a", a.key, "lagSpara", { falt: { lager: 100 } })).ok, "låst efter godkännande");
   await bestall("lag-a", { antal: 2, mobil: mobil(1) });
   const ov = (await lagAdmin("lag-a", a.key, "oversikt")).oversikt;
   assert.equal(ov.kvarILager, 6); assert.equal((await lista()).lag[0].lager, 8);
-  assert.ok((await klubb("lagUppdatera", { slug: "lag-a", falt: { lager: 20 } })).ok, "klubben får ändra");
+  assert.ok(!(await klubb("lagSpara", { falt: { lager: 20 } }, "lag-a")).ok, "klubben ändrar inte");
 });
 
 test("lager: med ett lager behövs inget minimum, bara ett mål", async () => {
-  assert.ok((await lagNy({ namn: "Lag A", lager: 50, minimum: 0, mal: 50 })).ok);
-  assert.match((await lagNy({ namn: "Lag B", lager: 0, minimum: 0, mal: 50 })).fel, /Minimum och mål/);
-  assert.match((await lagNy({ namn: "Lag C", lager: 50, minimum: 0, mal: "" })).fel, /Målet saknas/);
+  const fyllt = { produkt: "Lotter", enhetEn: "lott", enhet: "lotter", swishNummer: "070 123 45 67", mottagare: "Laget", pris: 50, inkopspris: 40 };
+  const skicka = async (namn, falt) => {
+    const r = await lagNy({ namn, status: "utkast", minimum: "", mal: "", lager: "" });
+    const s = await lagAdmin(r.slug, r.key, "lagSpara", { falt: { ...fyllt, ...falt } });
+    return s.ok ? lagAdmin(r.slug, r.key, "skickaGodkannande", { bekraftat: true }) : s;
+  };
+  assert.ok((await skicka("Lag A", { lager: 50, minimum: 0, mal: 50 })).ok);
+  assert.match((await skicka("Lag B", { lager: 0, minimum: 0, mal: 50 })).fel, /Minimum och mål/);
+  assert.match((await skicka("Lag C", { lager: 50, minimum: 0 })).fel, /Mål/);
 });
 
 /* ---------- Adminvyn: lagföräldern ---------- */
@@ -366,15 +378,53 @@ async function tillGranskning(namn = "Lag A") {
   return { a, slug };
 }
 
-test("klubben godkänner: bara administratören, bara från väntar-på-godkännande, och först då går det att beställa", async () => {
+test("klubben godkänner: bara administratören, bara från väntar-på-godkännande, och då öppnar försäljningen", async () => {
   const { a, slug } = await tillGranskning();
-  assert.ok(!(await lagAdmin(slug, a.key, "godkann", { slug, till: "pagar" })).ok, "lagföräldern kan inte godkänna");
+  assert.ok(!(await lagAdmin(slug, a.key, "godkann", { slug })).ok, "lagföräldern kan inte godkänna");
+  assert.ok(!(await lagAdmin(slug, a.key, "oppna")).ok, "lagföräldern kan inte öppna det som inte är godkänt");
   assert.ok(!(await bestall(slug)).ok);
-  assert.match((await klubb("godkann", { slug, till: "kanske" })).fel, /nu eller senare/);
-  assert.equal((await klubb("godkann", { slug, till: "snart" })).lag.status, "snart");
-  assert.match((await klubb("godkann", { slug, till: "pagar" })).fel, /väntar inte/);
-  await klubb("lagUppdatera", { slug, falt: { status: "pagar" } });
+  const r = await klubb("godkann", { slug });
+  assert.equal(r.lag.status, "pagar");
+  assert.match((await klubb("godkann", { slug })).fel, /väntar inte/);
   assert.ok((await bestall(slug)).ok);
+});
+
+test("lagföräldern avslutar och öppnar igen, och en ändring efter godkännandet granskas av klubben igen", async () => {
+  const { a, slug } = await tillGranskning();
+  await klubb("godkann", { slug });
+  assert.ok((await bestall(slug, { mobil: mobil(1) })).ok);
+  assert.equal((await lagAdmin(slug, a.key, "avsluta")).lag.status, "avslutad");
+  assert.ok(!(await bestall(slug, { mobil: mobil(2) })).ok, "avslutad: ingen kan beställa");
+  assert.match((await lagAdmin(slug, a.key, "avsluta")).fel, /inte öppen/);
+  assert.equal((await lagAdmin(slug, a.key, "oppna")).lag.status, "pagar");
+  assert.match((await lagAdmin(slug, a.key, "oppna")).fel, /redan öppen/);
+  assert.ok(!(await klubb("avsluta", null, slug)).ok && !(await klubb("oppna", null, slug)).ok && !(await klubb("andra", null, slug)).ok, "klubben öppnar, avslutar och ändrar inte");
+  // ändra: försäljningen stängs, blir ett utkast, och måste godkännas igen innan den kan öppnas
+  assert.equal((await lagAdmin(slug, a.key, "andra")).lag.status, "utkast");
+  assert.ok(!(await bestall(slug, { mobil: mobil(3) })).ok);
+  assert.ok(!(await lagAdmin(slug, a.key, "oppna")).ok, "ett utkast kan inte öppnas");
+  assert.equal((await lagAdmin(slug, a.key, "lagSpara", { falt: { pris: 35 } })).lag.pris, 35);
+  assert.equal((await lagAdmin(slug, a.key, "skickaGodkannande", { bekraftat: true })).lag.status, "granskas");
+  assert.ok(!(await lagAdmin(slug, a.key, "oppna")).ok, "väntar på granskning: kan inte öppnas");
+  await klubb("godkann", { slug });
+  assert.equal((await bestall(slug, { mobil: mobil(4), antal: 1 })).belopp, 35);
+  assert.equal((await lagAdmin(slug, a.key, "lista")).ordrar.length, 2, "beställningarna finns kvar genom ändringen");
+});
+
+test("klubben kan stoppa en försäljning i nödfall: den går tillbaka till lagföräldern och måste godkännas igen", async () => {
+  const { a, slug } = await tillGranskning();
+  assert.match((await klubb("stoppa", { slug, kommentar: "x" })).fel, /inte godkänd/);
+  await klubb("godkann", { slug });
+  assert.match((await klubb("stoppa", { slug, kommentar: "  " })).fel, /Skriv varför/);
+  assert.ok(!(await lagAdmin(slug, a.key, "stoppa", { slug, kommentar: "x" })).ok, "lagföräldern kan inte stoppa via klubbens åtgärd");
+  const r = await klubb("stoppa", { slug, kommentar: "Fel Swish-nummer" });
+  assert.equal(r.lag.status, "utkast"); assert.match(r.lag.kommentar, /Klubben stoppade försäljningen: Fel Swish-nummer/);
+  assert.ok(!(await bestall(slug)).ok);
+  assert.ok(!(await lagAdmin(slug, a.key, "oppna")).ok, "lagföräldern kan inte öppna igen själv");
+  assert.ok(!JSON.stringify(await lista()).includes("Fel Swish"), "kommentaren är inte publik");
+  // även en avslutad försäljning kan stoppas, så att den inte öppnas igen
+  await lagAdmin(slug, a.key, "skickaGodkannande", { bekraftat: true }); await klubb("godkann", { slug }); await lagAdmin(slug, a.key, "avsluta");
+  assert.equal((await klubb("stoppa", { slug, kommentar: "Stopp" })).lag.status, "utkast");
 });
 
 test("klubben kan skicka tillbaka med en kommentar som bara laget ser", async () => {
@@ -387,18 +437,15 @@ test("klubben kan skicka tillbaka med en kommentar som bara laget ser", async ()
   assert.equal((await lagAdmin(slug, a.key, "skickaGodkannande", { bekraftat: true })).lag.kommentar, "", "kommentaren rensas när den skickas igen");
 });
 
-test("godkännande kontrollerar uppgifterna en gång till, och klubben kan inte öppna en försäljning utan Swish-nummer", async () => {
+test("godkännande kontrollerar uppgifterna en gång till: utan Swish-nummer kan klubben inte godkänna", async () => {
   const { slug } = await tillGranskning();
-  await klubb("lagUppdatera", { slug, falt: { swishNummer: "" } });
-  assert.match((await klubb("godkann", { slug, till: "pagar" })).fel, /Swish-nummer/);
-  assert.match((await klubb("lagUppdatera", { slug, falt: { status: "pagar" } })).fel, /Swish-nummer/);
-  const u = await lagNy({ namn: "Lag U", status: "utkast", swishNummer: "", mottagare: "", pris: "", inkopspris: "", minimum: "", mal: "", produkt: "" });
-  assert.match((await klubb("lagUppdatera", { slug: u.slug, falt: { status: "snart" } })).fel, /Fyll i först/);
-  assert.match((await lagNy({ namn: "Lag V", status: "pagar", swishNummer: "" })).fel, /Swish-nummer/);
+  await m.db.prepare("UPDATE lag SET swish_nummer = '' WHERE slug = ?1").bind(slug).run();   // något har hänt med uppgifterna sedan de skickades
+  assert.match((await klubb("godkann", { slug })).fel, /Swish-nummer/);
+  assert.equal((await klubb("lagLista")).lag.find((l) => l.slug === slug).status, "granskas");
 });
 
-test("ett nytt lag kan skapas med bara ett namn, och produkten skrivs in av laget själv", async () => {
-  const r = await klubb("lagNy", { data: { namn: "Lag N" } });
+test("en ny försäljning börjar med bara ett namn, och produkten skrivs in av laget själv", async () => {
+  const r = await starta("Lag N");
   assert.ok(r.ok); assert.equal(r.lag.status, "utkast"); assert.equal(r.lag.produkt.namn, ""); assert.equal(r.lag.pris, 0);
   const s = await lagAdmin("lag-n", r.key, "lagSpara", { falt: { produkt: "x".repeat(100), detalj: "y".repeat(200), enhetEn: "z".repeat(40) } });
   assert.equal(s.lag.produkt.namn.length, 40); assert.equal(s.lag.produkt.detalj.length, 80); assert.equal(s.lag.produkt.enhetEn.length, 15);
@@ -441,17 +488,16 @@ test("klubben kan ta bort ett utkast eller en väntande försäljning, men inte 
   assert.ok(!(await lagAdmin("lag-p", "x".repeat(32), "lagTaBort", { slug: "lag-p" })).ok);
 });
 
-test("ändra lag: bara tillåtna fält, och siffrorna kontrolleras mot de befintliga", async () => {
-  await lagNy({ namn: "Lag A", pris: 30, inkopspris: 10, minimum: 10, mal: 100 });
-  assert.ok((await klubb("lagUppdatera", { slug: "lag-a", falt: { pris: 35 } })).ok);
-  assert.match((await klubb("lagUppdatera", { slug: "lag-a", falt: { inkopspris: 40 } })).fel, /Inköpspriset/);
-  assert.match((await klubb("lagUppdatera", { slug: "lag-a", falt: { mal: 5 } })).fel, /Målet/);
-  const r = await klubb("lagUppdatera", { slug: "lag-a", falt: { nyckel_hash: "x", slug: "annat", id: 99, klubb_id: 2, nasta_order: 500 } });
-  assert.ok(r.ok);
+test("lagförälderns uppsättning: bara tillåtna fält, och siffrorna kontrolleras mot de befintliga", async () => {
+  const a = await lagNy({ namn: "Lag A", status: "utkast", pris: 30, inkopspris: 10, minimum: 10, mal: 100 });
+  const spara = (falt) => lagAdmin("lag-a", a.key, "lagSpara", { falt });
+  assert.ok((await spara({ pris: 35 })).ok);
+  assert.match((await spara({ inkopspris: 40 })).fel, /Inköpspriset/);
+  assert.match((await spara({ mal: 5 })).fel, /Målet/);
+  assert.ok((await spara({ nyckel_hash: "x", slug: "annat", id: 99, klubb_id: 2, nasta_order: 500, status: "pagar", namn: "Lag B" })).ok);
   const rad = (await m.rader("lag"))[0];
   assert.equal(rad.slug, "lag-a"); assert.equal(rad.id, 1); assert.equal(rad.klubb_id, 1); assert.equal(rad.nasta_order, 1); assert.notEqual(rad.nyckel_hash, "x");
-  assert.match((await klubb("lagUppdatera", { slug: "lag-a", falt: { status: "hej" } })).fel, /status/);
-  assert.match((await klubb("lagUppdatera", { slug: "finns-inte", falt: { pris: 1 } })).fel, /Okänt/);
+  assert.equal(rad.status, "utkast"); assert.equal(rad.namn, "Lag A"); assert.equal(rad.pris, 35);
 });
 
 test("ny nyckel: den gamla slutar fungera och nyckeln syns bara i svaret på just det anropet", async () => {

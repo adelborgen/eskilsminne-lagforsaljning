@@ -50,7 +50,7 @@ Skarp drift kräver betalnivån: gratisnivåns dagstak gör att anropen felar en
 - **Begäran:** servern svarar alltid likadant, oavsett om adressen finns, så att ingen kan ta reda på vem som är administratör.
 - **Länken:** 32 slumpade byte. Bara hashen sparas. Gäller i 15 minuter och kan användas en gång. Högst 5 begäranden per timme per adress och per IP-nummer.
 - **Mejlskannrar:** länken i mejlet öppnar en sida med en knapp, och först knappen (POST) använder länken. Då förbrukas den inte av en skanner som bara hämtar adressen.
-- **Sessionen:** slumpad nyckel där bara hashen sparas, 14 dagar, i en cookie som är `HttpOnly`, `Secure` och `SameSite=Lax`. Utloggning raderar den i databasen.
+- **Sessionen:** slumpad nyckel där bara hashen sparas, 30 dagar, i en cookie som är `HttpOnly`, `Secure` och `SameSite=Lax`. Utloggning raderar den i databasen.
 - Alla administratörsåtgärder kontrollerar sessionen, vilken klubb personen hör till och rollen. Det är samma tankesätt som i `Server.gs`, där servern kontrollerar behörigheten och aldrig sidan.
 
 ### Beställning och lager
@@ -77,7 +77,7 @@ Första steget i Fas 1: kontrollera att `wrangler` och Miniflare går att köra 
 
 Samma åtgärder och samma svar som idag, med två tillägg:
 - **klubb** (adressen) följer med i varje anrop.
-- Klubbens administratörsåtgärder (`lagLista`, `lagNy`, `godkann`, `skickaTillbaka` med flera) kräver inloggning som administratör för just den klubben, i stället för superadmin-nyckeln.
+- Klubbens administratörsåtgärder (`lagLista`, `godkann`, `skickaTillbaka`, `stoppa` med flera) kräver inloggning som administratör för just den klubben, i stället för superadmin-nyckeln.
 
 Därför blir ändringarna i `app.js`, `admin.js` och `util.js` små: adressen till servern (`/api/`), klubbens adress från sökvägen, och inloggningen för klubbens administratör.
 
@@ -264,3 +264,16 @@ Fas 1 är byggd (se *Läge efter Fas 1*). Eskilsminne kan gå live när Fas 1 oc
 - **XSS-testet i webbläsare** (`npm run test:xss`) är portat till nya servern. Det körs en gång i slutet av arbetet.
 - **Eskilsminne som första klubb** kräver ett Cloudflare-konto, klubbens skriftliga ok och en administratör i klubben. Det är inte gjort.
 - **Fas 3** (biträdesavtal, radering efter 60 dagar, integritetspolicy) återstår. `wrangler.toml` har inga `[triggers]` än: vaktprovet `test/eu.test.js` förbjuder dem och måste ändras när raderingen läggs till.
+
+## Rollerna efter genomgången med ägaren (17 oktober 2026)
+
+Ägarens beslut: lagföräldern äger försäljningen, och klubbens administratör granskar.
+- **Klubben godkänner, och då öppnar försäljningen** direkt (ingen status *öppnar snart* längre vid godkännandet). Klubben kan också skicka tillbaka med en kommentar.
+- **Lagföräldern öppnar och avslutar** själv, och kan öppna en avslutad försäljning igen. Bara det klubben har godkänt kan öppnas.
+- **Ändringar efter godkännandet granskas igen.** Lagföräldern väljer *Ändra uppgifter*: försäljningen stängs, blir ett utkast, och öppnar först när klubben har godkänt den på nytt. Klubben ändrar aldrig uppgifterna själv (servern avvisar det).
+- **Klubben kan stoppa** en godkänd försäljning i nödfall, med en kommentar som lagföräldern ser. Den blir ett utkast och måste godkännas igen.
+- **Klubben lägger inte till lag.** Under Alla lag finns länken *Starta en försäljning* som klubben delar med lagföräldrarna.
+- Klubbens administratör ser fortsatt alla lags beställningar, med namn och mobilnummer, som idag.
+- **Inloggningen gäller i 30 dagar**, och sidan frågar servern när den laddas, så administratören behöver en ny länk bara på en ny enhet eller efter en månad.
+
+Testerna har attacker för det nya: lagföräldern gör klubbens jobb, klubben ändrar försäljningens uppgifter, och lagföräldern öppnar något som klubben inte har godkänt (utkast, granskas, stoppad, ändrad). `npm test`: 119 tester, alla gröna. Mutationstestet har 45 skydd (kontrollerat att alla ändringar går att göra, inte kört färdigt).

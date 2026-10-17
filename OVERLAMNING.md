@@ -4,7 +4,7 @@ Läs den här filen först när arbetet fortsätter i en ny session. Senast uppd
 
 ## Vad det här är
 
-**Skramlat** (skramlat.se) är en enkel tjänst för lagförsäljning i föreningar och skolor. Föräldrar beställer i mobilen och swishar direkt till laget eller skolan. Pengarna går aldrig via Skramlat. Lagföräldern lägger upp försäljningen, klubben eller skolan godkänner, och lagföräldern bockar av betalt och hämtat.
+**Skramlat** (skramlat.se) är en enkel tjänst för lagförsäljning i föreningar och skolor. Föräldrar beställer i mobilen och swishar direkt till laget eller skolan. Pengarna går aldrig via Skramlat. Lagföräldern lägger upp försäljningen och skickar den till klubben eller skolan, som godkänner (då öppnar den). Lagföräldern avslutar och öppnar igen, bockar av betalt och hämtat, och ändringar efter godkännandet granskas av klubben igen. Se *Rollerna efter genomgången med ägaren* i planen.
 
 - Sidorna är statiska filer. Idag ligger de på GitHub Pages och visar demo.
 - **Servern är byggd för Cloudflare** (en Worker med statiska filer och databasen D1, EU-jurisdiktion), en gemensam server för alla klubbar, så att en klubb kan onboarda sig själv utan Google. Den gamla Apps Script-servern (`Server.gs`) används inte längre och tas bort när Eskilsminne har flyttat. **Inget är uppsatt hos Cloudflare, och ingenting är köpt.**
@@ -13,7 +13,7 @@ Läs den här filen först när arbetet fortsätter i en ny session. Senast uppd
 
 ## Läge
 
-Fas 1 i planen är byggd och testad lokalt, på grenen `fas1-cloudflare-server` (inte sammanfogad med `main`). Se *Läge efter Fas 1* längst ned i planen: vad som är gjort, vad testerna hittade, och vad som bara går att visa hos Cloudflare. De lokala testerna kostar ingenting och körs mot en riktig D1 på datorn.
+Fas 1 i planen är byggd, testad lokalt och ligger på `main` (publiceras hos Cloudflare på skramlat.adelborg.workers.dev). Rollerna ändrades 17 oktober 2026 efter en genomgång med ägaren. Se *Läge efter Fas 1* längst ned i planen: vad som är gjort, vad testerna hittade, och vad som bara går att visa hos Cloudflare. De lokala testerna kostar ingenting och körs mot en riktig D1 på datorn.
 
 ## Live på skramlat.se
 

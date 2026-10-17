@@ -25,7 +25,7 @@ beforeEach(async () => { await m.nollstall(); await m.skapaKlubb(KL, "Testklubbe
 test("inget svar från servern får cachas: alla anrop ger Cache-Control: no-store", async () => {
   const li = await m.loggaIn(KL, ADMIN_EPOST);
   const H = m.somAdmin(li.kaka);
-  const a = await m.admin(KL, "*", "", "lagNy", { data: lagData({ namn: "Lag A" }) }, H);
+  const a = await m.nyttLag(KL, lagData({ namn: "Lag A" }));
   const best = { klubb: KL, lag: "lag-a", barn: "Emil", mobil: "070 123 45 67", antal: 1, samtycke: true, website: "", t: 5000 };
   const anrop = [
     ["GET", "/api?action=lag&klubb=" + KL], ["GET", "/api?action=lag&klubb=finns-inte"], ["GET", "/api?action=version"], ["GET", "/api?action=status&klubb=" + KL + "&lag=lag-a"],
@@ -144,7 +144,7 @@ test("uppgifter om personer finns bara i bestallning (barn, mobil) och klubb_adm
   const PERSONUPPGIFTER = ["Hemligt Barn", "Hemliga Syskon", "0709998877", "070 999 88 77", "0709998866", "+46709998866", "tyst@hemlig.example", ADMIN_EPOST, "testklubben.example"];
   const li = await m.loggaIn(KL, ADMIN_EPOST);
   const H = m.somAdmin(li.kaka);
-  const a = await m.admin(KL, "*", "", "lagNy", { data: lagData({ namn: "Lag A" }) }, H);
+  const a = await m.nyttLag(KL, lagData({ namn: "Lag A" }));
   await m.post({ klubb: KL, lag: "lag-a", barn: "Hemligt Barn", mobil: "070 999 88 77", antal: 2, samtycke: true, website: "", t: 5000, kod: "kod-0123456789" });
   await m.post({ klubb: KL, lag: "lag-a", barn: "Hemliga Syskon", mobil: "+46 70 999 88 66", antal: 1, samtycke: true, website: "", t: 5000 });
   await m.admin(KL, "lag-a", a.key, "lista"); await m.admin(KL, "lag-a", a.key, "satt", { id: "0001", varde: "JA" });
@@ -153,7 +153,7 @@ test("uppgifter om personer finns bara i bestallning (barn, mobil) och klubb_adm
   await m.post({ action: "starta", klubb: KL, namn: "Lag B", t: 5000, website: "" });
   await m.post({ action: "login", op: "begar", klubb: KL, epost: "tyst@hemlig.example" });
   for (let i = 0; i < 12; i++) await m.admin(KL, "lag-a", "f".repeat(32), "lista");
-  await m.admin(KL, "*", "", "lagUppdatera", { slug: "lag-a", falt: { intro: "text" } }, H); await m.admin(KL, "*", "", "nyNyckel", { slug: "lag-a" }, H);
+  await m.admin(KL, "*", "", "stoppa", { slug: "lag-a", kommentar: "text" }, H); await m.admin(KL, "*", "", "nyNyckel", { slug: "lag-a" }, H);
   const epost = [ADMIN_EPOST, "testklubben.example"];   // adressen och dess domän
   const inneHar = { bestallning: ["Hemligt Barn", "Hemliga Syskon", "0709998877", "0709998866"], klubb_admin: epost, inloggningslank: epost, session: epost };
   for (const t of ["klubb", "lag", "logg", "sparr", "bestallning", "klubb_admin", "inloggningslank", "session"]) {

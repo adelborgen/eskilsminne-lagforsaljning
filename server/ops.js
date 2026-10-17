@@ -1,11 +1,12 @@
 /* Adminvyn: det lagföräldern (med lagets nyckel) och klubbens administratör (inloggad med e-postlänk) kan göra.
-   Lagets åtgärder gäller bara det egna laget. Klubbens åtgärder gäller alla lag i klubben.
+   Lagföräldern äger försäljningen: fyller i den, skickar den till klubben, öppnar och avslutar den, och ändrar den (då granskas den igen).
+   Klubbens administratör granskar: godkänner (då öppnar försäljningen), skickar tillbaka, stoppar i nödfall, ger ny nyckel och tar bort
+   skräputkast. Båda kan se och hantera beställningarna. Klubben ändrar aldrig försäljningens uppgifter och lägger inte till lag.
    Där det går sker ändringen och loggraden i samma körning, och loggraden skrivs bara om ändringen träffade en rad. */
 import { hittaKlubb, hittaLag, lasLag, lasOrdrar, orderFranRad, adminLag, utOrder, loggOmAndrat, loggUttryck } from "./data.js";
 import { autentisera } from "./auth.js";
-import { skapaLag } from "./bestall.js";
 import { nyNyckelText, hashNyckel } from "./krypto.js";
-import { oversikt, rensaLag, kanInteOppnas, saknas, kontrolleraSiffror, LAG_EGNA_FALT, LAG_KOLUMN } from "./regler.js";
+import { oversikt, rensaLag, saknas, kontrolleraSiffror, LAG_EGNA_FALT, LAG_KOLUMN } from "./regler.js";
 
 const har = (o, k) => Object.prototype.hasOwnProperty.call(o, k);
 const EJ_INLOGGAD = { ok: false, fel: "Fel lag eller nyckel." };
@@ -17,14 +18,18 @@ export async function hanteraAdmin(k, d) {
   const a = await autentisera(k, klubb, d.lag, d.key);
   if (a.fel) return { ok: false, fel: a.fel };
   const op = String(d.op || "");
-  const lagOps = { oversikt: opOversikt, lista: opLista, satt: opSatt, hamtad: opHamtad, hamtadAlla: opHamtadAlla,
-    lagSpara: opLagSpara, skickaGodkannande: opSkickaGodkannande, dragTillbaka: opDragTillbaka, taBort: opTaBort };
-  const superOps = { lagLista: opLagLista, lagNy: opLagNy, lagUppdatera: opLagUppdatera, nyNyckel: opNyNyckel,
-    godkann: opGodkann, skickaTillbaka: opSkickaTillbaka, lagTaBort: opLagTaBort };
+  const delade = { oversikt: opOversikt, lista: opLista, satt: opSatt, hamtad: opHamtad, hamtadAlla: opHamtadAlla, taBort: opTaBort };
+  const lagOps = { lagSpara: opLagSpara, skickaGodkannande: opSkickaGodkannande, dragTillbaka: opDragTillbaka,
+    oppna: opOppna, avsluta: opAvsluta, andra: opAndra };
+  const superOps = { lagLista: opLagLista, godkann: opGodkann, skickaTillbaka: opSkickaTillbaka, stoppa: opStoppa,
+    nyNyckel: opNyNyckel, lagTaBort: opLagTaBort };
   let svar;
-  if (har(lagOps, op)) {
+  if (har(delade, op)) {
     if (!a.lag) return { ok: false, fel: "Okänt lag." };
-    svar = await lagOps[op](k, klubb, a.lag, d, a.roll);
+    svar = await delade[op](k, klubb, a.lag, d);
+  } else if (har(lagOps, op)) {
+    if (a.roll !== "lag") return { ok: false, fel: "Det här gör lagföräldern. Klubben ändrar inte försäljningens uppgifter." };
+    svar = await lagOps[op](k, klubb, a.lag, d);
   } else if (har(superOps, op)) {
     if (a.roll !== "super") return { ok: false, fel: "Bara klubbens administratör får göra det här." };
     svar = await superOps[op](k, klubb, d);
@@ -115,16 +120,16 @@ async function opHamtadAlla(k, klubb, lag) {
 
 /* ---------- Skriva försäljningens uppgifter ---------- */
 // Skriver bara kända fält: nyckel, adress och räknare kan aldrig ändras den här vägen. Kolumnnamnen kommer från LAG_KOLUMN, aldrig från anropet.
-// Är bara utkast satt ändras ingenting om försäljningen inte är ett utkast (kontrollen är en del av uttrycket, så den håller även om
-// något ändrats sedan lagret lästes). Ger antalet ändrade rader.
-async function skrivFalt(k, klubb, lag, r, bara_utkast) {
+// Ingenting ändras om försäljningen inte är ett utkast (kontrollen är en del av uttrycket, så den håller även om något ändrats sedan
+// laget lästes). Ger antalet ändrade rader.
+async function skrivFalt(k, klubb, lag, r) {
   const falt = Object.keys(r).filter((f) => har(LAG_KOLUMN, f));
   if (!falt.length) return { andrade: falt, rader: 1 };
-  const satt = falt.map((f, i) => LAG_KOLUMN[f] + " = ?" + (i + 3)).join(", ");
+  const satt = falt.map((f, i) => LAG_KOLUMN[f] + " = ?" + (i + 2)).join(", ");
   const varden = falt.map((f) => r[f]);
   const svar = await k.db.batch([
-    k.db.prepare("UPDATE lag SET " + satt + " WHERE id = ?1 AND (?2 = 0 OR status = 'utkast')").bind(lag.id, bara_utkast ? 1 : 0, ...varden),
-    loggOmAndrat(k, klubb.id, lag.slug, (bara_utkast ? "försäljning sparad: " : "lag ändrat: ") + falt.join(", "), "", "")
+    k.db.prepare("UPDATE lag SET " + satt + " WHERE id = ?1 AND status = 'utkast'").bind(lag.id, ...varden),
+    loggOmAndrat(k, klubb.id, lag.slug, "försäljning sparad: " + falt.join(", "), "", "")
   ]);
   return { andrade: falt, rader: svar[0].meta.changes };
 }
@@ -136,19 +141,19 @@ function kontrolleraNya(lag, r) {
 }
 
 // Lagförälderns egen uppsättning. Bara försäljningens uppgifter (inte namn, status eller adress), och bara medan den är ett utkast.
-// Klubbens administratör får ändra även efter godkännande.
-async function opLagSpara(k, klubb, lag, d, roll) {
+// Efter godkännandet ändrar lagföräldern genom att välja Ändra uppgifter (opAndra), och då granskas försäljningen igen.
+async function opLagSpara(k, klubb, lag, d) {
   const inn = d.falt || {}, falt = {};
   LAG_EGNA_FALT.forEach((f) => { if (inn[f] !== undefined) falt[f] = inn[f]; });
   const r = rensaLag(falt, false);
   if (r.fel) return { ok: false, fel: r.fel };
   const l = await hittaLag(k, klubb.id, lag.slug);   // läs om: det kan ha ändrats
   if (!l) return { ok: false, fel: "Okänt lag." };
-  const last = { ok: false, fel: "Försäljningen är låst medan klubben granskar eller efter godkännandet. Be klubbens administratör ändra." };
-  if (roll !== "super" && l.status !== "utkast") return last;
+  const last = { ok: false, fel: "Försäljningen är låst medan klubben granskar eller efter godkännandet. Välj Ändra uppgifter för att ändra den." };
+  if (l.status !== "utkast") return last;
   const fel = kontrolleraNya(l, r);
   if (fel) return { ok: false, fel };
-  const s = await skrivFalt(k, klubb, l, r, roll !== "super");
+  const s = await skrivFalt(k, klubb, l, r);
   if (!s.rader) return last;
   return { ok: true, lag: adminLag(await hittaLag(k, klubb.id, l.slug)) };
 }
@@ -171,7 +176,7 @@ async function opSkickaGodkannande(k, klubb, lag, d) {
   if (d.bekraftat !== true) return { ok: false, fel: "Bekräfta de två punkterna först." };
   const fel = saknas(l);
   if (fel) return { ok: false, fel };
-  if (!await sattStatus(k, klubb, l, "utkast", "granskas", "", "skickad för godkännande", "")) return { ok: false, fel: "Försäljningen ändrades just nu. Försök igen." };
+  if (!await sattStatus(k, klubb, l, "utkast", "granskas", "", "skickad för godkännande", "")) return andrades();
   return { ok: true, lag: adminLag(await hittaLag(k, klubb.id, l.slug)) };
 }
 
@@ -179,7 +184,40 @@ async function opDragTillbaka(k, klubb, lag) {
   const l = await hittaLag(k, klubb.id, lag.slug);
   if (!l) return { ok: false, fel: "Okänt lag." };
   if (l.status !== "granskas") return { ok: false, fel: "Försäljningen väntar inte på godkännande." };
-  if (!await sattStatus(k, klubb, l, "granskas", "utkast", "", "tillbakadragen till utkast", "")) return { ok: false, fel: "Försäljningen ändrades just nu. Försök igen." };
+  if (!await sattStatus(k, klubb, l, "granskas", "utkast", "", "tillbakadragen till utkast", "")) return andrades();
+  return { ok: true, lag: adminLag(await hittaLag(k, klubb.id, l.slug)) };
+}
+
+/* ---------- Lagföräldern öppnar, avslutar och ändrar en godkänd försäljning ---------- */
+const andrades = () => ({ ok: false, fel: "Försäljningen ändrades just nu. Försök igen." });   // ett nytt svar varje gång (roll läggs till på svaret)
+
+// Öppnar en godkänd försäljning, eller öppnar en avslutad igen. Bara det klubben har godkänt kan öppnas: ett utkast eller en försäljning
+// som väntar på granskning (till exempel efter att klubben stoppat den) går inte.
+async function opOppna(k, klubb, lag) {
+  const l = await hittaLag(k, klubb.id, lag.slug);
+  if (!l) return { ok: false, fel: "Okänt lag." };
+  if (l.status !== "snart" && l.status !== "avslutad") return { ok: false, fel: l.status === "pagar" ? "Försäljningen är redan öppen." : "Försäljningen måste godkännas av klubben innan den kan öppnas." };
+  const fel = saknas(l);
+  if (fel) return { ok: false, fel };
+  if (!await sattStatus(k, klubb, l, l.status, "pagar", "", "öppnad av lagföräldern", "")) return andrades();
+  return { ok: true, lag: adminLag(await hittaLag(k, klubb.id, l.slug)) };
+}
+
+async function opAvsluta(k, klubb, lag) {
+  const l = await hittaLag(k, klubb.id, lag.slug);
+  if (!l) return { ok: false, fel: "Okänt lag." };
+  if (l.status !== "pagar" && l.status !== "snart") return { ok: false, fel: "Försäljningen är inte öppen." };
+  if (!await sattStatus(k, klubb, l, l.status, "avslutad", "", "avslutad av lagföräldern", "")) return andrades();
+  return { ok: true, lag: adminLag(await hittaLag(k, klubb.id, l.slug)) };
+}
+
+// Ändra uppgifter efter godkännandet: försäljningen stängs och blir ett utkast igen, som lagföräldern ändrar och skickar till klubben.
+// Beställningarna finns kvar.
+async function opAndra(k, klubb, lag) {
+  const l = await hittaLag(k, klubb.id, lag.slug);
+  if (!l) return { ok: false, fel: "Okänt lag." };
+  if (["snart", "pagar", "avslutad"].indexOf(l.status) < 0) return { ok: false, fel: "Försäljningen går redan att ändra." };
+  if (!await sattStatus(k, klubb, l, l.status, "utkast", "", "öppnad för ändring av lagföräldern", l.status)) return andrades();
   return { ok: true, lag: adminLag(await hittaLag(k, klubb.id, l.slug)) };
 }
 
@@ -195,15 +233,6 @@ async function opLagLista(k, klubb) {
     ut.oversikt = { bestallt: ov.bestallt, betalt: ov.betalt, betaltKr: ov.betaltKr, obetalt: ov.obetalt, hamtat: ov.hamtat, attHamta: ov.attHamta };
     return ut;
   }) };
-}
-
-async function opLagNy(k, klubb, d) {
-  const r = rensaLag(d.data || {}, true);
-  if (r.fel) return { ok: false, fel: r.fel };
-  const oppen = kanInteOppnas({ produkt: { namn: r.produkt, enhetEn: r.enhetEn, enhet: r.enhet }, swish: { nummer: r.swishNummer, namnPaKonto: r.mottagare },
-    pris: r.pris, inkopspris: r.inkopspris, minimum: r.minimum, mal: r.mal, lager: r.lager }, r.status);
-  if (oppen) return { ok: false, fel: oppen };
-  return await skapaLag(k, klubb, r, "klubb");
 }
 
 // Klubben tar bort ett lag som aldrig har öppnat: ett felaktigt eller dubbelt utkast, eller ett som väntar på godkännande.
@@ -222,34 +251,15 @@ async function opLagTaBort(k, klubb, d) {
   return { ok: true, borttaget: lag.slug };
 }
 
-async function opLagUppdatera(k, klubb, d) {
-  const r = rensaLag(d.falt || {}, false);
-  if (r.fel) return { ok: false, fel: r.fel };
-  const lag = await hittaLag(k, klubb.id, d.slug);
-  if (!lag) return { ok: false, fel: "Okänt lag." };
-  const fel = kontrolleraNya(lag, r);
-  if (fel) return { ok: false, fel };
-  // Hur laget ser ut efter ändringen: får det öppnas (snart eller pagar) måste allt föräldrarna behöver vara ifyllt
-  const vp = (f, nuvarande) => r[f] !== undefined ? r[f] : nuvarande;
-  const efter = { produkt: { namn: vp("produkt", lag.produkt.namn), enhetEn: vp("enhetEn", lag.produkt.enhetEn), enhet: vp("enhet", lag.produkt.enhet) },
-    swish: { nummer: vp("swishNummer", lag.swish.nummer), namnPaKonto: vp("mottagare", lag.swish.namnPaKonto) },
-    pris: vp("pris", lag.pris), inkopspris: vp("inkopspris", lag.inkopspris), minimum: vp("minimum", lag.minimum), mal: vp("mal", lag.mal), lager: vp("lager", lag.lager) };
-  const oppen = kanInteOppnas(efter, r.status !== undefined ? r.status : lag.status);
-  if (oppen) return { ok: false, fel: oppen };
-  await skrivFalt(k, klubb, lag, r, false);
-  return { ok: true, lag: adminLag(await hittaLag(k, klubb.id, lag.slug)) };
-}
-
-// Klubben godkänner: öppnar direkt (pagar) eller senare (snart). Kontrollerar uppgifterna en gång till eftersom de kan ha ändrats.
+// Klubben godkänner, och då öppnar försäljningen: den syns för föräldrarna och går att beställa från. Lagföräldern kan sedan avsluta den
+// och öppna den igen. Uppgifterna kontrolleras en gång till.
 async function opGodkann(k, klubb, d) {
-  const till = String(d.till || "");
-  if (["snart", "pagar"].indexOf(till) < 0) return { ok: false, fel: "Välj om försäljningen ska öppnas nu eller senare." };
   const l = await hittaLag(k, klubb.id, d.slug);
   if (!l) return { ok: false, fel: "Okänt lag." };
   if (l.status !== "granskas") return { ok: false, fel: "Försäljningen väntar inte på godkännande." };
   const fel = saknas(l);
   if (fel) return { ok: false, fel };
-  if (!await sattStatus(k, klubb, l, "granskas", till, "", "godkänd av klubben", till)) return { ok: false, fel: "Försäljningen ändrades just nu. Försök igen." };
+  if (!await sattStatus(k, klubb, l, "granskas", "pagar", "", "godkänd av klubben", "pagar")) return andrades();
   return { ok: true, lag: adminLag(await hittaLag(k, klubb.id, l.slug)) };
 }
 
@@ -260,7 +270,19 @@ async function opSkickaTillbaka(k, klubb, d) {
   const l = await hittaLag(k, klubb.id, d.slug);
   if (!l) return { ok: false, fel: "Okänt lag." };
   if (l.status !== "granskas") return { ok: false, fel: "Försäljningen väntar inte på godkännande." };
-  if (!await sattStatus(k, klubb, l, "granskas", "utkast", kommentar, "skickad tillbaka till laget", kommentar)) return { ok: false, fel: "Försäljningen ändrades just nu. Försök igen." };
+  if (!await sattStatus(k, klubb, l, "granskas", "utkast", kommentar, "skickad tillbaka till laget", kommentar)) return andrades();
+  return { ok: true, lag: adminLag(await hittaLag(k, klubb.id, l.slug)) };
+}
+
+// Klubben stoppar en godkänd försäljning i nödfall, till exempel om Swish-numret är fel. Den blir ett utkast igen med klubbens kommentar,
+// syns inte för föräldrarna och kan inte öppnas förrän lagföräldern har rättat den och klubben har godkänt den igen. Beställningarna finns kvar.
+async function opStoppa(k, klubb, d) {
+  const kommentar = String(d.kommentar === undefined || d.kommentar === null ? "" : d.kommentar).trim().replace(/^[=+\-@\s]+/, "").slice(0, 300);
+  if (!kommentar) return { ok: false, fel: "Skriv varför försäljningen stoppas. Lagföräldern ser det." };
+  const l = await hittaLag(k, klubb.id, d.slug);
+  if (!l) return { ok: false, fel: "Okänt lag." };
+  if (["snart", "pagar", "avslutad"].indexOf(l.status) < 0) return { ok: false, fel: "Försäljningen är inte godkänd, så det finns inget att stoppa." };
+  if (!await sattStatus(k, klubb, l, l.status, "utkast", "Klubben stoppade försäljningen: " + kommentar, "stoppad av klubben", kommentar)) return andrades();
   return { ok: true, lag: adminLag(await hittaLag(k, klubb.id, l.slug)) };
 }
 
