@@ -78,7 +78,7 @@ Inför Sally Bauerskolorna, andra kunden:
 - **Lagbrickan:** P över 2019 för lag, 6B eller ÅK över 9 för klasser.
 - **Swish per kund:** varje lag eget nummer (Eskilsminne) eller ett låst nummer för alla (Sally Bauer). Kunden bestämmer.
 - **Sally Bauer:** skolans administratör bockar av betalningar och behöver en samlad lista över obetalda i alla klasser. Färger marinblå `#1d345f` och vit. Loggan godkänd att använda. Skolor kräver ofta organisationsnummer för att få godkänna en leverantör.
-- **Prismodell:** Gratis (1–3 försäljningar samtidigt), Bas (10, egna färger), Plus (20, support). Pris per år. Eskilsminne och Sally Bauer är kundcase: gratis till och med våren 2028.
+- **Prismodell:** Gratis (1 försäljning åt gången), Bas (3 samtidigt, egna färger), Plus (upp till 10, support; fler efter kontakt). Pris per år. Eskilsminne och Sally Bauer är kundcase: gratis till och med våren 2028.
 - **Villkor:** kunden ansvarar för att försäljningen följer reglerna. Skramlat är verktyget.
 
 ## Nästa steg, i ordning
