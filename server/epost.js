@@ -1,8 +1,8 @@
 /* Skickar e-post. Det här är den enda filen som känner till e-postleverantören, så att den går att byta.
 
-   Nu: Cloudflare Email Service, via bindningen EMAIL (se wrangler.toml). Fältnamnen (to, from.email, from.name, subject, text)
-   är hämtade från en tredjepartsbeskrivning av den nya tjänsten, som är i beta. KONTROLLERA mot Cloudflares egen dokumentation
-   innan skarp drift, och att domänen är påslagen för utskick (npx wrangler email sending enable skramlat.se).
+   Nu: Cloudflares bindning send_email (EMAIL i wrangler.toml). Fältnamnen (to, from.email, from.name, subject, text) fungerar hos
+   riktiga Cloudflare: provat 17 oktober 2026 med ett inloggningsmejl till en verifierad mottagare i Email Routing (gratisnivån).
+   Till andra adresser krävs Workers Paid och Cloudflare Email Service (npx wrangler email sending enable skramlat.se).
 
    Mejlen innehåller bara administratörens egen adress och en inloggningslänk, aldrig barnens uppgifter. */
 
