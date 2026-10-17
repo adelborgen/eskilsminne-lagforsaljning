@@ -7,7 +7,7 @@
 -- Allt som sparas om personer (barnets förnamn, mobilnummer, e-postadresser) ligger i den här databasen och ingen annanstans.
 -- Se PLAN-gemensam-server.md, avsnittet "Lagring bara i EU".
 
-CREATE TABLE klubb (
+CREATE TABLE IF NOT EXISTS klubb (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   slug TEXT NOT NULL UNIQUE,
   namn TEXT NOT NULL,
@@ -19,16 +19,16 @@ CREATE TABLE klubb (
 );
 
 -- Klubbens administratörer. E-postadressen sparas med små bokstäver.
-CREATE TABLE klubb_admin (
+CREATE TABLE IF NOT EXISTS klubb_admin (
   klubb_id INTEGER NOT NULL REFERENCES klubb (id) ON DELETE CASCADE,
   epost TEXT NOT NULL,
   skapad TEXT NOT NULL,
   PRIMARY KEY (klubb_id, epost)
 );
-CREATE INDEX klubb_admin_epost ON klubb_admin (epost);
+CREATE INDEX IF NOT EXISTS klubb_admin_epost ON klubb_admin (epost);
 
 -- Ett lag (eller en klass) och dess försäljning. En försäljning med en produkt per post.
-CREATE TABLE lag (
+CREATE TABLE IF NOT EXISTS lag (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   klubb_id INTEGER NOT NULL REFERENCES klubb (id) ON DELETE CASCADE,
   slug TEXT NOT NULL,
@@ -59,7 +59,7 @@ CREATE TABLE lag (
   UNIQUE (klubb_id, slug)
 );
 
-CREATE TABLE bestallning (
+CREATE TABLE IF NOT EXISTS bestallning (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   lag_id INTEGER NOT NULL REFERENCES lag (id) ON DELETE RESTRICT,
   nr INTEGER NOT NULL,                 -- ordernumret, löpande per lag
@@ -73,10 +73,10 @@ CREATE TABLE bestallning (
   kod TEXT,                            -- beställningskoden från sidan, skyddar mot dubbletter
   UNIQUE (lag_id, nr)
 );
-CREATE UNIQUE INDEX bestallning_kod ON bestallning (lag_id, kod) WHERE kod IS NOT NULL;
+CREATE UNIQUE INDEX IF NOT EXISTS bestallning_kod ON bestallning (lag_id, kod) WHERE kod IS NOT NULL;
 
 -- Vem gjorde vad. Innehåller aldrig barnets namn, mobilnummer eller e-postadresser: bara ordernummer, antal och belopp.
-CREATE TABLE logg (
+CREATE TABLE IF NOT EXISTS logg (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   tid TEXT NOT NULL,
   klubb_id INTEGER,
@@ -88,21 +88,21 @@ CREATE TABLE logg (
 
 -- Räknare för spärrar (felaktiga nyckelförsök, beställningar per mobilnummer, startade försäljningar, inloggningsbegäranden).
 -- Nyckeln innehåller bara hashar, aldrig klartext. till = när räknaren går ut (millisekunder sedan 1970).
-CREATE TABLE sparr (
+CREATE TABLE IF NOT EXISTS sparr (
   nyckel TEXT PRIMARY KEY,
   antal INTEGER NOT NULL,
   till INTEGER NOT NULL
 );
 
 -- Inloggning för klubbens administratör: länken i e-postmeddelandet och sessionen efteråt. Bara hashar sparas.
-CREATE TABLE inloggningslank (
+CREATE TABLE IF NOT EXISTS inloggningslank (
   hash TEXT PRIMARY KEY,
   epost TEXT NOT NULL,
   giltig_till INTEGER NOT NULL,
   anvand INTEGER NOT NULL DEFAULT 0
 );
 
-CREATE TABLE session (
+CREATE TABLE IF NOT EXISTS session (
   hash TEXT PRIMARY KEY,
   epost TEXT NOT NULL,
   giltig_till INTEGER NOT NULL
