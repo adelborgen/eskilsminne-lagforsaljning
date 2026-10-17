@@ -23,7 +23,7 @@ run_worker_first = ["/api", "/api/*"]   # bara adresser under /api går till kod
 [[d1_databases]]
 binding = "DB"
 database_name = "skramlat"
-database_id = "BYT-MOT-ID-FRAN-wrangler-d1-create"
+database_id = "0d0f5dc9-72e6-4294-9a04-f4cd01e68a10"
 migrations_dir = "migrations"
 
 [[send_email]]

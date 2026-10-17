@@ -155,5 +155,5 @@ test("kontrollskriptet godkänner bara jurisdiktion eu, och säger ifrån när d
   for (const svar of [{ result: { name: "skramlat" } }, { result: { jurisdiction: null } }, { result: { jurisdiction: "" } }, { result: null }, null, {}, "text"])
     assert.equal(bedom(svar).kod, 2, JSON.stringify(svar));
   assert.equal(databasId('name = "x"\n[[d1_databases]]\nbinding = "DB"\ndatabase_name = "skramlat"\ndatabase_id = "abc-123"\n'), "abc-123");
-  assert.equal(databasId(toml()), "BYT-MOT-ID-FRAN-wrangler-d1-create", "wrangler.toml har ännu bara platshållaren");
+  assert.match(databasId(toml()), /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/, "wrangler.toml ska ha databasens id");
 });
