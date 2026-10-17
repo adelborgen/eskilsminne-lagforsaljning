@@ -1,10 +1,10 @@
 # Plan: gemensam server för Skramlat (utan Apps Script)
 
-Utkast för beslut, 17 oktober 2026. Inget av det här är byggt. Det är en plan att godkänna eller ändra innan arbetet börjar.
+Status 17 oktober 2026: tekniken (Cloudflare) och besluten längst ned är tagna. Inget är byggt. Nästa steg är Fas 1, när du säger till.
 
 ## Mål
 
-En klubb går till skramlat.se, loggar in med sin e-post, skriver klubbens namn, väljer två färger, laddar upp märket och är igång. Inget Google-konto, inget kalkylark, ingen kod. Lagföräldrar och föräldrar märker ingen skillnad mot idag.
+En klubb går till skramlat.se, loggar in med sin e-post, skriver klubbens namn, väljer två färger, laddar upp märket och skickar in sin ansökan. När du har godkänt den är klubben igång. Inget Google-konto, inget kalkylark, ingen kod. Lagföräldrar och föräldrar märker ingen skillnad mot idag.
 
 Pengarna går fortfarande aldrig via Skramlat.
 
@@ -20,29 +20,58 @@ Pengarna går fortfarande aldrig via Skramlat.
 | Utseende | Redigera `style.css` för hand | Två färger och ett märke i adminvyn |
 | Klubbens uppgifter | `lag.js` | Klubbens inställningar i adminvyn |
 
-## Teknikval
+## Teknikval: Cloudflare
 
-**Supabase** (Postgres-databas, inloggning med e-postlänk, fillagring för märken), med en enda serverfunktion i TypeScript som motsvarar dagens `doGet` och `doPost`.
+Allt hos en leverantör. DNS och e-postvidarebefordran ligger redan där.
 
-Varför det och inte en egen lösning på Cloudflare Workers med D1:
-- Inloggning med e-postlänk är det som är farligast att bygga själv, och här följer den med färdig.
-- Postgres har riktiga transaktioner. Lagerkontrollen och ordernumret (idag skyddade av ett skriptlås i Apps Script) blir en rad i en transaktion, och går att testa på riktigt.
-- Det går att köra databasen i Europa.
+- **Pages** för sidorna (statiska filer är gratis och obegränsade), med **Pages Functions** under `skramlat.se/api/`. Sidor och API får samma adress, så ingen CORS behövs och inloggningen kan använda säkra cookies. Adresser som `skramlat.se/<klubb>/` skrivs om till samma sidor (se Adresser).
+- **D1** (SQLite) som databas. **Den skapas med EU-jurisdiktion från början**, eftersom det inte går att lägga till efteråt.
+- **Email Service** för inloggningslänkar. Den är i beta. Visar den sig ostabil byts den mot en annan leverantör, som då läggs till på underbiträdeslistan.
+- **Turnstile** mot robotar vid ansökan om ny klubb.
 
-Att kontrollera innan vi bestämmer (jag har inte kollat dem idag): aktuella priser, om gratisnivån pausar projekt som inte används (då behövs en betald nivå i drift), och vilken EU-region som finns.
+Varför Cloudflare och inte Supabase: Supabase kräver Pro-nivån (25 $ i månaden) för skarp drift, eftersom gratisprojekt pausas efter en vecka utan aktivitet, och dessutom en egen e-postleverantör. Med Cloudflare blir det en leverantör, en faktura och en post på underbiträdeslistan.
 
-Alla tabeller stängs för direktåtkomst. Allt går via serverfunktionen, som kontrollerar behörighet i koden precis som `Server.gs` gör idag. Det gör att behörighetstesterna kan följa med.
+### Kostnad (kontrollerad 17 oktober 2026, dollar, exkl. moms)
+
+| Del | Gratis | Betald |
+|---|---|---|
+| Workers | 100 000 anrop per dag | **5 $ per månad**: 20 miljoner anrop per månad ingår, sedan 0,60 $ per miljon |
+| D1 | 5 miljoner lästa och 100 000 skrivna rader per dag, 5 GB. När taket nås felar anropen tills midnatt UTC. | 25 miljarder lästa och 50 miljoner skrivna rader per månad ingår, 5 GB, sedan 0,001 $ per miljon lästa, 1 $ per miljon skrivna och 0,75 $ per GB och månad. Ingen avgift för utgående trafik. |
+| Pages | Statiska sidor gratis och obegränsat. Functions räknas som Workers. | – |
+| E-post (utgående) | – | 3 000 per månad ingår (kräver Workers Paid), sedan 0,35 $ per 1 000 |
+| Turnstile | Gratis enligt vad jag vet, inte kontrollerat | – |
+
+Skarp drift kräver betalnivån: gratisnivåns dagstak gör att anropen felar en dag med många föräldrar, och utgående e-post kräver den. Räkna med **ungefär 5 $ i månaden**. Användningen kostar nästan ingenting (min uppskattning: några hundra beställningar per klubb och säsong ryms med god marginal i allt som ingår).
+
+## Det vi bygger själva
+
+### Inloggning med e-postlänk (klubbens administratör)
+
+- **Begäran:** servern svarar alltid likadant, oavsett om adressen finns, så att ingen kan ta reda på vem som är administratör.
+- **Länken:** 32 slumpade byte. Bara hashen sparas. Gäller i 15 minuter och kan användas en gång. Högst 5 begäranden per timme per adress och per IP-nummer.
+- **Mejlskannrar:** länken i mejlet öppnar en sida med en knapp, och först knappen (POST) använder länken. Då förbrukas den inte av en skanner som bara hämtar adressen.
+- **Sessionen:** slumpad nyckel där bara hashen sparas, 14 dagar, i en cookie som är `HttpOnly`, `Secure` och `SameSite=Lax`. Utloggning raderar den i databasen.
+- Alla administratörsåtgärder kontrollerar sessionen, vilken klubb personen hör till och rollen. Det är samma tankesätt som i `Server.gs`, där servern kontrollerar behörigheten och aldrig sidan.
+
+### Beställning och lager
+
+Idag skyddas lagret och ordernumret av ett skriptlås. D1 har enligt vad jag vet inga interaktiva transaktioner, så det blir ett villkorat SQL-anrop i en atomär körning: ordernumret räknas upp bara om lagret räcker, annars sparas ingenting.
+
+Det ska bevisas, inte antas:
+1. Tester med många parallella anrop mot lokal D1 (Miniflare).
+2. Ett lasttest mot en riktig D1 (en separat testdatabas på ditt Cloudflare-konto) **innan skarp drift**. Den lokala versionen visar inte hur riktiga Cloudflare beter sig under last.
+
+Första steget i Fas 1: kontrollera att `wrangler` och Miniflare går att köra i den här miljön.
 
 ## Datamodell
 
-- **klubb**: adress (till exempel `eskilsminne`), namn, motto, mörk färg, ljus färg, märke, status (*väntar*, *aktiv*, *avstängd*), tidpunkt och version för godkänt biträdesavtal.
-- **klubb_admin**: koppling mellan inloggad person och klubb. Flera per klubb, så att "andra administratören" finns från start.
+- **klubb**: adress (till exempel `eskilsminne`), namn, motto, mörk färg, ljus färg, märke, status (*väntar*, *aktiv*, *avstängd*), organisationsnummer, webbadress, tidpunkt och version för godkänt biträdesavtal, och **hur och när du verifierade klubben**.
+- **klubb_admin**: koppling mellan e-postadress och klubb. Flera per klubb, så att "andra administratören" finns från start.
+- **inloggningslank** och **session**: bara hashar, med giltighetstid.
 - **lag**: som dagens flik *Lag*, plus klubb och nyckelns hash. Fortfarande en försäljning med en produkt per post.
 - **bestallning**: som dagens flik *Beställningar*, plus beställningskoden. Unikt per lag, så att dubbletter stoppas bestående och inte bara i 15 minuter.
 - **logg**: som dagens flik *Logg*.
-- **sparr**: räknare för spärr på felaktiga nyckelförsök, beställningar per mobilnummer (hashat) och startade försäljningar.
-
-Order och lager: raden för laget låses i transaktionen, lagret kontrolleras, ordernumret räknas upp och beställningen sparas. Det är samma regler som idag, men med ett riktigt lås.
+- **sparr**: räknare för spärr på felaktiga nyckelförsök, beställningar per mobilnummer (hashat), startade försäljningar och inloggningsbegäranden.
 
 ## API: så lite som möjligt ändras
 
@@ -50,7 +79,47 @@ Samma åtgärder och samma svar som idag, med två tillägg:
 - **klubb** (adressen) följer med i varje anrop.
 - Klubbens administratörsåtgärder (`lagLista`, `lagNy`, `godkann`, `skickaTillbaka` med flera) kräver inloggning som administratör för just den klubben, i stället för superadmin-nyckeln.
 
-Därför blir ändringarna i `app.js`, `admin.js` och `util.js` små: adressen till servern, klubbens adress från sökvägen, och inloggningen för klubbens administratör.
+Därför blir ändringarna i `app.js`, `admin.js` och `util.js` små: adressen till servern (`/api/`), klubbens adress från sökvägen, och inloggningen för klubbens administratör.
+
+## Vem får skapa en klubb?
+
+**Vem som helst kan ansöka. Ingen kan använda en klubb förrän du har godkänt den.** Det går inte att bevisa tekniskt att någon företräder föreningen: en inloggning med e-post visar bara att personen når en e-postadress. Beviset är din kontroll, och den ska vara en rutin.
+
+**Varför det spelar roll.** Pengarna går till det Swish-nummer lagföräldern skriver in, och klubbens administratör godkänner försäljningen. En falsk klubbadministratör kan godkänna sin egen försäljning med sitt eget nummer, och föräldrarna betalar till en bedragare. Klubbens administratör är det som allt annat bygger på.
+
+**Ansökan** (på `skramlat.se/kom-igang`, bakom Turnstile):
+- klubbens namn, organisationsnummer och webbadress
+- den sökandes namn, roll i klubben och telefonnummer
+- en kryssruta: *Jag får företräda klubben och godkänna biträdesavtalet för klubbens räkning.*
+
+**Automatiska varningar** (de flaggar, de avgör inte):
+- e-postadressens domän matchar inte klubbens webbadress
+- namnet liknar en befintlig klubb
+- reserverade namn (`skramlat`, `admin`, `api`, `eskilsminne` före godkännande med flera) går inte att välja
+
+**Din kontroll innan godkännande:**
+1. Kontakta klubben via en uppgift från **klubbens egen webbplats eller ett offentligt register**, aldrig via uppgifterna i ansökan.
+2. Be styrelsen, ordföranden eller kassören bekräfta att klubben vill använda Skramlat och vem som är administratör.
+3. Spara hur och när du kontrollerade (`verifierad_hur`, `verifierad_tid`).
+
+En godkänd klubb kan stängas av direkt: försäljningarna döljs och inga beställningar tas emot.
+
+### Eskilsminne IF
+
+Du har klubbens tillåtelse att använda märket (det står i `lag.js`), men att köra klubbens försäljning på Skramlat kräver mer:
+- **Skriftligt ok från styrelsen** (ett mejl räcker) att Eskilsminne använder Skramlat, och vem som är klubbens administratör.
+- **Klubbens administratör ska vara en person i klubben**, helst med en klubbadress, inte du. Annars godkänner du själv P2019:s försäljningar. Du är plattformens ägare, inte klubbens administratör.
+- En andra administratör i klubben bjuds in från start.
+
+## Kom igång-flödet för en klubb
+
+1. Klubben fyller i ansökan (se ovan) och bekräftar sin e-post med inloggningslänken.
+2. Klubben får status *väntar*. Du kontrollerar och godkänner. Klubben får besked med e-post.
+3. Klubbens administratör väljer namn, motto, färger och märke, och godkänner **biträdesavtalet**. Godkännandets tidpunkt och version sparas.
+4. Klubbens administratör bjuder in en andra administratör.
+5. Lagföräldrar startar sina försäljningar som idag. Klubben godkänner som idag.
+
+Kräver att Skramlat skickar e-post från `skramlat.se`. `hej@skramlat.se` tar idag bara emot.
 
 ## Utseende
 
@@ -62,39 +131,42 @@ Därför blir ändringarna i `app.js`, `admin.js` och `util.js` små: adressen t
 
 ## Adresser
 
-`skramlat.se/<klubb>/` ska peka på samma sidor för alla klubbar. GitHub Pages kan inte skriva om adresser, så de statiska sidorna flyttas till Cloudflare Pages (gratis, och DNS ligger redan hos Cloudflare). Eskilsminnes adress `skramlat.se/eskilsminne/` och gamla `?lag=`-länkar fortsätter fungera. Behöver kontrolleras: att Cloudflare Pages skriver om adresser som vi behöver.
-
-## Kom igång-flödet för en klubb
-
-1. Klubben går till `skramlat.se/kom-igang`, skriver sin e-post och bekräftar att den inte är en robot (Cloudflare Turnstile, gratis).
-2. Inloggningslänk till e-posten.
-3. Klubben skriver namn, adress, motto, väljer färger och laddar upp märket. Klubben godkänner **biträdesavtalet** (se nedan).
-4. Klubben skapas med status *väntar*. **Under piloten godkänner du varje ny klubb**, så att ingen kan registrera en klubb som inte finns. Senare kan det bli automatiskt med verifierad e-post.
-5. Klubbens administratör bjuder in en andra administratör.
-6. Lagföräldrar startar sina försäljningar som idag. Klubben godkänner som idag.
-
-Kräver att Skramlat skickar e-post från `skramlat.se` (inloggningslänkar). Det behöver en e-posttjänst med riktig avsändare. Dagens `hej@skramlat.se` tar bara emot.
+`skramlat.se/<klubb>/` ska peka på samma sidor för alla klubbar. Det löses med omskrivning på Cloudflare Pages. Eskilsminnes adress `skramlat.se/eskilsminne/` och gamla `?lag=`-länkar fortsätter fungera. **Att kontrollera:** att Cloudflare Pages kan skriva om adresser på det sätt vi behöver. Sidorna flyttas från GitHub Pages i Fas 2.
 
 ## Personuppgifter: det som flyttar till dig
 
 Idag ligger barnets förnamn och förälderns mobilnummer i klubbens eget Google-konto. Efter bytet håller Skramlat dem åt alla klubbar. Då är klubben personuppgiftsansvarig och Skramlat personuppgiftsbiträde.
 
 Det här måste vara klart **innan en riktig klubb använder tjänsten**:
-- **Biträdesavtal** som klubben godkänner när den skapar kontot. Godkännandets tidpunkt och version sparas. Texten bör granskas av någon som kan, jag är inte jurist.
-- **Servern i EU**, och en lista över underbiträden (databasleverantören, Cloudflare, e-posttjänsten).
-- **Automatisk radering** av beställningarna en bestämd tid efter att försäljningen avslutats. Loggen behåller bara ordernummer, antal och belopp, som idag.
+- **Biträdesavtal** som klubben godkänner när den skapar kontot. Texten bör granskas av någon som kan, jag är inte jurist.
+- **Data i EU.** D1 skapas med jurisdiktion `eu`. Det gäller lagring och körning av databasen, men Workers kan nå den från hela världen, så anropen behandlas i Cloudflares globala nätverk. **Att kontrollera:** om det räcker, eller om Cloudflares Regional Services behövs, och i så fall vad det kostar. Policyn ska säga hur det fungerar.
+- **Underbiträden:** Cloudflare och, om Email Service byts ut, den leverantören.
+- **Automatisk radering 60 dagar efter att försäljningen avslutats.** Loggen behåller bara ordernummer, antal och belopp, som idag. Försäljningar som glöms öppna ska klubbens administratör påminnas om (bestäms i Fas 3).
 - **Integritetspolicy** (står redan på att-göra-listan).
-- **Rutin för incidenter**: som biträde måste du kunna säga till klubbarna om något händer.
-- **Säkerhetskopior** hos leverantören, och att policyn säger hur länge de finns kvar.
+- **Rutin för incidenter:** som biträde måste du kunna säga till klubbarna om något händer.
+- **Säkerhetskopior** och hur länge de finns kvar (policyn ska säga det).
 - **Minst två personer** med åtkomst till servern, databasen och domänen.
-- **Vem som är avtalspart.** Skramlat ägs privat tills vidare. Fundera på om avtalen ska skrivas av dig som privatperson eller av ett bolag.
+
+### Utan bolag i början
+
+Jag är inte jurist. Det här är underlag för ett samtal med någon som är det.
+
+- **Det går att börja som privatperson.** Ingen lag kräver ett bolag för att vara personuppgiftsbiträde. Du är då själv avtalspart och ansvarig, **utan ansvarsskydd**: ett skadeståndskrav eller en sanktionsavgift kan riktas mot dig personligen.
+- **Skatt.** Så länge tjänsten är gratis och du inte tar betalt är det enkelt. När du tar betalt (Bas och Plus) är det näringsverksamhet, och då behövs minst en enskild firma (registreras hos Skatteverket, inget krav på aktiekapital, men inget ansvarsskydd). Ett aktiebolag kräver 25 000 kr i aktiekapital och begränsar i de flesta fall ansvaret.
+- **Praktiskt.** Skolor och större föreningar kräver ofta ett organisationsnummer för att få godkänna en leverantör. Det gäller troligen Sally Bauerskolorna.
+- **Förslag:**
+  1. Pilot som privatperson, med Eskilsminne och högst en klubb till, gratis, med skriftligt biträdesavtal, så få uppgifter som möjligt (förnamn och mobilnummer, som idag) och radering efter 60 dagar.
+  2. Registrera enskild firma **innan första betalande kund**, eller innan klubb nummer tre.
+  3. Aktiebolag när det växer eller när en kund kräver det.
+  4. Se till att Cloudflare-kontot och domänen går att flytta till ett bolag senare, och att en andra person har åtkomst.
+  5. Fråga någon som kan om en ansvarsförsäkring.
 
 ## Vad som återanvänds
 
 - **Sidorna.** `app.js` (563 rader), `admin.js` (1 115), `util.js`, `style.css` och alla texter. Demoläget behålls.
 - **Reglerna.** Pris räknas på servern, namn och mobilnummer kontrolleras, spärrar, honeypot och tidsspärr, lager, dubbletter, rensning av text. All logik i `Server.gs` flyttas över.
-- **Testerna.** Testerna anropar servern via `post`, `get` och `admin` i `test/harness.cjs`. Behåller den nya servern samma anrop går scenarierna att köra om mot den, med klubbens adress och administratörsinloggning som tillägg. `test/xss.webblasare.cjs` går att behålla nästan som den är. `test/mutera.cjs` ändrar texten i `Server.gs` och måste skrivas om, men idén (koppla bort ett skydd i taget) behålls.
-- **Bättre test av det som inte gick att prova.** Idag testas servern mot låtsas-Google, och "20 beställningar på sista lotten" kan inte bevisas förrän riktiga Google. Med Postgres går det att köra mot en riktig databas i testerna (till exempel PGlite i Node eller en lokal Supabase). Att kontrollera: vilket av dem som fungerar i vår miljö.
+- **Testerna.** Testerna anropar servern via `post`, `get` och `admin` i `test/harness.cjs`. Behåller den nya servern samma anrop går scenarierna att köra om mot den, med klubbens adress och administratörsinloggning som tillägg. `test/xss.webblasare.cjs` går att behålla nästan som den är. `test/mutera.cjs` ändrar texten i `Server.gs` och måste skrivas om, men idén (koppla bort ett skydd i taget) behålls. Nya tester behövs för inloggningen: länk som används två gånger, utgången länk, fel adress, spärr, och en klubbadministratör som försöker nå en annan klubb.
+- **Det som inte går att bevisa lokalt.** Riktig samtidighet mot en riktig D1 kräver lasttestet i Fas 1 (se ovan). Det är samma ärlighet som README har idag om riktiga Google.
 
 ## Faser
 
@@ -102,12 +174,12 @@ Storleken är relativ (S, M, L). Jag vill inte gissa antal dagar innan vi har pr
 
 | Fas | Innehåll | Storlek |
 |---|---|---|
-| **1. Servern** | Databas, beställning, lagförälderns och klubbens åtgärder, inloggning för klubbens administratör, testerna flyttade och körda. Eskilsminne som första klubb. Sidorna pekar på nya servern. | L |
-| **2. Kom igång** | Registrering, godkännande, utseende (färger och märke), fler administratörer, adresser `skramlat.se/<klubb>`, e-post från skramlat.se. | M |
-| **3. Juridik och drift** | Biträdesavtal i flödet, automatisk radering, integritetspolicy, säkerhetskopior, övervakning, en andra person med åtkomst. Görs parallellt med Fas 2. | M |
-| **4. Skolor och lotter** | Förening eller skola (ord per kund), samlad lista över obetalda för skolans administratör, Swish per kund, rutan "Kräver 18 år". | M |
+| **1. Servern** | D1 med EU-jurisdiktion, beställning med atomärt lager, lagförälderns och klubbens åtgärder, inloggning med e-postlänk för klubbens administratör, testerna flyttade och körda, lasttest mot riktiga D1. Eskilsminne som första klubb. Sidorna pekar på nya servern. | L |
+| **2. Kom igång** | Ansökan, din kontroll och ditt godkännande, utseende (färger och märke), fler administratörer, adresser `skramlat.se/<klubb>`, e-post från skramlat.se, flytt av sidorna till Cloudflare Pages. | M |
+| **3. Juridik och drift** | Biträdesavtal i flödet, automatisk radering efter 60 dagar, integritetspolicy, säkerhetskopior, övervakning, en andra person med åtkomst. Görs parallellt med Fas 2. | M |
+| **4. Skolor** | Förening eller skola (ord per kund), samlad lista över obetalda för skolans administratör, Swish per kund (låst nummer för alla klasser). | M |
 
-Eskilsminne kan gå live när Fas 1 och Fas 3 är klara. Fas 2 behövs först för klubb nummer två.
+Eskilsminne kan gå live när Fas 1 och Fas 3 är klara, och när styrelsens skriftliga ok finns. Fas 2 behövs först för klubb nummer två. Bingolotter och rutan "Kräver 18 år" är inte med: de är strukna tills vidare.
 
 ## Det här byggs inte
 
@@ -115,11 +187,21 @@ Eskilsminne kan gå live när Fas 1 och Fas 3 är klara. Fas 2 behövs först f�
 - Lösenord. Klubben använder e-postlänk, lagföräldern en länk med nyckel.
 - Temaeditor, plattformsadmin med eget gränssnitt eller fler lager än klubb och lag. Du godkänner klubbar i databasens egen vy.
 - Flera försäljningar per grupp. Det är fortfarande en post per försäljning, som idag.
+- Bingolotter och åldersgräns (struket).
 
-## Beslut jag behöver från dig
+## Beslut som är tagna (17 oktober 2026)
 
-1. **Supabase** enligt ovan, eller Cloudflare Workers med D1?
-2. **Eskilsminne och bingolotterna.** Jag föreslår att vi **inte** sätter upp Apps Script som mellanlösning. Då finns ingen riktig data att flytta, och Eskilsminne blir första klubben på nya servern. Finns det ett datum som inte kan skjutas?
-3. **Hur länge sparas beställningar efter avslutad försäljning?** Förslag: 60 dagar.
-4. **Godkänner du varje ny klubb under piloten?** Förslag: ja.
-5. **Vem är avtalspart** för biträdesavtalet: du privat, eller ett bolag?
+1. **Cloudflare** (Pages, Workers, D1, Email Service), inte Supabase.
+2. **Ingen mellanlösning med Apps Script.** Eskilsminne blir första klubben på nya servern. Bingolotterna är struket, så det finns ingen brådska.
+3. **Beställningar raderas 60 dagar efter avslutad försäljning.**
+4. **Du godkänner varje ny klubb** under piloten.
+5. **Avtalspart:** du som privatperson under piloten, enligt "Utan bolag i början". Enskild firma senast före första betalande kund.
+
+## Kvar att göra eller kontrollera
+
+- Biträdesavtalets text granskas av någon som kan.
+- Om Cloudflares Regional Services behövs för att behandlingen ska stanna i EU.
+- Att Cloudflare Pages kan skriva om adresser som vi behöver.
+- Att Email Service fungerar tillräckligt stabilt (beta), annars en annan leverantör.
+- Styrelsens skriftliga ok och namnet på klubbens administratör i Eskilsminne.
+- Att `wrangler` och Miniflare går att köra i den här miljön.
