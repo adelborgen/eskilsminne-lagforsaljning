@@ -1,10 +1,19 @@
 {
-  "name": "eskilsminne-lagforsaljning",
+  "name": "skramlat",
   "private": true,
-  "description": "Lagförsäljning för Eskilsminne IF: laglista, beställning och adminvy (prototyp).",
+  "type": "module",
+  "description": "Skramlat: lagförsäljning för föreningar och skolor. Sidor (statiska filer) och en server på Cloudflare (Worker och D1).",
   "scripts": {
-    "test": "node --test test/server.test.cjs test/attacker.test.cjs",
-    "test:mutera": "node test/mutera.cjs",
-    "test:xss": "node test/xss.webblasare.cjs"
+    "test": "node --test test/api.test.js test/attack.test.js test/eu.test.js test/server.test.cjs test/attacker.test.cjs",
+    "test:mutera": "node test/mutera.js",
+    "test:gammal": "node --test test/server.test.cjs test/attacker.test.cjs",
+    "test:xss": "node test/xss.webblasare.cjs",
+    "bygg": "node scripts/bygg.js",
+    "dev": "npm run bygg && wrangler dev",
+    "lasttest": "node scripts/lasttest.js"
+  },
+  "devDependencies": {
+    "miniflare": "4.20260730.0",
+    "wrangler": "4.116.0"
   }
 }
