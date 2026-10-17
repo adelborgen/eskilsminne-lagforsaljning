@@ -12,7 +12,9 @@ export const CFG = {
   LANK_GILTIG_MIN: 15,     // en inloggningslänk gäller så här länge och kan användas en gång
   SESSION_DAGAR: 30,       // en inloggning gäller så här länge (klubbens administratör behöver en ny länk bara på en ny enhet eller efter en månad)
   LANK_PER_EPOST_TIMME: 5, // högst så många inloggningslänkar per e-postadress ...
-  LANK_PER_IP_TIMME: 20    // ... och per IP-nummer och timme
+  LANK_PER_IP_TIMME: 20,   // ... och per IP-nummer och timme
+  FORFRAGAN_PER_IP_TIMME: 5,   // förfrågningar från klubbar (kom-igang) per IP-nummer och timme ...
+  FORFRAGAN_PER_TIMME: 30      // ... och totalt per timme
 };
 
 export const BARN_RE = /^[\p{L}][\p{L}\p{M} '’\-.&\/,()]{1,39}$/u;   // barnets namn: börjar med en bokstav

@@ -54,6 +54,10 @@ const MUTATIONER = [
     ["ops.js", '"UPDATE lag SET status = \'pagar\', kommentar = \'\', godkant = " + OGONBLICK + `,', '"UPDATE lag SET status = \'pagar\', kommentar = \'\'" + `,']),
   M("Notisen nämner vilka fält som ändrats, inte värdena", "api", "mejl till klubben när en försäljning väntar",
     ["ops.js", 'andr.length ? "Ändrat sedan klubben godkände den senast: " + andr.join(", ") + "."', 'andr.length ? "Ändrat sedan klubben godkände den senast: " + ny.andringar.map((a) => a.namn + " " + a.nu).join(", ") + "."']),
+  M("Förfrågan tas bara emot från skramlat.se och sidornas egen adress", "api", "förfrågan: fel och tomma fält",
+    ["forfragan.js", 'if (!fran) return { ok: false, fel: "Felaktig förfrågan." };', ""]),
+  M("Spärr på förfrågningar", "api", "förfrågan: spärr per IP-nummer",
+    ["forfragan.js", "if (ip > CFG.FORFRAGAN_PER_IP_TIMME || alla > CFG.FORFRAGAN_PER_TIMME)", "if (false)"]),
   M("Bara försäljningens egna fält kan sparas av lagföräldern", "attack", "Smuggla in status, nyckel, adress och räknare",
     ["ops.js", "LAG_EGNA_FALT.forEach((f) => { if (inn[f] !== undefined) falt[f] = inn[f]; });", "Object.assign(falt, inn);"]),
 
@@ -101,7 +105,7 @@ const MUTATIONER = [
   M("Högst tio försäljningar i timmen kan startas", "api", "starta en försäljning",
     ["bestall.js", "if ((await lasRakning(k, nyckel)) >= CFG.MAX_STARTER_PER_TIMME)", "if (false)"]),
   M("Anrop från en annan webbplats avvisas", "attack", "Beställa från en annan webbplats",
-    ["api.js", 'if (!ursprungOk(k, false)) return { ok: false, fel: "Felaktig förfrågan." };', ""]),
+    ["api.js", 'if (!sammaUrsprung) return { ok: false, fel: "Felaktig förfrågan." };', ""]),
 
   // ----- Text och SQL -----
   M("Inledande = + - @ tas bort ur lagförälderns texter", "attack", "Formler i texter som exporteras",

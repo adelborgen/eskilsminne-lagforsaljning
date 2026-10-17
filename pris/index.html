@@ -55,14 +55,15 @@
   details p { margin: 0 0 16px; color: var(--dampad); max-width: 62ch; }
   .kontakt { background: var(--mint); color: var(--black); border-radius: 22px; padding: 26px 24px; display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 16px; box-shadow: 0 5px 0 #050b1c; }
   .kontakt h2 { margin: 0; font: 900 clamp(26px, 5vw, 36px)/1.05 var(--display); font-stretch: 108%; max-width: 18ch; }
-  .kontakt b { font: 900 26px/1 var(--display); background: var(--grafit); color: var(--kram); border-radius: 14px; padding: 14px 18px; }
+  .kontakt a { display: inline-flex; align-items: center; min-height: 56px; font: 900 22px/1 var(--display); font-stretch: 106%; background: var(--grafit); color: var(--kram); border-radius: 14px; padding: 0 22px; text-decoration: none; box-shadow: 0 4px 0 #050b1c; }
+  .kontakt a:hover { color: var(--mint); }
 </style>
 </head>
 <body>
 <main class="sida">
   <header class="topp">
     <a href="../"><img src="../logga/skramlat-logga-mork.svg" alt="Skramlat, till framsidan"></a>
-    <nav aria-label="Huvudmeny"><a href="../pris/" aria-current="page">Pris</a><a href="../guider/">Guider</a><a href="../demo/">Demo</a></nav>
+    <nav aria-label="Huvudmeny"><a href="../pris/" aria-current="page">Pris</a><a href="../guider/">Guider</a><a href="../demo/">Demo</a><a href="../kom-igang/">Kom igång</a></nav>
   </header>
 
   <header>
@@ -124,7 +125,7 @@
 
   <section class="kontakt">
     <h2>Vill din klubb eller skola vara med?</h2>
-    <b>hej@skramlat.se</b>
+    <a href="../kom-igang/">Skicka en förfrågan →</a>
   </section>
 </main>
 </body>

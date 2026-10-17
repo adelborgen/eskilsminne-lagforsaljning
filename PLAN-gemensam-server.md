@@ -285,3 +285,7 @@ Testerna har attacker för det nya: lagföräldern gör klubbens jobb, klubben �
 - **Klubben ser beställningarna men bockar inte av** (servern avvisar det).
 - **Först betald, sedan hämtad:** en obetald beställning kan inte markeras som hämtad, och en hämtad kan inte bli obetald. I utlämningen får en obetald beställning knappen *Betald nu* och sedan bocken för hämtad.
 - Migreringen `0002_pengar_och_notiser.sql` lägger till kolumnerna. Workern lägger in den själv. `npm test`: 125 tester, alla gröna. Mutationstestet: 49 skydd (kontrollerat, inte kört färdigt).
+
+### Förfrågningar från klubbar (17 oktober 2026, ägarens val)
+
+`skramlat.se/kom-igang/` har ett formulär: klubb eller skola, förening eller skola, namn, e-post, telefon (valfritt), ungefär hur många lag och ett meddelande. Servern mejlar förfrågan till ägaren och sparar ingenting i databasen, bara en räknare mot spam med en hash av IP-numret (5 per IP-nummer och 30 totalt i timmen). Mottagaren är hemligheten `FORFRAGAN_TILL` hos Cloudflare. Förfrågan finns alltså bara i ägarens inkorg, och den som frågar får veta det på sidan. Formuläret är inte Fas 2:s ansökan, där klubben skapar sitt konto själv. Den kommer senare.

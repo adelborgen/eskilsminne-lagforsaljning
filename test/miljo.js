@@ -27,7 +27,7 @@ export async function skapaMiljo() {
   // Databasen som servern ser. m.dbFel = true får den att fela, för att pröva det oväntade felet.
   const dbVag = { prepare: (...a) => { if (m.dbFel) throw new Error("databasen är nere"); return db.prepare(...a); },
     batch: (...a) => { if (m.dbFel) throw new Error("databasen är nere"); return db.batch(...a); } };
-  const env = { DB: dbVag, SIDA_ORIGIN: ORIGIN, EPOST_FRAN: "inloggning@skramlat.test", EMAIL: { send: async (b) => { if (m.epostFel) throw new Error("e-posten gick inte att skicka"); m.brev.push(b); } } };
+  const env = { DB: dbVag, SIDA_ORIGIN: ORIGIN, EPOST_FRAN: "inloggning@skramlat.test", FORFRAGAN_TILL: AGARE_EPOST, EMAIL: { send: async (b) => { if (m.epostFel) throw new Error("e-posten gick inte att skicka"); m.brev.push(b); } } };
   const ctx = { nu: () => m.klocka, waitUntil: (p) => { m.vantande.push(p); } };
 
   m.nollstall = async () => {
@@ -100,3 +100,4 @@ export const lagData = (o = {}) => ({ namn: "Lag A", kampanj: "Bingolotter", pro
   swishNummer: "123 456 78 90", mottagare: "Testklubben", pris: 30, inkopspris: 10, minimum: 10, mal: 100, maxAntal: 20, status: "pagar", ...o });
 
 export const ADMIN_EPOST = "admin@testklubben.example";
+export const AGARE_EPOST = "agare@skramlat.test";   // dit förfrågningar från kom-igang går (FORFRAGAN_TILL)

@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="sv">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#16191d">
+<meta name="referrer" content="no-referrer">
+<title>Kom igång – Skramlat</title>
+<meta name="description" content="Vill din klubb eller skola sälja med Skramlat? Skicka en förfrågan, så hör vi av oss.">
+<link rel="icon" href="../logga/skramlat-ikon-mork.svg" type="image/svg+xml">
+<link rel="stylesheet" href="../fonts/fonts.css">
+<style>
+  /* Skramlats egna sidor: grafit, krämvita kort, mint som detaljfärg. Se brand-manualen. */
+  :root { --grafit: #16191d; --upphojd: #20252b; --kram: #fff8d6; --kram2: #f1e8b4; --mint: #6fe3b4; --black: #0f1a33; --text: #ece8d8; --dampad: #a9b0b8;
+    --dampad-kort: #4a5575; --kant: #7c7440; --fel: #a3261d; --klart: #17612b;
+    --display: Archivo, "Arial Black", system-ui, sans-serif;
+    --body: "Atkinson Hyperlegible Next", system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--grafit); color: var(--text); font: 17px/1.55 var(--body); }
+  a { color: var(--mint); }
+  :focus-visible { outline: 3px solid var(--mint); outline-offset: 3px; border-radius: 6px; }
+  [hidden] { display: none !important; }
+  .sida { max-width: 1080px; margin: 0 auto; padding: calc(env(safe-area-inset-top, 0px) + 28px) max(16px, env(safe-area-inset-right, 0px)) calc(env(safe-area-inset-bottom, 0px) + 56px) max(16px, env(safe-area-inset-left, 0px)); display: flex; flex-direction: column; gap: 36px; }
+  .topp { display: flex; justify-content: space-between; align-items: center; gap: 16px; flex-wrap: wrap; }
+  .topp img { height: 40px; width: auto; display: block; }
+  .topp nav { display: flex; gap: 8px; flex-wrap: wrap; }
+  /* Menyn som knappar: kant, bakgrund och skugga, så att det syns att de går att trycka på. Sidan du är på är mint. */
+  .topp nav a { display: inline-flex; align-items: center; min-height: 46px; padding: 0 18px; border-radius: 999px; background: var(--upphojd); border: 2px solid #3d454e;
+    color: var(--kram); text-decoration: none; font: 800 16px/1 var(--display); font-stretch: 106%; box-shadow: 0 3px 0 #050608; }
+  .topp nav a:hover { border-color: var(--mint); }
+  .topp nav a[aria-current] { background: var(--mint); border-color: var(--mint); color: var(--black); }
+  .etikett { font: 800 13px/1.2 var(--display); font-stretch: 125%; letter-spacing: .12em; text-transform: uppercase; color: var(--mint); margin: 0; }
+  h1 { margin: 6px 0 0; font: 900 clamp(40px, 8vw, 72px)/.95 var(--display); font-stretch: 112%; letter-spacing: -.01em; color: var(--kram); text-wrap: balance; max-width: 16ch; }
+  .ingress { margin: 16px 0 0; font-size: 20px; max-width: 52ch; }
+
+  .upplagg { display: grid; grid-template-columns: minmax(0, .8fr) minmax(0, 1.2fr); gap: 32px; align-items: start; }
+  .steg { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 14px; counter-reset: steg; }
+  .steg li { counter-increment: steg; display: grid; grid-template-columns: 44px 1fr; gap: 14px; align-items: start; background: var(--upphojd); border-radius: 18px; padding: 16px; }
+  .steg li::before { content: counter(steg); width: 44px; height: 44px; border-radius: 12px; background: var(--grafit); color: var(--mint); display: grid; place-items: center; font: 900 22px/1 var(--display); }
+  .steg b { display: block; color: var(--kram); font-weight: 800; }
+  .steg span { color: var(--dampad); font-size: 15.5px; }
+  .gratis { margin: 16px 0 0; color: var(--dampad); font-size: 15.5px; }
+  .gratis b { color: var(--mint); }
+
+  .kort { background: var(--kram); color: var(--black); border-radius: 22px; padding: 26px 24px; box-shadow: 0 5px 0 #050b1c; }
+  .kort h2 { margin: 0 0 4px; font: 900 30px/1.05 var(--display); font-stretch: 110%; }
+  .falt { margin-top: 18px; }
+  .falt > label, .falt > legend { display: block; font-weight: 800; margin-bottom: 6px; padding: 0; }
+  .falt .tips { display: block; font-weight: 400; font-size: 14.5px; color: var(--dampad-kort); }
+  fieldset.falt { border: 0; margin: 18px 0 0; padding: 0; min-width: 0; }
+  input[type=text], input[type=email], input[type=tel], textarea { width: 100%; min-height: 52px; padding: 12px 14px; border: 2px solid var(--kant); border-radius: 14px; background: var(--kram2); color: var(--black); font: 17px/1.4 var(--body); }
+  textarea { min-height: 110px; resize: vertical; }
+  input:focus, textarea:focus { outline: 3px solid var(--black); outline-offset: 1px; }
+  /* Val som knappar: riktiga radioknappar under, så att det fungerar med tangentbord och skärmläsare */
+  .val { display: flex; flex-wrap: wrap; gap: 8px; }
+  .val input { position: absolute; opacity: 0; width: 1px; height: 1px; }
+  .val label { display: inline-flex; align-items: center; min-height: 46px; padding: 0 16px; border-radius: 999px; border: 2px solid var(--black); background: transparent; font-weight: 800; cursor: pointer; }
+  .val input:checked + label { background: var(--black); color: var(--mint); }
+  .val input:focus-visible + label { outline: 3px solid var(--mint); outline-offset: 2px; }
+  .falla { position: absolute; left: -10000px; width: 1px; height: 1px; overflow: hidden; }
+  .skicka { margin-top: 22px; width: 100%; min-height: 56px; border: 3px solid var(--black); border-radius: 14px; background: var(--mint); color: var(--black); font: 900 19px/1 var(--display); font-stretch: 106%; cursor: pointer; box-shadow: 0 4px 0 #050b1c; }
+  .skicka:disabled { opacity: .6; cursor: default; }
+  .fel { color: var(--fel); font-weight: 700; margin: 14px 0 0; }
+  .fel:empty { display: none; }
+  .integritet { margin: 14px 0 0; font-size: 14.5px; color: var(--dampad-kort); }
+  .integritet a { color: var(--klart); font-weight: 700; }
+  .tack p { margin: 10px 0 0; }
+  .tack .bock { width: 56px; height: 56px; border-radius: 16px; background: var(--grafit); color: var(--mint); display: grid; place-items: center; font: 900 30px/1 var(--display); margin-bottom: 14px; }
+  /* I mobilen kommer formuläret först, direkt under rubriken */
+  @media (max-width: 820px) { .upplagg { grid-template-columns: 1fr; } .kort { padding: 22px 18px; order: -1; } }
+</style>
+</head>
+<body>
+<main class="sida">
+  <header class="topp">
+    <a href="../"><img src="../logga/skramlat-logga-mork.svg" alt="Skramlat, till framsidan"></a>
+    <nav aria-label="Huvudmeny"><a href="../pris/">Pris</a><a href="../guider/">Guider</a><a href="../demo/">Demo</a><a href="./" aria-current="page">Kom igång</a></nav>
+  </header>
+
+  <header>
+    <p class="etikett">Kom igång</p>
+    <h1>Vill din klubb eller skola vara med?</h1>
+    <p class="ingress">Berätta lite om er, så hör vi av oss. Det tar en minut och förpliktar inte till något.</p>
+  </header>
+
+  <div class="upplagg">
+    <section aria-label="Så går det till">
+      <ol class="steg">
+        <li><div><b>Skicka en förfrågan</b><span>Med formuläret här. Du får svar på mejlen.</span></div></li>
+        <li><div><b>Vi sätter upp klubben</b><span>Klubben eller skolan får en egen sida och en administratör som godkänner lagens försäljningar.</span></div></li>
+        <li><div><b>Lagen börjar sälja</b><span>Lagföräldrarna lägger upp sina försäljningar, och föräldrarna beställer och swishar direkt till laget.</span></div></li>
+      </ol>
+      <p class="gratis"><b>Gratis för pilotklubbar</b> under pilotåret. Se <a href="../pris/">pris</a>, eller <a href="../demo/">prova demon</a> först.</p>
+    </section>
+
+    <section class="kort" aria-labelledby="formrubrik">
+      <form id="form" novalidate>
+        <h2 id="formrubrik">Skicka en förfrågan</h2>
+        <div class="falt"><label for="klubb">Klubb eller skola</label><input type="text" id="klubb" name="klubb" maxlength="80" autocomplete="organization" required></div>
+        <fieldset class="falt"><legend>Är det en förening eller en skola?</legend>
+          <div class="val">
+            <input type="radio" name="typ" id="typ-f" value="Förening"><label for="typ-f">Förening</label>
+            <input type="radio" name="typ" id="typ-s" value="Skola"><label for="typ-s">Skola</label>
+            <input type="radio" name="typ" id="typ-a" value="Annat"><label for="typ-a">Annat</label>
+          </div>
+        </fieldset>
+        <div class="falt"><label for="namn">Ditt namn</label><input type="text" id="namn" name="namn" maxlength="60" autocomplete="name" required></div>
+        <div class="falt"><label for="epost">E-post <span class="tips">Hit skickar vi svaret.</span></label><input type="email" id="epost" name="epost" maxlength="254" autocomplete="email" inputmode="email" required></div>
+        <div class="falt"><label for="telefon">Telefon (valfritt)</label><input type="tel" id="telefon" name="telefon" maxlength="20" autocomplete="tel" inputmode="tel"></div>
+        <fieldset class="falt"><legend>Ungefär hur många lag eller klasser?</legend>
+          <div class="val">
+            <input type="radio" name="antal" id="antal-1" value="1–3"><label for="antal-1">1–3</label>
+            <input type="radio" name="antal" id="antal-2" value="4–10"><label for="antal-2">4–10</label>
+            <input type="radio" name="antal" id="antal-3" value="Fler än 10"><label for="antal-3">Fler än 10</label>
+            <input type="radio" name="antal" id="antal-4" value="Vet inte"><label for="antal-4">Vet inte</label>
+          </div>
+        </fieldset>
+        <div class="falt"><label for="meddelande">Meddelande (valfritt) <span class="tips">Till exempel när ni vill börja, eller vad lagen brukar sälja.</span></label><textarea id="meddelande" name="meddelande" maxlength="1500"></textarea></div>
+        <div class="falla" aria-hidden="true"><label for="website">Lämna tomt</label><input type="text" id="website" name="website" tabindex="-1" autocomplete="off"></div>
+        <button type="submit" class="skicka" id="skicka">Skicka förfrågan</button>
+        <p class="fel" id="fel" role="alert"></p>
+        <p class="integritet">Förfrågan skickas som ett mejl till Skramlat och sparas inte på webbplatsen. Vi använder uppgifterna bara för att svara dig. Hellre mejla direkt? <a href="mailto:hej@skramlat.se">hej@skramlat.se</a></p>
+      </form>
+      <div class="tack" id="tack" hidden tabindex="-1">
+        <div class="bock" aria-hidden="true">✓</div>
+        <h2>Tack för din förfrågan!</h2>
+        <p id="tacktext">Vi hör av oss på mejlen så snart vi kan.</p>
+        <p>Under tiden kan du <a href="../demo/" style="color: var(--klart); font-weight: 700">prova demon</a>.</p>
+      </div>
+    </section>
+  </div>
+</main>
+<script>
+  (function () {
+    // Sidan ligger på skramlat.se medan servern ligger hos Cloudflare: anropet går dit. När domänen har flytt blir det "/api".
+    var API = /\.workers\.dev$/.test(location.hostname) ? "/api" : "https://skramlat.adelborg.workers.dev/api";
+    var MIN_TID = 3500;   // servern avvisar svar som kommer snabbare än så efter att sidan laddats (robotar)
+    var laddad = Date.now();
+    var form = document.getElementById("form"), knapp = document.getElementById("skicka"), fel = document.getElementById("fel");
+    function varde(namn) { var e = form.elements[namn]; return e ? String(e.value || "").trim() : ""; }
+    function vald(namn) { var e = form.querySelector("input[name=" + namn + "]:checked"); return e ? e.value : ""; }
+    function visaFel(t, falt) { fel.textContent = t; knapp.disabled = false; knapp.textContent = "Skicka förfrågan"; if (falt) document.getElementById(falt).focus(); }
+
+    form.addEventListener("submit", function (ev) {
+      ev.preventDefault();
+      fel.textContent = "";
+      if (varde("klubb").length < 2) return visaFel("Skriv vilken klubb eller skola det gäller.", "klubb");
+      if (varde("namn").length < 2) return visaFel("Skriv ditt namn.", "namn");
+      if (!/^[^\s@]+@[^\s@.]+(\.[^\s@.]+)+$/.test(varde("epost"))) return visaFel("Skriv en e-postadress som vi kan svara till.", "epost");
+      var data = { action: "forfragan", klubb: varde("klubb"), typ: vald("typ"), namn: varde("namn"), epost: varde("epost"), telefon: varde("telefon"),
+        antal: vald("antal"), meddelande: varde("meddelande"), website: varde("website") };
+      knapp.disabled = true; knapp.textContent = "Skickar…";
+      // Går det fort väntar sidan själv de sekunder som saknas, så att ingen ser ett fel för det
+      setTimeout(function () {
+        data.t = Date.now() - laddad;
+        fetch(API, { method: "POST", headers: { "Content-Type": "text/plain;charset=utf-8" }, body: JSON.stringify(data) })
+          .then(function (r) { return r.json(); })
+          .then(function (d) {
+            if (!d || !d.ok) return visaFel((d && d.fel) || "Det gick inte att skicka. Mejla hej@skramlat.se i stället.");
+            if (d.meddelande) document.getElementById("tacktext").textContent = d.meddelande;
+            form.hidden = true;
+            var tack = document.getElementById("tack"); tack.hidden = false; tack.focus();
+          })
+          .catch(function () { visaFel("Det gick inte att nå servern. Försök igen, eller mejla hej@skramlat.se."); });
+      }, Math.max(0, MIN_TID - (Date.now() - laddad)));
+    });
+  })();
+</script>
+</body>
+</html>

@@ -26,6 +26,7 @@ Repot är fristående från P2019-sidan ([adelborgen/eskilsminne-p2019](https://
 | Fil eller mapp | Innehåll |
 |---|---|
 | `index.html`, `pris/`, `guider/` | Skramlats framsida, prissida och guider. |
+| `kom-igang/` | Formuläret där en klubb eller skola skickar en förfrågan. Servern (`server/forfragan.js`) mejlar den till Skramlat och sparar ingenting i databasen. Mottagaren är hemligheten `FORFRAGAN_TILL` hos Cloudflare (se *Sätt upp Cloudflare*). Sidan ligger på skramlat.se och anropar Cloudflare-adressen, så just den åtgärden tar emot anrop från skramlat.se (CORS). |
 | `demo/` | Demosidan i Skramlats färger: förälderns och lagförälderns vy bredvid varandra, utan inloggning och utan server. `demo/lag/` är en påhittad klubb (Demoklubben, laget P2015) som använder samma `app.js`, `admin.js`, `util.js` och `style.css` som `eskilsminne/`, med egen `lag.js` (`visning: true`, exempelbeställningar) och `tema.css` (färgerna). En beställning på förälderns sida syns hos lagföräldern i samma flik (sessionStorage) och försvinner när fliken stängs. |
 | `eskilsminne/` | Eskilsminnes sidor: `index.html` + `app.js` (laglista och beställning, `?lag=p2019` visar ett lag), `admin.html` + `admin.js` (adminvyn), `lag.js` (klubbens namn, texter och `slug`/`endpoint`), `util.js`, `style.css`, `assets/`. |
 | `server/` | Servern. `worker.js` (ingången), `api.js` (adresser), `ops.js` (adminvyn), `bestall.js` (beställning och start), `auth.js` (nycklar, inloggning, session), `data.js` (databasen), `regler.js` (kontroller och uträkningar), `krypto.js`, `epost.js`. |
@@ -64,6 +65,7 @@ Görs av den som driver Skramlat. Kräver ett Cloudflare-konto med **Workers Pai
 5. **Publicera.** `npx wrangler deploy` (bygger själv först, se `[build]` i `wrangler.toml`), eller automatiskt från GitHub (se *Publicera*). Sätt `endpoint: "/api"` i `eskilsminne/lag.js` först.
 6. **Kontrollera jurisdiktionen.** `CLOUDFLARE_ACCOUNT_ID=… CLOUDFLARE_API_TOKEN=… node scripts/kontrollera-eu.js`. Kan skriptet inte avgöra det (svaret nämner ingen jurisdiktion) kontrolleras det för hand i Cloudflares panel och skrivs ner.
 7. **Lasttest mot en testdatabas** innan skarp drift: `scripts/lasttest.js`.
+8. **Förfrågningar från kom-igang.** Lägg in mottagarens adress som hemlighet: Workers & Pages → skramlat → Settings → Variables and Secrets → Add, typ *Secret*, namn `FORFRAGAN_TILL`. Utan Workers Paid måste adressen vara en verifierad mottagare i Email Routing. Adressen läggs aldrig i repot. Saknas hemligheten får den som frågar beskedet att mejla hej@skramlat.se.
 
 Domänen `skramlat.se` pekar idag på GitHub Pages. Flytten till Cloudflare görs i Fas 2.
 

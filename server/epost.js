@@ -4,7 +4,8 @@
    riktiga Cloudflare: provat 17 oktober 2026 med ett inloggningsmejl till en verifierad mottagare i Email Routing (gratisnivån).
    Till andra adresser krävs Workers Paid och Cloudflare Email Service (npx wrangler email sending enable skramlat.se).
 
-   Mejlen innehåller bara mottagarens egen adress, lagets namn, antal och belopp, och en länk. Aldrig barnens namn eller mobilnummer,
+   Förfrågningar från klubbar (kom-igang) går till Skramlat och innehåller det som den som frågar själv skrev in.
+   Mejlen till klubbarna innehåller bara mottagarens egen adress, lagets namn, antal och belopp, och en länk. Aldrig barnens namn eller mobilnummer,
    och aldrig Swish-nummer eller andra värden som lagföräldern skrivit in: notisen säger vilka fält som ändrats, och värdena syns i adminvyn. */
 
 export async function skickaInloggningslank(k, till, lank) {
@@ -27,6 +28,27 @@ export async function skickaInloggningslank(k, till, lank) {
     subject: "Din inloggningslänk till Skramlat",
     text
   });
+}
+
+// En förfrågan från en klubb eller skola (kom-igang) till Skramlat. Avsändarens adress står i mejlet, så att det går att svara.
+export async function skickaForfragan(k, till, f) {
+  if (!k.env.EMAIL || typeof k.env.EMAIL.send !== "function") throw new Error("e-postbindningen saknas");
+  const text = [
+    "Ny förfrågan från skramlat.se/kom-igang",
+    "",
+    "Klubb eller skola: " + f.klubb + (f.typ ? " (" + f.typ + ")" : ""),
+    "Namn: " + f.namn,
+    "E-post: " + f.epost,
+    "Telefon: " + (f.telefon || "–"),
+    "Ungefär hur många lag eller klasser: " + (f.antal || "–"),
+    "",
+    "Meddelande:",
+    f.meddelande || "–",
+    "",
+    "Svara till " + f.epost + ". Förfrågan sparas inte på webbplatsen, bara i det här mejlet."
+  ].join("\n");
+  await k.env.EMAIL.send({ to: till, from: { email: k.env.EPOST_FRAN || "inloggning@skramlat.se", name: "Skramlat" },
+    subject: "Förfrågan: " + f.klubb, text });
 }
 
 // En notis till klubbens administratörer, till exempel att en försäljning väntar på godkännande. rader: mejlets text, rad för rad.

@@ -2,7 +2,7 @@
    Körs mot en riktig D1 lokalt (se miljo.js). Portat från server.test.cjs, som testade Apps Script-versionen (Server.gs). */
 import test, { before, beforeEach, after } from "node:test";
 import assert from "node:assert/strict";
-import { skapaMiljo, lagData, ADMIN_EPOST, CFG } from "./miljo.js";
+import { skapaMiljo, lagData, ADMIN_EPOST, AGARE_EPOST, CFG, ORIGIN } from "./miljo.js";
 
 const KL = "testklubben";
 let m, H;
@@ -667,4 +667,66 @@ test("kommer mejlet till klubben inte fram görs åtgärden ändå, och felet in
   } finally { console.error = orig; }
   assert.equal(m.brev.length, 0);
   assert.ok(loggat.length && loggat.every((l) => !l.includes("@")), loggat.join(" | "));
+});
+
+/* ---------- Förfrågan från en klubb eller skola (kom-igang) ---------- */
+const forfragan = (o = {}, origin = "https://skramlat.se", ip = "203.0.113.7") => m.anrop("POST", "/api", { action: "forfragan", klubb: "Nya IF", typ: "Förening",
+  namn: "Kim Exempel", epost: "kim@nyaif.example", telefon: "070 123 45 67", antal: "4–10", meddelande: "Vi vill prova i vår.\nGår det?", website: "", t: 5000, ...o },
+  Object.assign({ "CF-Connecting-IP": ip }, origin ? { Origin: origin } : {}));
+
+test("förfrågan från skramlat.se mejlas till Skramlat, med CORS för skramlat.se, och sparas inte i databasen", async () => {
+  m.brev.length = 0;
+  const fore = { klubb: (await m.rader("klubb")).length, logg: (await m.rader("logg")).length };
+  const s = await forfragan();
+  assert.equal(s.json.ok, true, s.text);
+  assert.equal(s.rubriker.get("Access-Control-Allow-Origin"), "https://skramlat.se");
+  assert.equal(s.rubriker.get("Cache-Control"), "no-store");
+  assert.equal(m.brev.length, 1);
+  const b = m.brev[0];
+  assert.equal(b.to, AGARE_EPOST); assert.equal(b.subject, "Förfrågan: Nya IF");
+  for (const t of ["Klubb eller skola: Nya IF (Förening)", "Namn: Kim Exempel", "E-post: kim@nyaif.example", "Telefon: 070 123 45 67", "lag eller klasser: 4–10", "Vi vill prova i vår.\nGår det?"])
+    assert.ok(b.text.includes(t), t + " saknas i " + b.text);
+  // Inget om den som frågade finns i databasen, bara en räknare med hash
+  const allt = JSON.stringify(await Promise.all(["klubb", "klubb_admin", "lag", "logg", "sparr", "bestallning", "session", "inloggningslank"].map((t) => m.rader(t))));
+  for (const pu of ["Kim", "nyaif", "0701234567", "070 123 45 67", "Nya IF", "203.0.113.7"]) assert.ok(!allt.includes(pu), pu + " finns i databasen");
+  assert.equal((await m.rader("klubb")).length, fore.klubb); assert.equal((await m.rader("logg")).length, fore.logg);
+  // Från sidornas egen adress behövs ingen CORS-rubrik
+  const egen = await forfragan({ epost: "egen@nyaif.example" }, ORIGIN, "203.0.113.8");
+  assert.equal(egen.json.ok, true); assert.equal(egen.rubriker.get("Access-Control-Allow-Origin"), null);
+});
+
+test("förfrågan: fel och tomma fält, honungsfälla, för snabbt, och bara från tillåtna adresser", async () => {
+  m.brev.length = 0;
+  assert.match((await forfragan({ klubb: " " })).json.fel, /klubb eller skola/);
+  assert.match((await forfragan({ namn: "" })).json.fel, /namn/);
+  assert.match((await forfragan({ epost: "inte-en-adress" })).json.fel, /e-postadress/);
+  assert.match((await forfragan({ telefon: "ring mig" })).json.fel, /Telefonnumret/);
+  assert.match((await forfragan({ t: 100 })).json.fel, /Vänta/);
+  const robot = await forfragan({ website: "http://spam.example" });
+  assert.equal(robot.json.ok, true, "en robot får samma svar");
+  for (const o of ["https://ond.example", "null", "", "https://skramlat.se.ond.example"]) {
+    const s = await forfragan({}, o || null);
+    assert.equal(s.json.ok, false, "från " + (o || "ingen adress")); assert.equal(s.rubriker.get("Access-Control-Allow-Origin"), null);
+  }
+  assert.equal(m.brev.length, 0, "inget av det skickades");
+  // Bara kända val följer med, och inledande formeltecken tas bort
+  await forfragan({ typ: "<script>", antal: "1000", klubb: "=HYPERLINK(1)" });
+  assert.ok(m.brev[0].text.includes("Klubb eller skola: HYPERLINK(1)\n") && m.brev[0].text.includes("lag eller klasser: –"), m.brev[0].text);
+});
+
+test("förfrågan: spärr per IP-nummer och totalt, och utan mottagare eller med trasig e-post får den som frågar ett tydligt besked", async () => {
+  m.brev.length = 0;
+  const svar = [];
+  for (let i = 0; i < CFG.FORFRAGAN_PER_IP_TIMME + 2; i++) svar.push((await forfragan()).json);
+  assert.equal(svar.filter((s) => s.ok).length, CFG.FORFRAGAN_PER_IP_TIMME);
+  assert.match(svar.pop().fel, /Många förfrågningar/);
+  m.tid(3600000 + 1000); m.brev.length = 0;   // en ny timme
+  for (let i = 0; i < CFG.FORFRAGAN_PER_TIMME + 2; i++) await forfragan({}, "https://skramlat.se", "198.51.100." + i);
+  assert.equal(m.brev.length, CFG.FORFRAGAN_PER_TIMME, "högst så många per timme totalt, även från olika IP-nummer");
+  m.tid(3600000 + 1000);
+  m.epostFel = true;
+  const orig = console.error, loggat = [];
+  console.error = (...x) => { loggat.push(x.join(" ")); };
+  try { assert.match((await forfragan()).json.fel, /hej@skramlat\.se/); } finally { console.error = orig; }
+  assert.ok(loggat.every((l) => !l.includes("@") && !l.includes("Kim")), loggat.join(" | "));
 });

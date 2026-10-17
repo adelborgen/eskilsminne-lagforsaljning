@@ -9,7 +9,7 @@ import { skrivSchema } from "./schema.js";
 skrivSchema();   // migrationerna som Workern lägger in själv (server/schema.js)
 const rot = path.join(path.dirname(fileURLToPath(import.meta.url)), "..");
 const ut = path.join(rot, "dist");
-const MED = ["index.html", "eskilsminne", "demo", "guider", "pris", "logga", "fonts"];
+const MED = ["index.html", "eskilsminne", "demo", "guider", "kom-igang", "pris", "logga", "fonts"];
 const BORT = new Set([".DS_Store", "README.md"]);   // fonts/README.md är en anteckning, licensfilerna ska följa med
 
 fs.rmSync(ut, { recursive: true, force: true });

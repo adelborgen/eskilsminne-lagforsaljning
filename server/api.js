@@ -3,6 +3,7 @@
    GET  /api?action=lag&klubb=<adress>      den offentliga laglistan (inga personuppgifter, inga nycklar)
    GET  /api?action=version
    POST /api                               beställning (utan action), eller {action: "admin" | "starta" | "login", klubb, …}
+                                           eller {action: "forfragan", …} från skramlat.se/kom-igang (se forfragan.js)
 
    Sidan tar aldrig emot pengar. Föräldern swishar direkt till lagets eget nummer.
    Allt som sparas om personer ligger i D1 (EU). Inget sparas på något annat ställe, och inget svar får cachas. */
@@ -10,9 +11,10 @@ import { hittaAktivKlubb, lasLag, publik } from "./data.js";
 import { hanteraBestallning, hanteraStart } from "./bestall.js";
 import { hanteraAdmin } from "./ops.js";
 import { hanteraLogin, ursprungOk } from "./auth.js";
+import { hanteraForfragan } from "./forfragan.js";
 import { migrera } from "./migrera.js";
 
-export const VERSION = "2026-10-17-pengar";
+export const VERSION = "2026-10-17-forfragan";
 const MAX_KROPP = 32 * 1024;   // en förfrågan är aldrig större än så
 
 // Inget svar får cachas (inte heller av Cloudflare runt om i världen), eftersom svaren kan innehålla uppgifter om personer.
@@ -26,11 +28,16 @@ function json(obj, status, extra) {
   return new Response(JSON.stringify(obj), { status: status || 200, headers: rubriker });
 }
 
-// Svaret till en inloggning kan bära en cookie. Den lyfts ur svaret så att den aldrig syns i texten.
+// Svaret till en inloggning kan bära en cookie, och svaret på en förfrågan från skramlat.se en CORS-rubrik. De lyfts ur svaret så att
+// de aldrig syns i texten.
 function svara(obj) {
   if (obj && obj._kaka) {
     const { _kaka, ...resten } = obj;
     return json(resten, 200, [["Set-Cookie", _kaka]]);
+  }
+  if (obj && obj._cors) {
+    const { _cors, ...resten } = obj;
+    return json(resten, 200, [["Access-Control-Allow-Origin", _cors], ["Vary", "Origin"]]);
   }
   return json(obj);
 }
@@ -63,12 +70,14 @@ async function hanteraGet(k, url) {
 }
 
 async function hanteraPost(k) {
-  if (!ursprungOk(k, false)) return { ok: false, fel: "Felaktig förfrågan." };
+  const sammaUrsprung = ursprungOk(k, false);
   const text = await k.request.text();
   if (text.length > MAX_KROPP) return { ok: false, fel: "Förfrågan är för stor." };
   let d;
   try { d = JSON.parse(text); } catch (e) { return { ok: false, fel: "Felaktig förfrågan." }; }
   if (!d || typeof d !== "object" || Array.isArray(d)) return { ok: false, fel: "Felaktig förfrågan." };
+  if (d.action === "forfragan") return await hanteraForfragan(k, d);   // egen kontroll av varifrån anropet kommer: skramlat.se får skicka
+  if (!sammaUrsprung) return { ok: false, fel: "Felaktig förfrågan." };
   switch (d.action) {
     case undefined: case "bestall": return await hanteraBestallning(k, d);
     case "admin": return await hanteraAdmin(k, d);
