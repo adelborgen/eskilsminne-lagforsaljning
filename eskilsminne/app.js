@@ -367,16 +367,12 @@
       var hp = h("input", { type: "text", name: "website", tabindex: "-1", autocomplete: "off", "aria-hidden": "true" });
       form.appendChild(h("div", { class: "hp", "aria-hidden": "true" }, h("label", { text: "Lämna tomt" }), hp));
 
-      var samtycke = h("input", { type: "checkbox", id: "samtycke" });
-      samtycke.checked = !!state.samtycke;
-      samtycke.addEventListener("change", function () { state.samtycke = samtycke.checked; });
-      form.appendChild(h("div", { class: "field" },
-        h("label", { class: "check", for: "samtycke" }, samtycke,
-          h("span", { text: "Jag godkänner att barnets förnamn och mitt mobilnummer sparas av laget för att hantera beställningen." })),
-        h("p", { class: "error", id: "err-samtycke" })));
-
       var submit = h("button", { type: "submit", class: "primary", text: "Beställ och gå vidare till Swish" });
       form.appendChild(submit);
+      // Ingen ruta att kryssa i: uppgifterna behövs för att hantera beställningen, så föräldern får bara veta vad som sparas
+      form.appendChild(h("p", { class: "small", style: "margin:12px 0 0" },
+        "Laget sparar barnets förnamn och ditt mobilnummer för att hantera beställningen. Läs mer under ",
+        h("a", { href: "#fragor", onclick: function (e) { e.preventDefault(); showTab("fragor"); } }, "Vanliga frågor"), "."));
       form.appendChild(h("p", { class: "small", style: "margin:12px 0 0", text: cfg.aterbetalning }));
       content.appendChild(form);
 
@@ -389,7 +385,7 @@
 
       form.addEventListener("submit", function (ev) {
         ev.preventDefault();
-        ["barn", "mobil", "antal", "samtycke"].forEach(function (k) { setErr("err-" + k); });
+        ["barn", "mobil", "antal"].forEach(function (k) { setErr("err-" + k); });
         errBox.hidden = true;
         var ok = true;
         var namn = barn.value.trim();
@@ -398,10 +394,9 @@
         if (!/^07\d{8}$/.test(tel)) { setErr("err-mobil", "Skriv ett svenskt mobilnummer, till exempel 070 123 45 67."); ok = false; }
         if (state.antal < 1) { setErr("err-antal", "Välj hur många " + E + " du vill beställa."); ok = false; }
         else if (kvarNu() !== null && state.antal > kvarNu()) { setErr("err-antal", "Det finns bara " + nf.format(kvarNu()) + " kvar."); ok = false; }
-        if (!samtycke.checked) { setErr("err-samtycke", "Du behöver godkänna för att kunna beställa."); ok = false; }
         if (!ok) { var f = form.querySelector(".error:not(:empty)"); if (f) f.scrollIntoView({ block: "center", behavior: "smooth" }); return; }
 
-        var payload = { klubb: K.slug, lag: cfg.slug, barn: namn, mobil: tel, antal: state.antal, samtycke: true, website: hp.value,
+        var payload = { klubb: K.slug, lag: cfg.slug, barn: namn, mobil: tel, antal: state.antal, website: hp.value,
           kod: kodBas + "-" + litenHash(namn + "|" + tel + "|" + state.antal) };
         submit.disabled = true; submit.textContent = "Skickar…";
         function fail(msg) {

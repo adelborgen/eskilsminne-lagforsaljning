@@ -196,7 +196,7 @@ Jag är inte jurist. Det här är underlag för ett samtal med någon som är de
   1. Pilot som privatperson, med Eskilsminne och högst en klubb till, gratis, med skriftligt biträdesavtal, så få uppgifter som möjligt (förnamn och mobilnummer, som idag) och radering efter 60 dagar.
   2. Registrera enskild firma **innan första betalande kund**, eller innan klubb nummer tre.
   3. Aktiebolag när det växer eller när en kund kräver det.
-  4. Se till att Cloudflare-kontot och domänen går att flytta till ett bolag senare, och att en andra person har åtkomst.
+  4. Se till att Cloudflare-kontot och domänen går att flytta till ett bolag senare, och att en reserv (någon i familjen) har åtkomst.
   5. Fråga någon som kan om en ansvarsförsäkring.
 
 ## Vad som återanvänds
@@ -214,7 +214,7 @@ Storleken är relativ (S, M, L). Jag vill inte gissa antal dagar innan vi har pr
 |---|---|---|
 | **1. Servern** | D1 med EU-jurisdiktion, beställning med atomärt lager, lagförälderns och klubbens åtgärder, inloggning med e-postlänk för klubbens administratör, testerna flyttade och körda, vaktproven för EU-reglerna, lasttest mot riktiga D1. Eskilsminne som första klubb. Sidorna pekar på nya servern. | L |
 | **2. Kom igång** | Ansökan, din kontroll och ditt godkännande, utseende (färger och märke), fler administratörer, adresser `skramlat.se/<klubb>`, e-post från skramlat.se, flytt av sidorna och domänen till Cloudflare. | M |
-| **3. Juridik och drift** | Biträdesavtal i flödet, automatisk radering efter 60 dagar, integritetspolicy, säkerhetskopior, övervakning, en andra person med åtkomst. Görs parallellt med Fas 2. | M |
+| **3. Juridik och drift** | Biträdesavtal i flödet, automatisk radering efter 60 dagar, integritetspolicy, säkerhetskopior, övervakning, en reserv i familjen med åtkomst. Görs parallellt med Fas 2. | M |
 | **4. Skolor** | Förening eller skola (ord per kund), samlad lista över obetalda för skolans administratör, Swish per kund (låst nummer för alla klasser). | M |
 
 Fas 1 är byggd (se *Läge efter Fas 1*). Eskilsminne kan gå live när Fas 1 och Fas 3 är klara, och när styrelsens skriftliga ok finns. Fas 2 behövs först för klubb nummer två. Bingolotter och rutan "Kräver 18 år" är inte med: de är strukna tills vidare.
@@ -300,4 +300,5 @@ Testerna har attacker för det nya: lagföräldern gör klubbens jobb, klubben �
 - **Pris:** Bas 999 kr per år (10 försäljningar samtidigt), Plus 1 999 kr per år (20 samtidigt). Gratisnivån (1–3 samtidigt) finns kvar, och pilotklubbar är gratis under pilotåret. Visas på prissidan sedan 17 oktober 2026. Moms är inte nämnt: med enskild firma och en omsättning under gränsen för momsbefrielse tas ingen moms ut, men det behöver kontrolleras innan första fakturan.
 - **Nästa steg:** Eskilsminne på riktigt.
 - **I villkor och biträdesavtal (ägarens val 17 oktober 2026):** förfrågningar från kom-igang sparas högst sex månader, incidenter meddelas klubben utan onödigt dröjsmål, fakturan har 30 dagars betalningsvillkor, och ett betalt år återbetalas inte vid uppsägning. Priserna är exklusive moms. Skramlats ansvar mot klubben är begränsat till vad klubben betalat de senaste 12 månaderna. Villkoren och biträdesavtalet godkänns av någon som får teckna föreningen (ordförande eller kassör). Föräldrar vänder sig till klubbens administratör med frågor om sina uppgifter, och klubbens sida behöver därför visa administratörens adress (inte byggt).
+- **Mer från ägaren 17 oktober 2026:** reserven för driften är någon i familjen, med tystnadsplikt och en kort skriftlig instruktion för vad som görs om ägaren inte nås (inte skriven). Om enskild firma registreras redan under piloten är inte bestämt (planen säger senast före första betalande kund). Rutan *Jag godkänner …* i beställningsformuläret är borttagen: uppgifterna behövs för att hantera beställningen, så det är inte samtycke som behövs. Föräldern får i stället en rad under knappen om vad som sparas, med länk till *Vanliga frågor*. Den automatiska raderingen efter 60 dagar byggs när klubben har sagt ja, och finns innan start.
 - **Leverantörstips:** guiderna börjar neutrala, utan namn på leverantörer. Tips kan läggas till senare om lagföräldrarna efterfrågar det. Ingen provision.

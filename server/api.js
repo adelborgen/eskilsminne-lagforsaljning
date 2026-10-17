@@ -14,7 +14,7 @@ import { hanteraLogin, ursprungOk } from "./auth.js";
 import { hanteraForfragan, korsUrsprung } from "./forfragan.js";
 import { migrera } from "./migrera.js";
 
-export const VERSION = "2026-10-17-forfragan-2";
+export const VERSION = "2026-10-17-utan-ruta";
 const MAX_KROPP = 32 * 1024;   // en förfrågan är aldrig större än så
 
 // Inget svar får cachas (inte heller av Cloudflare runt om i världen), eftersom svaren kan innehålla uppgifter om personer.

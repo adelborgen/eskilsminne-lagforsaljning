@@ -31,7 +31,6 @@ export async function hanteraBestallning(k, d) {
   if (!BARN_RE.test(barn)) return { ok: false, fel: "Skriv barnets namn med bokstäver (2–40 tecken). Mellanslag, bindestreck och & går bra." };
   if (!/^07\d{8}$/.test(mobil)) return { ok: false, fel: "Skriv ett svenskt mobilnummer, till exempel 070 123 45 67." };
   if (!(antal >= 1 && antal <= lag.maxAntal && antal % 1 === 0)) return { ok: false, fel: "Välj mellan 1 och " + lag.maxAntal + "." };
-  if (d.samtycke !== true) return { ok: false, fel: "Du behöver godkänna för att kunna beställa." };
 
   // Spärr per mobilnummer. Numret sparas inte i klartext i räknaren.
   const sparrNyckel = "m:" + klubb.id + ":" + (await sha256(mobil)).slice(0, 24);

@@ -166,5 +166,5 @@ P2019-sidan och dess skript (`Code.gs` i [P2019-repot](https://github.com/adelbo
 1. **Klubbens skriftliga ok** för att Eskilsminne använder Skramlat, och vem som är klubbens administratör (en person i klubben, inte den som driver Skramlat). Samt klubbens ok för märke, namn och färger.
 2. **Biträdesavtal och integritetspolicy** (Fas 3), granskade av någon som kan.
 3. **Svar från Cloudflare** på de frågor som återstår (se planen).
-4. **En andra person** med åtkomst till Cloudflare-kontot, databasen och domänen.
+4. **En reserv** med åtkomst till Cloudflare-kontot, databasen och domänen: någon i familjen, med tystnadsplikt och en kort skriftlig instruktion för vad som görs om du inte nås.
 5. **Vem betalar tillbaka** om minimum inte nås, för varje lag.

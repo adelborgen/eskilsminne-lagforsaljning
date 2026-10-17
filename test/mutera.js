@@ -90,7 +90,7 @@ const MUTATIONER = [
     ["bestall.js", ".bind(lag.id, klubb.id, iso(k), barn, mobil, antal, kod || null)", ".bind(lag.id, klubb.id, iso(k), barn, mobil, antal, kod || null, typeof d.belopp === \"number\" ? d.belopp : null)"]),
   M("Beloppet avrundas till ören", "attack", "Pris med ören ger ett exakt belopp",
     ["bestall.js", "ROUND(?6 * l.pris, 2), ?7", "(?6 * l.pris), ?7"]),
-  M("Robotfältet", "attack", "Beställa utan att godkänna villkoren",
+  M("Robotfältet", "attack", "Beställa för snabbt eller som robot",
     ["bestall.js", 'if (d.website) return { ok: true, id: "0000", belopp: 0 };', ""]),
   M("Gräns per mobilnummer", "attack", "Många beställningar från samma mobilnummer",
     ["bestall.js", "if ((await lasRakning(k, sparrNyckel)) >= CFG.MAX_PER_MOBIL)", "if (false)"]),

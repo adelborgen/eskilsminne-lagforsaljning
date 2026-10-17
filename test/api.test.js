@@ -120,7 +120,6 @@ test("beställning: avvisas för okänt lag, stängt lag och felaktiga uppgifter
   assert.match((await bestall("lag-a", { antal: 0 })).fel, /Välj mellan 1 och 20/);
   assert.match((await bestall("lag-a", { antal: 21 })).fel, /Välj mellan 1 och 20/);
   assert.match((await bestall("lag-a", { antal: 1.5 })).fel, /Välj mellan/);
-  assert.match((await bestall("lag-a", { samtycke: false })).fel, /godkänna/);
   assert.match((await bestall("lag-a", { t: 100 })).fel, /Vänta/);
   assert.equal((await m.rader("bestallning")).length, 0);
 });

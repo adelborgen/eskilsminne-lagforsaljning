@@ -262,15 +262,14 @@ const ATTACKER = [
       const rad = (await m.rader("bestallning")).pop();
       return { anrop: "POST {lag:'lag-a', antal:3, belopp:1, pris:1, nr:99, betald:'JA'}", svar: kort(svar), stoppad: svar.ok && svar.belopp === 90 && rad.belopp === 90 && rad.nr === 2 && rad.betald === "", bevis: "servern räknade själv: 3 × 30 = " + svar.belopp + " kr, och ordernumret och betalningen sattes av servern" };
     } },
-  { grupp: "Förbi knapparna", namn: "Beställa utan att godkänna villkoren, för snabbt, eller som robot",
-    hur: "Utan samtycke, utan tidsstämpel, med t:100 (för snabbt) och med det dolda robotfältet ifyllt.",
+  { grupp: "Förbi knapparna", namn: "Beställa för snabbt eller som robot",
+    hur: "Utan tidsstämpel, med t:100 (för snabbt) och med det dolda robotfältet ifyllt.",
     async kor() {
       const { bestall } = await klubb();
-      const s1 = await bestall("lag-a", { samtycke: false, mobil: "070 600 00 01" });
       const s2 = await bestall("lag-a", { t: undefined, mobil: "070 600 00 02" });
       const s3 = await bestall("lag-a", { t: 100, mobil: "070 600 00 03" });
       const s4 = await bestall("lag-a", { website: "http://spam.example", mobil: "070 600 00 04" });
-      return { anrop: "POST utan samtycke / utan t / t:100 / website:'http://…'", svar: kort(s4), stoppad: !s1.ok && !s2.ok && !s3.ok && (await antal("bestallning")) === 3, bevis: "robotens beställning fick ett låtsas-svar och sparades inte" };
+      return { anrop: "POST utan t / t:100 / website:'http://…'", svar: kort(s4), stoppad: !s2.ok && !s3.ok && (await antal("bestallning")) === 3, bevis: "robotens beställning fick ett låtsas-svar och sparades inte" };
     } },
   { grupp: "Förbi knapparna", namn: "Många beställningar från samma mobilnummer",
     hur: "Skickar tio beställningar i rad med samma nummer.",

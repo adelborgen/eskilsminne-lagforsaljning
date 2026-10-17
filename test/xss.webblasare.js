@@ -106,7 +106,7 @@ try {
   await kolla("Försäljningssidan", "/eskilsminne/?lag=lag-x", "#barn");
   await kolla("Beställningen och Swish-uppgifterna", "/eskilsminne/?lag=lag-x", "#barn", async () => {
     await p.fill("#barn", "Emil"); await p.fill("#mobil", "070 765 43 21"); await p.fill("#antal", "2");
-    await p.click("label[for=samtycke]"); await p.click("button[type=submit]");
+    await p.click("button[type=submit]");
     await p.waitForSelector(".swish", { timeout: 15000 });
   });
   await kolla("Lagförälderns vy", `/eskilsminne/admin.html#lag=lag-x&k=${x.key}`, ".tabs");
