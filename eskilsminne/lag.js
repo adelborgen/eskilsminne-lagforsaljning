@@ -3,7 +3,7 @@
 
    Lagen och deras uppgifter (Swish-nummer, pris, mål, status) ligger inte här.
    De läggs till och ändras i adminvyn (admin.html) och sparas i klubbens
-   kalkylark via Server.gs. Den här filen innehåller bara det som är gemensamt
+   Skramlats databas. Den här filen innehåller bara det som är gemensamt
    för klubben och texter som skiljer för ett visst lag.
 
    Texterna visas som ren text (ingen HTML). {mal}, {minimum}, {pris} och {lag}
@@ -14,6 +14,7 @@
    ========================================================================== */
 
 var KLUBB = {
+  slug: "eskilsminne",                   // klubbens adress hos Skramlat (skramlat.se/eskilsminne/). Följer med i varje anrop till servern.
   namn: "Eskilsminne IF",
   titel: "Lagförsäljning",              // platshållare, se README
   motto: "Respekt – Kamratskap – Jämlikhet",
@@ -21,7 +22,7 @@ var KLUBB = {
   valjLagText: "Du swishar direkt till laget, och pengarna går till lagets kassa.",
   kontakt: "Hittar du inte svaret? Hör av dig där du brukar prata med laget.",
 
-  // Adressen till klubbens Apps Script (webbappens URL, slutar på /exec). Se README, steg "Sätt upp servern".
+  // Adressen till Skramlats server. "/api" när Cloudflare-versionen är uppsatt (se README, "Sätt upp Cloudflare"): sidor och server ligger då på samma adress.
   // Tom = demoläge: sidorna visar exempellag och exempeldata, och inget sparas eller skickas.
   endpoint: "",
 

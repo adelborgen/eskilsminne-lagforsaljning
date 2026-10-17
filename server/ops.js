@@ -44,7 +44,11 @@ async function opLista(k, klubb, lag) {
   return { ok: true, lag: adminLag(lag), ordrar: (await lasOrdrar(k, lag.id)).reverse().map(utOrder) };
 }
 
-const ordernummer = (d) => { const nr = parseInt(d.id, 10); return isNaN(nr) ? null : nr; };
+// Ett ordernummer är bara siffror: "1; DELETE …" eller "1abc" är inget ordernummer (parseInt hade gett 1)
+const ordernummer = (d) => {
+  const id = typeof d.id === "number" ? String(d.id) : d.id;
+  return typeof id === "string" && /^\d{1,9}$/.test(id.trim()) ? parseInt(id, 10) : null;
+};
 const hamtaOrder = (ordrar, nr) => ordrar.find((o) => o.nr === nr);
 
 // Sätter Betald för en order: JA, AVBRUTEN eller tomt (ångra).

@@ -1,6 +1,6 @@
 /* ==========================================================================
    Klubbsidan: laglista + beställningssida per lag.
-   Lagen och deras uppgifter hämtas från klubbens server (Server.gs), eller från
+   Lagen och deras uppgifter hämtas från Skramlats server (server/), eller från
    exempeldata i demoläge. Inget här behöver ändras när ett lag läggs till.
    Beställningssidan bygger på P2019-sidan (adelborgen/eskilsminne-p2019), men allt kommer från lagets inställningar.
    ========================================================================== */
@@ -289,7 +289,7 @@
     function loadStatus() {
       if (demo) { state.bestallt = cfg.demoBestallt; renderMeters(); return; }
       if (typeof cfg.bestallt === "number") { state.bestallt = cfg.bestallt; renderMeters(); return; }   // följer med laglistan
-      fetch(cfg.endpoint + "?action=status&lag=" + encodeURIComponent(cfg.slug))
+      fetch(cfg.endpoint + "?action=status&klubb=" + encodeURIComponent(K.slug) + "&lag=" + encodeURIComponent(cfg.slug))
         .then(function (r) { return r.json(); })
         .then(function (d) {
           if (d && d.ok && typeof d.bestallt === "number") { state.bestallt = d.bestallt; state.statusFel = false; }
@@ -401,7 +401,7 @@
         if (!samtycke.checked) { setErr("err-samtycke", "Du behöver godkänna för att kunna beställa."); ok = false; }
         if (!ok) { var f = form.querySelector(".error:not(:empty)"); if (f) f.scrollIntoView({ block: "center", behavior: "smooth" }); return; }
 
-        var payload = { lag: cfg.slug, barn: namn, mobil: tel, antal: state.antal, samtycke: true, website: hp.value,
+        var payload = { klubb: K.slug, lag: cfg.slug, barn: namn, mobil: tel, antal: state.antal, samtycke: true, website: hp.value,
           kod: kodBas + "-" + litenHash(namn + "|" + tel + "|" + state.antal) };
         submit.disabled = true; submit.textContent = "Skickar…";
         function fail(msg) {

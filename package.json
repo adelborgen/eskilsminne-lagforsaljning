@@ -4,10 +4,10 @@
   "type": "module",
   "description": "Skramlat: lagförsäljning för föreningar och skolor. Sidor (statiska filer) och en server på Cloudflare (Worker och D1).",
   "scripts": {
-    "test": "node --test test/api.test.js test/attack.test.js test/eu.test.js test/server.test.cjs test/attacker.test.cjs",
-    "test:mutera": "node test/mutera.js",
+    "test": "node --test test/api.test.js test/inloggning.test.js test/attack.test.js test/eu.test.js",
     "test:gammal": "node --test test/server.test.cjs test/attacker.test.cjs",
-    "test:xss": "node test/xss.webblasare.cjs",
+    "test:mutera": "node test/mutera.js",
+    "test:xss": "node test/xss.webblasare.js",
     "bygg": "node scripts/bygg.js",
     "dev": "npm run bygg && wrangler dev",
     "lasttest": "node scripts/lasttest.js"

@@ -1,159 +1,163 @@
-# Lagförsäljning för Eskilsminne IF: flera lag, adminvy och ett Swish-nummer per lag (prototyp)
+# Skramlat: lagförsäljning för föreningar och skolor (prototyp)
 
-En klubbsida där föräldern väljer lag i en lista och beställer, i samma stil som P2019-sidan. Varje lags lagförälder sätter upp försäljningen, och klubben godkänner den innan något säljs. Sedan har lagföräldern en adminvy där beställningar, betalningar och utlämning följs upp. Klubbens administratör lägger till lag och godkänner försäljningarna.
+Föräldern väljer lag i en lista och beställer, och swishar direkt till lagets nummer. Lagföräldern sätter upp försäljningen, och klubben godkänner den innan något säljs. Sedan följer lagföräldern upp beställningar, betalningar och utlämning i en adminvy. Klubbens administratör godkänner försäljningarna.
 
-**Det här är en prototyp, och repot är fristående från P2019-sidan ([adelborgen/eskilsminne-p2019](https://github.com/adelborgen/eskilsminne-p2019)), som inte påverkas. Inget här är kopplat till P2019:s server, kalkylark eller Swish-nummer.**
+**Status (17 oktober 2026):** servern på Cloudflare är byggd och testad lokalt (Fas 1 i [PLAN-gemensam-server.md](PLAN-gemensam-server.md)). **Inget är uppsatt hos Cloudflare än**: sidorna kör demoläge, och ingen databas eller server är köpt. Den gamla Apps Script-servern (`Server.gs`) finns kvar tills Eskilsminne har flyttat, men används inte längre och tas bort efter flytten.
+
+Repot är fristående från P2019-sidan ([adelborgen/eskilsminne-p2019](https://github.com/adelborgen/eskilsminne-p2019)), som inte påverkas.
 
 ## Principen
 
-- **Pengarna går direkt till lagets Swish-nummer.** Systemet tar aldrig emot, håller eller flyttar pengar. Det kräver inget särskilt slags nummer: lagets eget, ett privat eller ett Swish Handel-nummer, det bestämmer laget. Numret skrivs in i lagets uppgifter och visas för föräldern efter beställningen.
-- **Ett skript och ett kalkylark för hela klubben** (`Server.gs`). Alla beställningar ligger i klubbens kalkylark. Lagens lagföräldrar använder adminvyn, inte kalkylarket, och ser bara sitt eget lag.
+- **Pengarna går direkt till lagets Swish-nummer.** Systemet tar aldrig emot, håller eller flyttar pengar. Lagets eget nummer, ett privat eller ett Swish Handel-nummer: det bestämmer laget.
+- **En gemensam server för alla klubbar** (Cloudflare Worker och databasen D1). Klubbens administratör och lagföräldrar använder adminvyn, inte databasen.
 - **Priset räknas alltid på servern.** Sidan skickar bara antal.
+- **Allt som sparas om personer ligger i D1 med EU-jurisdiktion**, och ingen annanstans (se *Lagring i EU*).
 
 ## Tre roller
 
 | Roll | Gör | Loggar in med |
 |---|---|---|
 | Förälder | Väljer lag och beställer, swishar till lagets nummer | Inget |
-| Lagförälder | Startar försäljningen själv (eller får en länk av klubben), fyller i den (vad som säljs, priser, Swish-nummer, mål) och skickar den till klubben för godkännande. När den är godkänd: ser översikt och beställningar för sitt lag, markerar betald/avbruten och hämtad (en och en, eller alla betalda på en gång), tar bort obetalda beställningar, skriver ut en utlämningslista, ringer eller skickar SMS-påminnelse, exporterar CSV | Lagets adminnyckel (via en personlig länk) |
-| Klubbens administratör | Godkänner eller skickar tillbaka försäljningar, tar bort felaktiga eller dubbla utkast, lägger till lag vid behov, öppnar/stänger/avslutar, ändrar uppgifter, byter nycklar, ser alla lag | Superadmin-nyckeln |
+| Lagförälder | Startar försäljningen själv (eller får en länk av klubben), fyller i den (vad som säljs, priser, Swish-nummer, mål) och skickar den till klubben för godkännande. När den är godkänd: ser översikt och beställningar för sitt lag, markerar betald/avbruten och hämtad, tar bort obetalda beställningar, skriver ut en utlämningslista, ringer eller skickar SMS-påminnelse, exporterar CSV | Lagets adminnyckel (via en personlig länk) |
+| Klubbens administratör | Godkänner eller skickar tillbaka försäljningar, tar bort felaktiga eller dubbla utkast, lägger till lag, öppnar/stänger/avslutar, ändrar uppgifter, byter lagets nyckel, ser alla lag | E-post: en länk som gäller i 15 minuter och kan användas en gång |
 
 ## Filer
 
-Tjänsten heter **Skramlat** och ligger på `skramlat.se`. Varje klubb har en egen mapp, så att klubbens länkar aldrig behöver ändras när fler klubbar kommer till: Eskilsminne ligger på `skramlat.se/eskilsminne/`.
-
-| Fil | Innehåll |
+| Fil eller mapp | Innehåll |
 |---|---|
-| `index.html` (i roten) | Skramlats framsida med listan över klubbar. Gamla länkar med `?lag=` skickas vidare till `eskilsminne/`. |
-| `eskilsminne/` | Eskilsminnes sidor. Filerna nedan ligger i den här mappen. |
-| `index.html`, `app.js` | Laglistan och beställningssidan. `?lag=p2019` visar ett lag. |
-| `admin.html`, `admin.js` | Adminvyn för lagföräldrar och klubbens administratör. |
-| `Server.gs` (i roten) | Servern: klistras in i Google Apps Script. Sköter lag, beställningar, nycklar och adminåtgärder. |
-| `lag.js` | Klubbens gemensamma inställningar (namn, texter, adressen till servern) och texter som skiljer för ett visst lag. **Inte lagens siffror**, de läggs till i adminvyn. |
-| `util.js`, `style.css` | Delade hjälpfunktioner och utseende (Matchdag: blå bakgrund med ränder, krämfärgade kort, gula lagbrickor, vimplar). Samma utseende för förälder, lagförälder och klubbadministratör. |
-| `assets/` | Klubbmärket. |
-| `fonts/` (i roten) | Typsnitten (Archivo och Atkinson Hyperlegible Next, självhostade). Delas av framsidan och alla klubbar. |
-| `test/` (i roten) | Tester för servern. Se längst ned. |
+| `index.html`, `pris/`, `guider/` | Skramlats framsida, prissida och guider. |
+| `eskilsminne/` | Eskilsminnes sidor: `index.html` + `app.js` (laglista och beställning, `?lag=p2019` visar ett lag), `admin.html` + `admin.js` (adminvyn), `lag.js` (klubbens namn, texter och `slug`/`endpoint`), `util.js`, `style.css`, `assets/`. |
+| `server/` | Servern. `worker.js` (ingången), `api.js` (adresser), `ops.js` (adminvyn), `bestall.js` (beställning och start), `auth.js` (nycklar, inloggning, session), `data.js` (databasen), `regler.js` (kontroller och uträkningar), `krypto.js`, `epost.js`. |
+| `migrations/` | Databasens schema (D1). |
+| `wrangler.toml` | Cloudflare-konfigurationen. Bara databasen, de statiska filerna, e-posten och två inställningar: ingen annan lagring, inga loggar. |
+| `scripts/` | `bygg.js` (samlar de publika filerna i `dist/`), `ny-klubb.js` (lägger in en klubb och dess administratör), `kontrollera-eu.js` (kontrollerar jurisdiktionen), `lasttest.js` (lasttest mot en riktig testdatabas). |
+| `test/` | Tester av servern. Se längst ned. |
+| `fonts/`, `logga/`, `material/` | Typsnitt (Archivo och Atkinson Hyperlegible Next, självhostade), logga och marknadsmaterial. |
+| `Server.gs` | **Gammal**: Apps Script-servern. Används inte längre. |
 
 ## Prova utan att sätta upp något (demoläge)
 
-Så länge `endpoint` i `lag.js` är tom visar sidorna exempellag och exempeldata, och inget sparas eller skickas. Kör `python3 -m http.server` i repots rot och gå till `http://localhost:8000/eskilsminne/` (adminvyn på `…/eskilsminne/admin.html`).
+Så länge `endpoint` i `eskilsminne/lag.js` är tom visar sidorna exempellag och exempeldata, och inget sparas eller skickas. Kör `python3 -m http.server` i repots rot och gå till `http://localhost:8000/eskilsminne/` (adminvyn på `…/eskilsminne/admin.html`).
 
-I adminvyn i demoläge är nyckeln `demo` för ett lags admin och `super` för klubbens administratör. *Starta en försäljning* fungerar också i demon och visar en påhittad nyckel i samma form som de riktiga (32 tecken), som fungerar för just det laget så länge sidan inte laddas om. Förälderns sida och adminsidan har varsitt demotillstånd som nollställs när sidan laddas om: en beställning som läggs på ena sidan syns inte på den andra.
+I adminvyn i demoläge är nyckeln `demo` för ett lags admin. Klubbadministratör: skriv valfri e-postadress under *Klubbens administratör* och välj *Logga in direkt (demo)*. *Starta en försäljning* fungerar också i demon. Förälderns sida och adminsidan har varsitt demotillstånd som nollställs när sidan laddas om.
 
-## Sätt upp servern (en gång, ca 30 minuter)
+## Kör servern lokalt (kostar ingenting)
 
-Görs av klubbens administratör.
+```
+npm install
+npx wrangler d1 migrations apply skramlat --local                       # skapar den lokala databasen
+node scripts/ny-klubb.js --slug eskilsminne --namn "Eskilsminne IF" --epost du@example.se > ny-klubb.sql
+npx wrangler d1 execute skramlat --local --file ny-klubb.sql            # första klubben och dess administratör
+npm run dev -- --var SIDA_ORIGIN:http://localhost:8787                  # bygger dist/ och startar Worker, sidor och lokal D1
+```
 
-1. **Konto och kalkylark.** Skapa kalkylarket "Lagförsäljning" på ett Google-konto som **klubben äger** och som fler än en person kommer åt (se "Personuppgifter" nedan). Dela det inte med lagens lagföräldrar.
-2. **Apps Script.** I kalkylarket: **Tillägg → Apps Script**. Ta bort befintlig kod, klistra in hela `Server.gs` och spara.
-3. **Kör `setup`.** Välj funktionen `setup` och tryck **Kör**. Godkänn behörigheterna. Flikarna *Lag*, *Beställningar* och *Logg* skapas. Öppna **Körningar** (eller *Exekveringslogg*): där står **superadmin-nyckeln**. Den visas bara nu. Spara den i en lösenordshanterare. Tappas den: kör `nySuperNyckel` (den gamla slutar fungera).
-4. **Publicera som webbapp.** **Implementera → Ny implementering → Webbapp**. *Kör som:* **Jag**. *Vem har åtkomst:* **Alla** (inte "Alla med Google-konto", då stoppas beställningarna). Kopiera webbappens URL (slutar på `/exec`).
-5. **Koppla sidan.** Klistra in URL:en som `endpoint` i `lag.js`.
-6. **Lagen kommer in.** Lagföräldrar startar sina försäljningar själva på adminsidan (*Starta en försäljning*, direktlänk `admin.html#starta`). Du kan också lägga till ett lag själv: logga in som *Klubbadministratör*, öppna **Lägg till lag** och skriv lagets namn. Då får du en adminlänk att skicka till lagföräldern.
-7. **Efter varje ändring i `Server.gs`:** Implementera → Hantera implementeringar → pennan → Version: Ny version → Implementera.
+Sätt `endpoint: "/api"` i `eskilsminne/lag.js` för att sidorna ska prata med servern (ändra tillbaka till `""` innan du publicerar på GitHub Pages: servern finns bara på Cloudflare). Inloggningsmejlet skickas inte på riktigt lokalt: det skrivs som en fil under `.wrangler/tmp/email/` och loggas i terminalen, och länken i det är den du öppnar.
+
+## Sätt upp Cloudflare (en gång)
+
+Görs av den som driver Skramlat. Kräver ett Cloudflare-konto med **Workers Paid** (5 $ i månaden): gratisnivån har dagstak som gör att anropen felar en dag med många föräldrar, och utgående e-post kräver betalnivån. Stegen står också överst i `wrangler.toml`.
+
+1. **Databasen, med EU-jurisdiktion.** `npx wrangler d1 create skramlat --jurisdiction=eu`. Jurisdiktionen kan bara sättas när databasen skapas. Klistra in databasens id i `wrangler.toml`.
+2. **Schemat.** `npx wrangler d1 migrations apply skramlat --remote`.
+3. **E-post.** `npx wrangler email sending enable skramlat.se`. Cloudflares e-posttjänst är i beta, och fältnamnen i `server/epost.js` är hämtade från en tredjepartsbeskrivning: kontrollera mot Cloudflares egen dokumentation.
+4. **Första klubben.** `node scripts/ny-klubb.js --slug eskilsminne --namn "Eskilsminne IF" --epost <administratörens adress> > ny-klubb.sql`, sedan `npx wrangler d1 execute skramlat --remote --file ny-klubb.sql`. Radera filen efteråt. Administratören ska vara en person i klubben, inte den som driver Skramlat.
+5. **Publicera.** `npm run bygg && npx wrangler deploy`. Sätt `endpoint: "/api"` i `eskilsminne/lag.js` först.
+6. **Kontrollera jurisdiktionen.** `CLOUDFLARE_ACCOUNT_ID=… CLOUDFLARE_API_TOKEN=… node scripts/kontrollera-eu.js`. Kan skriptet inte avgöra det (svaret nämner ingen jurisdiktion) kontrolleras det för hand i Cloudflares panel och skrivs ner.
+7. **Lasttest mot en testdatabas** innan skarp drift: `scripts/lasttest.js`.
+
+Domänen `skramlat.se` pekar idag på GitHub Pages. Flytten till Cloudflare görs i Fas 2.
 
 ## Så går en försäljning till (alla försäljningar godkänns av klubben)
 
-1. **Lagföräldern startar försäljningen** på adminsidan med *Starta en försäljning*: skriver lagets namn och får en personlig länk som visas **en enda gång**. Länken är lagförälderns inloggning. Försäljningen börjar alltid som **Utkast** och syns inte för föräldrarna. (Klubben kan också lägga till laget och skicka länken.) Vem som helst kan starta ett utkast, men det kan inte öppnas utan klubbens godkännande, klubben kan ta bort felaktiga eller dubbla utkast, och högst tio försäljningar kan startas per timme.
+1. **Lagföräldern startar försäljningen** på adminsidan med *Starta en försäljning*: skriver lagets namn och får en personlig länk som visas **en enda gång**. Länken är lagförälderns inloggning. Försäljningen börjar alltid som **Utkast** och syns inte för föräldrarna. (Klubben kan också lägga till laget och skicka länken.) Vem som helst kan starta ett utkast, men det kan inte öppnas utan klubbens godkännande, klubben kan ta bort felaktiga eller dubbla utkast, och högst tio försäljningar kan startas per timme och klubb.
 2. **Lagföräldern fyller i försäljningen** i adminvyn: **vad som säljs** (produktens namn, en kort beskrivning, enhet i ental och flertal, till exempel *kaka* och *kakor*, en text om försäljningen, hur och när varorna delas ut och en belöningstext), pris, inköpspris, minimum, mål, eventuellt antal i lager, Swish-nummer och mottagarens namn. Det finns inga färdiga produkter: varje lag skriver in sin egen, en produkt per försäljning. Två punkter ska bekräftas innan den kan skickas: att den som äger Swish-numret vet om det, och att laget bara säljer sådant som klubben har godkänt att laget får sälja. Servern kontrollerar att allt är ifyllt. Status blir **Väntar på godkännande** och uppgifterna låses. Lagföräldern kan dra tillbaka den och ändra.
 3. **Klubbens administratör granskar** under *Väntar på godkännande* på sidan Alla lag. Administratören kan **godkänna och öppna nu**, **godkänna och öppna senare** (status *Godkänd, öppnar snart*) eller **skicka tillbaka med en kommentar** som lagföräldern ser. Servern kontrollerar uppgifterna en gång till vid godkännandet.
 4. **Först när försäljningen är öppen** syns den för föräldrar och går att beställa från. Utkast och väntande försäljningar visas inte i listan och inte på lagets egen länk. Efter godkännandet kan lagföräldern inte ändra pris eller Swish-nummer: bara klubben kan det.
 5. Gör en testbeställning på lagets sida och markera den som avbruten.
 
-Alla steg skrivs i fliken *Logg* (vem som skickade, godkände eller skickade tillbaka, och kommentaren).
+Alla steg skrivs i tabellen *logg* (vem som gjorde vad, utan namn eller mobilnummer). Förlorad nyckel: *Ny nyckel* under Alla lag. Den gamla slutar fungera direkt.
 
-Förlorad nyckel: *Ny nyckel* under Alla lag. Den gamla slutar fungera direkt.
+## Klubbens status
+
+En klubb är **väntar** (ansökt, inget syns för föräldrar och ingen kan beställa), **aktiv** eller **avstangd** (försäljningarna döljs, inga beställningar tas emot, och administratörens och lagens inloggningar slutar fungera). Besökare ser en väntande eller avstängd klubb som en klubb som inte finns. Skramlat godkänner klubbar: det går inte att bevisa tekniskt att någon företräder en förening, så det görs som en rutin (se *Vem får skapa en klubb?* i planen).
 
 ## Säkerhet
 
-- **Nycklar.** 32 slumpade tecken (122 bit). I kalkylarket och i servern lagras bara en hash av nyckeln, aldrig själva nyckeln. Adminlänken har formen `admin.html#lag=<lag>&k=<nyckel>`: nyckeln ligger efter `#`, så den skickas inte till webbservern, och tas bort ur adressfältet vid inloggning. Inloggningen sparas bara i webbläsarflikens `sessionStorage` och försvinner när fliken stängs.
-- **Behörighet kontrolleras alltid av servern**, aldrig av sidan. Ett lags nyckel ger bara det laget. Bara superadmin-nyckeln kan lägga till lag, godkänna försäljningar, ändra uppgifter efter godkännandet och byta nycklar. Ett lags nyckel kan bara ändra försäljningens uppgifter medan den är ett utkast.
-- **Spärr.** Efter 10 felaktiga nyckelförsök för ett lag (eller 40 totalt) stoppas fel nycklar en stund. Rätt nyckel kommer alltid in: nycklarna är för långa för att gissa, så spärren ska bara bromsa fel nycklar och får inte kunna användas för att låsa ute en lagförälder.
-- **Logg.** Fliken *Logg* i kalkylarket visar när ett lag skapades, ändrades eller fick ny nyckel och varje betalningsmarkering.
-- **Skydd mot skräp.** Beställningar har honeypot, tidsspärr, spärr per mobilnummer och kontroll av lag, status och högsta antal. Text som admin skriver rensas från inledande `=`, `+`, `-`, `@` så att inget tolkas som formel i kalkylarket.
-- Servern är en publik webbadress: den som känner URL:en kan anropa den. Därför ligger all behörighet i nycklarna ovan.
+- **Nycklar.** Lagets nyckel är 32 slumpade tecken (128 bit). I databasen lagras bara en hash. Adminlänken har formen `admin.html#lag=<lag>&k=<nyckel>`: nyckeln ligger efter `#`, så den skickas inte till webbservern, och tas bort ur adressfältet vid inloggning. Inloggningen sparas bara i webbläsarflikens `sessionStorage`.
+- **Klubbens administratör.** E-post med en länk (32 slumpade byte, bara hashen sparas) som gäller i 15 minuter och kan användas en gång. Länken öppnar en sida med en knapp, och först knappen loggar in, så att en e-postskanner inte förbrukar den. Sessionen gäller i 14 dagar, ligger i en cookie som bara går över https, inte är läsbar för skript och bara gäller den egna adressen (`__Host-`, `HttpOnly`, `Secure`, `SameSite=Lax`), och sparas bara som hash. Förfrågningar från en annan webbplats gäller inte (Origin kontrolleras).
+- **Behörighet kontrolleras alltid av servern**, aldrig av sidan. Ett lags nyckel ger bara det laget i just den klubben. Bara klubbens administratör kan lägga till lag, godkänna försäljningar, ändra uppgifter efter godkännandet och byta nycklar. Ett lags nyckel kan bara ändra försäljningens uppgifter medan den är ett utkast.
+- **Samtidighet.** Lagerkontrollen och ordernumret är samma databasuttryck som sparar beställningen, och körs som en transaktion: två föräldrar kan inte ta samma sista, och ett ordernummer används aldrig två gånger.
+- **Spärr.** Efter 10 felaktiga nyckelförsök för ett lag (eller 40 för klubben) på tio minuter stoppas fel nycklar en stund. Rätt nyckel kommer alltid in. Högst fem inloggningslänkar per adress och 20 per IP-nummer och timme, och svaret är detsamma oavsett om adressen är en administratör.
+- **Skydd mot skräp.** Beställningar har honeypot, tidsspärr, spärr per mobilnummer och kontroll av lag, status och högsta antal (antalet måste vara ett tal). Texter som lagföräldern skriver rensas från inledande `=`, `+`, `-`, `@`, så att inget tolkas som formel om uppgifterna exporteras till ett kalkylprogram. Alla databasfrågor har parametrar.
+- **Inget cachas.** Alla svar skickas med `Cache-Control: no-store`.
+- **Logg.** Tabellen *logg* visar när ett lag skapades, ändrades eller fick ny nyckel och varje betalningsmarkering, med ordernummer, antal och belopp, aldrig barnets namn, mobilnummer eller e-postadresser.
+- Servern är en publik webbadress: den som känner den kan anropa den. Därför ligger all behörighet i nycklarna och sessionen.
+
+## Lagring i EU
+
+Allt som sparas om personer (barnets förnamn, mobilnummer, administratörernas e-postadresser) ligger i D1, som skapas med EU-jurisdiktion. Inget KV, ingen R2, inga köer, inga Durable Objects, ingen cache och inga loggar med uppgifter om personer. Vaktprovet `test/eu.test.js` fallerar om något sådant läggs till.
+
+**Det Skramlat kan lova är att uppgifterna lagras i EU**, inte att de aldrig lämnar EU: koden körs i Cloudflares globala nätverk, och Cloudflares egna loggar (till exempel IP-nummer) lagras i både USA och Europa. Cloudflare är dessutom ett amerikanskt bolag. Se *Lagring bara i EU* i [PLAN-gemensam-server.md](PLAN-gemensam-server.md), och frågorna till Cloudflare som återstår.
 
 ## Personuppgifter
 
 Beställningarna innehåller barnets förnamn och förälderns mobilnummer.
 
-- **Klubben är personuppgiftsansvarig** för alla sina lag. Den som sätter upp och sköter servern behandlar uppgifterna **på klubbens uppdrag** (personuppgiftsbiträde). Skriv ner uppdraget kort: vem som får se uppgifterna, till vad, och att de raderas efter säsongen. Stäm av med klubbens styrelse hur det ska se ut. Det här är inte juridisk rådgivning.
-- Klubbens administratör (och den som äger kalkylarket) ser **alla** lags uppgifter. Lagens lagföräldrar ser bara sitt eget lag, via adminvyn.
-- Kalkylarket ska ligga på ett konto som klubben äger och som minst två personer kommer åt, så att det inte hänger på en enskild privatperson.
-- Radera beställningsraderna när säsongen är över.
+- **Klubben är personuppgiftsansvarig** för alla sina lag. **Skramlat är personuppgiftsbiträde** och behandlar uppgifterna på klubbens uppdrag. Biträdesavtal, integritetspolicy och radering efter 60 dagar (efter avslutad försäljning) ska vara klara innan en riktig klubb använder tjänsten (Fas 3 i planen). Det här är inte juridisk rådgivning.
+- Klubbens administratör ser **alla** lags uppgifter. Lagens lagföräldrar ser bara sitt eget lag, via adminvyn.
+- Klubben ska ha minst två administratörer, så att det inte hänger på en enskild person.
 
 ## Bra att veta
 
 - **Pengarna.** Den som äger lagets Swish-nummer tar emot pengarna och betalar tillbaka vid behov, till exempel om minimum inte nås. Skriv ner vem det är för varje lag.
-- **Notiser.** Det finns ingen Telegram eller e-post i den här versionen: den som tar emot pengarna tittar i adminvyn. Beställningar är *Obetalda* tills de markeras *Betald*.
-- **Utlämning.** Fliken *Utlämning* i adminvyn är en lista att bocka av när någon hämtar. Kryssrutan sparas direkt. *Markera alla betalda som hämtade* markerar bara betalda beställningar: obetalda och avbrutna rörs inte. Ett svar i kalkylarket syns i kolumnen *Hämtad* (JA eller tomt). *Skriv ut listan* skriver ut alla beställningar utom de avbrutna, i namnordning.
-- **En sak per lag.** Ett lag har en försäljning, med en produkt, i taget. Säljer laget något nytt efter att den förra avslutats, eller två saker samtidigt, startar lagföräldern (eller klubben) en ny post för laget, till exempel *P2019 Bingolotter*, med egen nyckel och egen länk. Det håller ordrar, mätare och utlämningslistor isär.
-- **Lager.** Har laget fått ett bestämt antal, till exempel bingolotter, skriver lagföräldern *Antal i lager*. Servern nekar då beställningar över det som finns kvar (kontrollen görs inne i låset, så att två föräldrar inte kan ta samma sista), och försäljningen visas som *Slutsåld* när allt är beställt. Avbrutna och borttagna beställningar ger tillbaka sina. Sidan visar "Det finns N kvar" och begränsar valet, och om någon hunnit före visar den hur många som verkligen finns kvar. Med ett lager behövs inget minimum (bara ett mål), och frågan om minimum döljs bland de vanliga frågorna. Tomt eller 0 betyder ingen gräns.
-- **Bingolotter.** Klubben köper in bingolotter som lagen får sälja. De läggs in som vilken produkt som helst (produkt *Bingolotter*, enhet *lott/lotter*) och klubben godkänner försäljningen som vanligt, så klubben ser priset innan något säljs. Lotterna är fysiska och lämnas ut vid hämtning, så flödet är det vanliga: beställ, swisha, hämta. Verktyget håller ingen koll på lottnummer. Vilka villkor som gäller för att sälja lotterna (till exempel åldersgräns och betalning via Swish) avgörs av den klubben köper dem av, inte av verktyget: kontrollera det innan försäljningen öppnas.
-- **Länk till beställningssidan.** Lagföräldern delar lagets egen länk (`?lag=…`) med föräldrarna på det sätt laget brukar kommunicera. Verktyget förutsätter ingen särskild kanal: alla lag har inte till exempel WhatsApp, så texterna till föräldrarna säger "hör av dig där du brukar prata med laget". Föräldrar som saknar den väljer sitt lag i listan på klubbsidan.
-- **Version och behörighet.** Överst i `Server.gs` står versionen (`VERSION`, ett datum). Den skrivs ut när `setup` körs och går att se på `?action=version`, så att det syns vilken version en klubb kör. Filen har också `@OnlyCurrentDoc`, som gör att Google bara ger skriptet åtkomst till kalkylarket det ligger i, inte till andra filer på kontot. Det är inte provat mot riktiga Google om varningen om en overifierad app då försvinner.
-- **Uppdaterar du en redan körd server?** Kör `setup` igen efter att du bytt in den nya `Server.gs`. Den lägger till kolumnen *Hämtad* i fliken *Beställningar* och kolumnerna *Klubbens kommentar*, produktfälten och *Antal i lager* i fliken *Lag* utan att röra befintliga rader. Lag som redan finns behåller sin status. Ett lag som saknar produkt kan inte öppnas igen förrän lagföräldern har fyllt i den.
+- **Notiser.** Det finns ingen Telegram eller e-post om beställningar: den som tar emot pengarna tittar i adminvyn. Beställningar är *Obetalda* tills de markeras *Betald*.
+- **Utlämning.** Fliken *Utlämning* i adminvyn är en lista att bocka av när någon hämtar. *Markera alla betalda som hämtade* markerar bara betalda beställningar: obetalda och avbrutna rörs inte. *Skriv ut listan* skriver ut alla beställningar utom de avbrutna, i namnordning.
+- **En sak per lag.** Ett lag har en försäljning, med en produkt, i taget. Säljer laget något nytt efter att den förra avslutats, eller två saker samtidigt, startar lagföräldern (eller klubben) en ny post för laget, till exempel *P2019 Lotter*, med egen nyckel och egen länk.
+- **Lager.** Har laget fått ett bestämt antal, till exempel bingolotter, skriver lagföräldern *Antal i lager*. Servern nekar då beställningar över det som finns kvar, och försäljningen visas som *Slutsåld* när allt är beställt. Avbrutna och borttagna beställningar ger tillbaka sina. Med ett lager behövs inget minimum (bara ett mål). Tomt eller 0 betyder ingen gräns.
+- **Länk till beställningssidan.** Lagföräldern delar lagets egen länk (`?lag=…`) med föräldrarna på det sätt laget brukar kommunicera. Verktyget förutsätter ingen särskild kanal. Föräldrar som saknar länken väljer sitt lag i listan på klubbsidan.
 - **Betalningar matchas för hand.** Föräldern skriver ordernumret i Swish-meddelandet, den som tar emot pengarna matchar det mot Swish-historiken och trycker *Betald*. Automatisk matchning kräver Swish Handel med API eller en betalleverantör och finns inte här.
-- **Inloggning med nyckel** är enkel och passar volontärer, men en vidarebefordrad länk ger åtkomst. Byt nyckel om den kan ha hamnat fel.
-- **Ta bort en beställning.** Obetalda och avbrutna beställningar kan tas bort i fliken *Beställningar* (två tryck). Betalda och hämtade kan inte det: ångra betalningen eller hämtningen först. Raden försvinner helt, även barnets namn och mobilnummer. I fliken *Logg* sparas bara ordernummer, antal och belopp. Ordernumret används inte igen.
-- **Många lag.** Klubbsidan visar kompakta rader och en sökruta när fler än sex lag säljer. Adminvyn *Alla lag* får sökruta, filter på status och hopfällbara kort. De flesta föräldrar kommer ändå direkt till sitt lag via länken (`?lag=…`) som lagföräldern delar med föräldrarna där laget brukar prata (gruppchatt, SMS eller något annat), så listan är mest en reservväg. Demon visar 23 lag.
-- **Besökare läser inte kalkylarket varje gång.** Laglistan, med antal beställda per lag, sparas i serverns minne. Sidan gör ett enda anrop för att visa ett lag. Det sparade svaret uppdateras när något händer, inte på en klocka: varje ny beställning räknas upp i det direkt, och allt som ändras i adminvyn (status, pris, betald, avbruten eller borttagen beställning) rensar det direkt. Som skyddsnät, om två saker råkar hända samtidigt, räknas det om från kalkylarket efter högst 5 minuter (`CFG.CACHE_SEK`). En beställning kontrollerar alltid lagets uppgifter direkt i kalkylarket, aldrig mot det sparade svaret, så en stängd försäljning stoppas direkt. **Ändra inte direkt i fliken *Lag* eller *Beställningar* medan en försäljning pågår:** det syns för besökarna först inom 5 minuter. Använd adminvyn.
-- **Dubbletter.** Varje beställning får en kod av sidan. Försöker föräldern igen med samma uppgifter efter ett svar som uteblev (men beställningen hann sparas) får hen samma kvitto, inte en ny beställning. Koden minns beställningen i 15 minuter.
-- **Kvittot överlever en omladdning.** Ordernummer, belopp och antal sparas i webbläsaren i 14 dagar (inte barnets namn eller mobilnummer), så att Swish-uppgifterna finns kvar om sidan laddas om medan föräldern är i Swish-appen. *Gör en ny beställning* rensar det.
+- **Ta bort en beställning.** Obetalda och avbrutna beställningar kan tas bort (två tryck). Betalda och hämtade kan inte det: ångra betalningen eller hämtningen först. Raden försvinner helt, även barnets namn och mobilnummer. I loggen sparas bara ordernummer, antal och belopp. Ordernumret används inte igen.
+- **Dubbletter.** Varje beställning får en kod av sidan. Försöker föräldern igen med samma uppgifter efter ett svar som uteblev får hen samma kvitto, inte en ny beställning. Det gäller även om två försök kommer exakt samtidigt.
+- **Kvittot överlever en omladdning.** Ordernummer, belopp och antal sparas i webbläsaren i 14 dagar (inte barnets namn eller mobilnummer), så att Swish-uppgifterna finns kvar om sidan laddas om medan föräldern är i Swish-appen.
 - **Namn och nummer.** Barnets namn måste börja med en bokstav men får innehålla mellanslag, bindestreck, apostrof, punkt, komma, `&`, `/` och parenteser (till exempel *Emil & Ella*). Mobilnummer skrivna `+46 (0)70 …` godtas. Bara svenska mobilnummer (07…) går att beställa med.
-- **Skalning.** Apps Script och ett kalkylark räcker för en klubb med några lag och några hundra beställningar. Beställningarna skrivs en i taget (ett lås), och Apps Script tillåter 30 samtidiga körningar per användare. Hur det beter sig med 23 lag samtidigt är inte provat mot riktiga Google: kör ett lasttest innan många lag öppnar på samma gång. Blir det betydligt mer (många lag, tusentals beställningar) bör servern bytas mot en riktig databas. Sidorna pratar med servern via ett litet JSON-API, så servern kan bytas ut senare.
+- **Många lag.** Klubbsidan visar kompakta rader och en sökruta när fler än sex lag säljer. Adminvyn *Alla lag* får sökruta, filter på status och hopfällbara kort.
+
+## Tester
+
+Servertesterna körs mot en riktig D1 på den här datorn (Miniflare, samma databasmotor som Cloudflare), utan att något konto, någon databas eller något riktigt uppgift rörs. Det kostar ingenting.
+
+```
+npm test             # funktionella tester, inloggning, attacker och vaktprov för EU-reglerna
+npm run test:mutera  # bevis för att testerna biter (långsamt: kör bara före lansering)
+npm run test:xss     # XSS-attacker i en riktig webbläsare (kräver Playwright och Chromium)
+npm run test:gammal  # testerna av den gamla Apps Script-servern (Server.gs)
+```
+
+- **`test/api.test.js`**: priset räknas på servern, ordernummer, lager (även med många samtidiga beställningar), dubbletter, adminvyn, godkännande, start av försäljning, spärrar och trasiga anrop.
+- **`test/inloggning.test.js`**: länkens livslängd och engångsanvändning, cookiens egenskaper, förfrågningar från andra webbplatser, spärrar, flera klubbar, och klubbar som väntar eller är avstängda.
+- **`test/attack.test.js`**: försöker göra det som inte ska gå: läsa eller ändra ett annat lags eller en annan klubbs uppgifter, ge sig själv klubbadministratörens behörighet, smyga in status eller nyckel, beställa förbi knapparna, skicka ett eget belopp, SQL-injektion, skript i texterna, gissa länkar och sessioner, skicka förfrågningar i den inloggades namn, ta reda på vilka adresser som är administratörer och fylla en brevlåda. `ATTACK_RAPPORT=rapport.md npm test` skriver en tabell över varje attack med anrop, svar och resultat.
+- **`test/eu.test.js`**: vaktprov för *Lagring i EU* (ingen cache, ingen annan lagring, inga loggar med uppgifter, konfigurationen, var personuppgifter finns).
+- **`test/mutera.js`**: kopplar bort varje skydd i en kopia av `server/`, ett i taget, och kontrollerar att rätt test då fallerar. Ett test som går igenom även utan sitt skydd bevisar ingenting.
+
+Det som bara kan bevisas hos riktiga Cloudflare, till exempel många beställningar exakt samtidigt mot en riktig D1, provas med `scripts/lasttest.js` mot en testdatabas innan skarp drift.
+
+## Publicera
+
+- **Idag:** sidorna ligger på GitHub Pages (*Settings → Pages*, gren `main`, mapp `/`), och `skramlat.se` pekar dit. Eskilsminne visar demo.
+- **Med Cloudflare (Fas 2):** sidorna och servern ligger i samma Worker, och domänen flyttas dit. Då får varje klubb sin adress `skramlat.se/<klubb>/` utan en egen mapp i repot, och en klubb skapas på `skramlat.se/kom-igang`. Se planen.
 
 ## Flytta P2019 hit
 
 P2019-sidan och dess skript (`Code.gs` i [P2019-repot](https://github.com/adelborgen/eskilsminne-p2019)) fortsätter som idag tills försäljningen är klar. Därefter:
 
-1. Lägg till P2019 i adminvyn med samma uppgifter. Produkten, enheten och belöningstexten skrivs in av lagföräldern i försäljningens uppgifter. Det finns inga färdiga produkter i `lag.js`.
+1. Lägg till P2019 i adminvyn. Produkten, enheten och belöningstexten skrivs in av lagföräldern i försäljningens uppgifter.
 2. Exportera de gamla beställningarna om de ska sparas (Order-ID och belopp följer inte med automatiskt).
 3. Ersätt `index.html` i P2019-repot med en omdirigering till den här sidan (`skramlat.se/eskilsminne/?lag=p2019`), så att gamla länkar fortsätter fungera.
 
-## Publicera
-
-- **GitHub Pages:** under *Settings → Pages* välj *Deploy from a branch*, gren `main`, mapp `/ (root)`. Pages på ett personligt konto kräver att repot är publikt.
-- **Egen domän (`skramlat.se`):** verifiera först domänen för kontot (*Settings → Pages → Add a domain* under kontots inställningar, en TXT-post hos registratorn), så att ingen annan kan ta över den. Lägg sedan A-posterna för GitHub Pages hos registratorn, skriv `skramlat.se` under repots *Settings → Pages → Custom domain* och slå på *Enforce HTTPS*. Klubbens sidor ligger då på `https://skramlat.se/eskilsminne/` och adminvyn på `…/eskilsminne/admin.html`.
-- **Gärna under en GitHub-organisation** för klubben, så att repot inte hänger på ett privat konto.
-
-## Beslut hittills (oktober 2026)
-
-Tagna efter genomgången av designbriefen:
-
-1. **Bara Eskilsminne IF.** Designen delas i lager (plattform, förening, grupp, försäljning) så att den går att bygga ut, men vi bygger inte plattformsadmin, temaeditor eller fler föreningstyper. En dialekt: Matchdag.
-2. **Ingen förifylld Swish.** Föräldern kopierar nummer, belopp och meddelande. Appen försöker inte öppna Swish. (Redan så i prototypen.)
-3. **Swish-meddelandet innehåller bara ordernumret**, inte barnets namn. (Redan så i prototypen.) Lagföräldern slår upp namnet i adminvyn.
-4. **Mätarens "till lagkassan" märks "beräknat"**, eftersom pengarna inte är inne förrän de är swishade. Gjort i prototypen.
-5. **Typsnitten ligger i repot** (`fonts/`: Archivo och Atkinson Hyperlegible Next) och laddas inte från Google. De används nu i hela appen.
-6. **Namnet är inte bestämt.** "Lagförsäljning" är ett arbetsnamn. Kontrollera domän och varumärke innan lansering.
-
-Det som designbriefen beskriver och som ännu inte finns i prototypen: flera försäljningar per grupp (idag en produkt per försäljning och en försäljning per lag), start- och slutdatum, kvittosida som tål omladdning, ordernummer med lagkod (P14-037), ångra-fönster på 8 sekunder och rensa-knapp per lag.
-
-Utseendet (Matchdag) är byggt: blå bakgrund med ränder, vimplar, klubbmärket med gul kant, krämfärgade kort (aldrig vitt), gula lagbrickor och Archivo/Atkinson. Alla text- och färgpar har minst 5,8:1 i kontrast. Färger, bilder och typsnitt är desamma för alla lag, eftersom klubben äger utseendet. Inga bilder på barn.
-
 ## Att bestämma innan ni går live
 
-1. **Namn.** "Lagförsäljning" är ett arbetsnamn. Välj ett namn som inte krockar med någon annan tjänst (kolla domän och varumärke).
-2. **Klubbens godkännande** för namn, logga och färger (färgerna är de som redan används på P2019-sidan och hämtades från en tredjepartssida, inte från klubben), och för att administratören sköter servern.
-3. **En andra administratör** som kommer åt kalkylarket, Apps Script-projektet, GitHub och domänen.
-4. **Uppdraget kring personuppgifter** (se ovan).
+1. **Klubbens skriftliga ok** för att Eskilsminne använder Skramlat, och vem som är klubbens administratör (en person i klubben, inte den som driver Skramlat). Samt klubbens ok för märke, namn och färger.
+2. **Biträdesavtal och integritetspolicy** (Fas 3), granskade av någon som kan.
+3. **Svar från Cloudflare** på de frågor som återstår (se planen).
+4. **En andra person** med åtkomst till Cloudflare-kontot, databasen och domänen.
 5. **Vem betalar tillbaka** om minimum inte nås, för varje lag.
-
-## Tester
-
-Servern körs i Node mot låtsas-versioner av Googles tjänster, utan att något riktigt kalkylark rörs:
-
-```
-npm test                 # servertester och attacktester
-npm run test:mutera      # bevis för att attacktesterna biter
-npm run test:xss         # XSS-attacker i en riktig webbläsare (kräver Playwright)
-```
-
-- **`test/server.test.cjs`** täcker bland annat att priset räknas på servern, att nycklar och hashar aldrig syns i något svar, spärren efter felaktiga försök, lager, dubbletter och att varje kontroll av indata avvisar fel värden.
-- **`test/attacker.test.cjs`** försöker göra det som inte ska gå: läsa eller ändra ett annat lags beställningar, ge sig själv klubbadministratörens behörighet, smyga in status eller nyckel när försäljningen sparas, beställa förbi knapparna, skicka ett eget belopp, formler och skript i texterna, och 20 beställningar på den sista lotten. `ATTACK_RAPPORT=rapport.md npm test` skriver en tabell över varje attack med anrop, svar och resultat.
-- **`test/mutera.cjs`** kopplar bort varje skydd i en kopia av `Server.gs`, ett i taget, och kontrollerar att rätt attack då lyckas. Ett test som går igenom även utan sitt skydd bevisar ingenting.
-- **`test/xss.webblasare.cjs`** fyller lagförälderns alla texter och klubbens kommentar med HTML och skript, öppnar föräldrasidan, Swish-sidan, lagförälderns vy och klubbens vy, och kontrollerar att inget skript körs och att texten syns som vanlig text.
-
-Det som bara kan bevisas i riktiga Google, till exempel många beställningar exakt samtidigt, behöver provas mot en riktig installation innan skarp drift.

@@ -27,14 +27,17 @@ const TABELLER = ["bestallning", "logg", "sparr", "inloggningslank", "session", 
 export async function skapaMiljo() {
   const mf = new Miniflare({ modules: true, script: "export default { fetch() { return new Response(''); } }", d1Databases: { DB: "test-db" } });
   const db = await mf.getD1Database("DB");
-  const m = { db, mf, klocka: Date.UTC(2026, 9, 17, 12, 0, 0), brev: [], vantande: [] };
-  const env = { DB: db, SIDA_ORIGIN: ORIGIN, EPOST_FRAN: "inloggning@skramlat.test", EMAIL: { send: async (b) => { m.brev.push(b); } } };
+  const m = { db, mf, klocka: Date.UTC(2026, 9, 17, 12, 0, 0), brev: [], vantande: [], epostFel: false, dbFel: false };
+  // Databasen som servern ser. m.dbFel = true får den att fela, för att pröva det oväntade felet.
+  const dbVag = { prepare: (...a) => { if (m.dbFel) throw new Error("databasen är nere"); return db.prepare(...a); },
+    batch: (...a) => { if (m.dbFel) throw new Error("databasen är nere"); return db.batch(...a); } };
+  const env = { DB: dbVag, SIDA_ORIGIN: ORIGIN, EPOST_FRAN: "inloggning@skramlat.test", EMAIL: { send: async (b) => { if (m.epostFel) throw new Error("e-posten gick inte att skicka"); m.brev.push(b); } } };
   const ctx = { nu: () => m.klocka, waitUntil: (p) => { m.vantande.push(p); } };
 
   m.nollstall = async () => {
     for (const t of TABELLER) await db.prepare("DROP TABLE IF EXISTS " + t).run();
     for (const s of SCHEMA) await db.prepare(s).run();
-    m.klocka = Date.UTC(2026, 9, 17, 12, 0, 0); m.brev.length = 0; m.vantande.length = 0;
+    m.klocka = Date.UTC(2026, 9, 17, 12, 0, 0); m.brev.length = 0; m.vantande.length = 0; m.epostFel = false; m.dbFel = false;
   };
   m.stang = () => mf.dispose();
   m.vanta = async () => { await Promise.all(m.vantande.splice(0)); };   // väntar på det som skickas efter svaret (e-post)
@@ -45,7 +48,7 @@ export async function skapaMiljo() {
     const h = new Headers(rubriker || {});
     const init = { method: metod, headers: h };
     if (kropp !== undefined) { init.body = typeof kropp === "string" ? kropp : JSON.stringify(kropp); h.set("Content-Type", "text/plain;charset=utf-8"); }
-    const svar = await hantera(new Request(ORIGIN + url, init), env, ctx);
+    const svar = await hantera(new Request(url.startsWith("http") ? url : ORIGIN + url, init), env, ctx);
     const text = await svar.text();
     let j = null; try { j = JSON.parse(text); } catch (e) { /* inte json */ }
     return { status: svar.status, text, json: j, rubriker: svar.headers };

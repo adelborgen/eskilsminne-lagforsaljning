@@ -1,6 +1,6 @@
 # Plan: gemensam server för Skramlat (utan Apps Script)
 
-Status 17 oktober 2026: tekniken (Cloudflare) och besluten längst ned är tagna. Inget är byggt. Nästa steg är Fas 1, när du säger till.
+Status 17 oktober 2026: tekniken (Cloudflare) och besluten längst ned är tagna. **Fas 1 är byggd och testad lokalt** på grenen `fas1-cloudflare-server` (se *Läge efter Fas 1* längst ned). **Inget är uppsatt hos Cloudflare, och ingenting är köpt.**
 
 ## Mål
 
@@ -24,7 +24,7 @@ Pengarna går fortfarande aldrig via Skramlat.
 
 Allt hos en leverantör. DNS och e-postvidarebefordran ligger redan där.
 
-- **Pages** för sidorna (statiska filer är gratis och obegränsade), med **Pages Functions** under `skramlat.se/api/`. Sidor och API får samma adress, så ingen CORS behövs och inloggningen kan använda säkra cookies. Adresser som `skramlat.se/<klubb>/` skrivs om till samma sidor (se Adresser).
+- **En Worker med statiska filer** (Workers static assets) för både sidorna och API:t. Statiska filer är gratis och obegränsade. Bara `/api` går via koden (`run_worker_first`), allt annat serveras som filer. Sidor och API får samma adress, så ingen CORS behövs och inloggningen kan använda säkra cookies. Det valdes i stället för Pages med Pages Functions (som planen först sa) av två skäl: Workers har Cron Triggers, som behövs för raderingen efter 60 dagar (Fas 3) och som Pages Functions saknar enligt Cloudflares migreringsguide, och Cloudflare lägger sin utveckling på Workers. Priset är detsamma (Workers Paid, 5 $).
 - **D1** (SQLite) som databas. **Den skapas med EU-jurisdiktion från början**, eftersom det inte går att lägga till efteråt.
 - **Email Service** för inloggningslänkar. Den är i beta. Visar den sig ostabil byts den mot en annan leverantör, som då läggs till på underbiträdeslistan.
 - **Turnstile** mot robotar vid ansökan om ny klubb.
@@ -37,7 +37,7 @@ Varför Cloudflare och inte Supabase: Supabase kräver Pro-nivån (25 $ i månad
 |---|---|---|
 | Workers | 100 000 anrop per dag | **5 $ per månad**: 20 miljoner anrop per månad ingår, sedan 0,60 $ per miljon |
 | D1 | 5 miljoner lästa och 100 000 skrivna rader per dag, 5 GB. När taket nås felar anropen tills midnatt UTC. | 25 miljarder lästa och 50 miljoner skrivna rader per månad ingår, 5 GB, sedan 0,001 $ per miljon lästa, 1 $ per miljon skrivna och 0,75 $ per GB och månad. Ingen avgift för utgående trafik. |
-| Pages | Statiska sidor gratis och obegränsat. Functions räknas som Workers. | – |
+| Statiska filer (i Workern) | Gratis och obegränsat. | Gratis och obegränsat. |
 | E-post (utgående) | – | 3 000 per månad ingår (kräver Workers Paid), sedan 0,35 $ per 1 000 |
 | Turnstile | Gratis enligt vad jag vet, inte kontrollerat | – |
 
@@ -138,7 +138,7 @@ Kräver att Skramlat skickar e-post från `skramlat.se`. `hej@skramlat.se` tar i
 
 ## Adresser
 
-`skramlat.se/<klubb>/` ska peka på samma sidor för alla klubbar. Det löses med omskrivning på Cloudflare Pages. Eskilsminnes adress `skramlat.se/eskilsminne/` och gamla `?lag=`-länkar fortsätter fungera. **Att kontrollera:** att Cloudflare Pages kan skriva om adresser på det sätt vi behöver. Sidorna flyttas från GitHub Pages i Fas 2.
+`skramlat.se/<klubb>/` ska peka på samma sidor för alla klubbar. Det löser Workern själv i Fas 2 (en adress som `/<klubb>/` serveras med den gemensamma klubbsidan, och klubbens uppgifter hämtas ur databasen), så ingen omskrivningsregel hos någon annan behövs. Eskilsminnes adress `skramlat.se/eskilsminne/` och gamla `?lag=`-länkar fortsätter fungera. I Fas 1 ligger Eskilsminnes sidor kvar i sin mapp. Sidorna och domänen flyttas från GitHub Pages i Fas 2.
 
 ## Lagring bara i EU
 
@@ -213,11 +213,11 @@ Storleken är relativ (S, M, L). Jag vill inte gissa antal dagar innan vi har pr
 | Fas | Innehåll | Storlek |
 |---|---|---|
 | **1. Servern** | D1 med EU-jurisdiktion, beställning med atomärt lager, lagförälderns och klubbens åtgärder, inloggning med e-postlänk för klubbens administratör, testerna flyttade och körda, vaktproven för EU-reglerna, lasttest mot riktiga D1. Eskilsminne som första klubb. Sidorna pekar på nya servern. | L |
-| **2. Kom igång** | Ansökan, din kontroll och ditt godkännande, utseende (färger och märke), fler administratörer, adresser `skramlat.se/<klubb>`, e-post från skramlat.se, flytt av sidorna till Cloudflare Pages. | M |
+| **2. Kom igång** | Ansökan, din kontroll och ditt godkännande, utseende (färger och märke), fler administratörer, adresser `skramlat.se/<klubb>`, e-post från skramlat.se, flytt av sidorna och domänen till Cloudflare. | M |
 | **3. Juridik och drift** | Biträdesavtal i flödet, automatisk radering efter 60 dagar, integritetspolicy, säkerhetskopior, övervakning, en andra person med åtkomst. Görs parallellt med Fas 2. | M |
 | **4. Skolor** | Förening eller skola (ord per kund), samlad lista över obetalda för skolans administratör, Swish per kund (låst nummer för alla klasser). | M |
 
-Eskilsminne kan gå live när Fas 1 och Fas 3 är klara, och när styrelsens skriftliga ok finns. Fas 2 behövs först för klubb nummer två. Bingolotter och rutan "Kräver 18 år" är inte med: de är strukna tills vidare.
+Fas 1 är byggd (se *Läge efter Fas 1*). Eskilsminne kan gå live när Fas 1 och Fas 3 är klara, och när styrelsens skriftliga ok finns. Fas 2 behövs först för klubb nummer två. Bingolotter och rutan "Kräver 18 år" är inte med: de är strukna tills vidare.
 
 ## Det här byggs inte
 
@@ -239,7 +239,24 @@ Eskilsminne kan gå live när Fas 1 och Fas 3 är klara, och när styrelsens skr
 
 - Biträdesavtalets text granskas av någon som kan.
 - **Frågor till Cloudflare:** stannar D1:s Time Travel inom jurisdiktionen? Var lagrar Email Service meddelanden och hur länge? Var finns Cloudflares biträdesavtal, underbiträdeslista och överföringsmekanism för tredjeland? Pris och tillgänglighet för Regional Services, om en kund kräver att även behandlingen sker i EU.
-- Att Cloudflare Pages kan skriva om adresser som vi behöver.
 - Att Email Service fungerar tillräckligt stabilt (beta), annars en annan leverantör.
 - Styrelsens skriftliga ok och namnet på klubbens administratör i Eskilsminne.
 - Att `wrangler` och Miniflare går att köra i den här miljön.
+
+## Läge efter Fas 1 (17 oktober 2026)
+
+**Byggt och testat lokalt** (på grenen `fas1-cloudflare-server`, inte sammanfogad med `main`):
+- Schema för D1, och servern i `server/`: beställning med lagerkontroll och ordernummer i ett enda atomärt databasuttryck, lagförälderns och klubbens åtgärder (samma regler och felmeddelanden som i `Server.gs`), start av försäljning, spärrar.
+- Inloggning med e-postlänk för klubbens administratör, session i cookie, kontroll av Origin, och klubbstatus (väntar, aktiv, avstängd) som gäller överallt.
+- Sidorna (`eskilsminne/`) pratar med servern via `/api` och klubbens adress (`slug`), och klubbadministratören loggar in med e-post. De kör fortfarande demoläge (`endpoint` är tom), så den publicerade sidan påverkas inte.
+- `wrangler.toml` (en Worker med statiska filer, D1, e-post, inga loggar), `scripts/` (bygg, ny klubb, kontroll av jurisdiktion, lasttest), och testerna: `api` (44), `inloggning` (22), `attack` (38) och `eu` (9). De körs mot en riktig D1 lokalt (Miniflare) och kostar ingenting.
+- `wrangler dev` har provats lokalt: Workern svarar på `/api` med `no-store`, statiska sidor serveras, schemat och klubbskriptet fungerar, och den lokala e-postsimulatorn tog emot inloggningsmejlet.
+
+**Det testerna hittade och som är åtgärdat:** servern godtog `antal: true` och `antal: [1]` som 1, och `id: "1; DELETE …"` som ordernummer 1 (`parseInt` läser bara början). Båda kräver nu ett riktigt tal respektive bara siffror. Apps Script-versionen hade samma slarv.
+
+**Inte gjort, och varför:**
+- **Inget är uppsatt hos Cloudflare** (ingen databas, ingen Worker, inget konto). Därför är det som bara går att visa där inte visat: att databasen verkligen fick jurisdiktion `eu` (`scripts/kontrollera-eu.js`), samtidighet mot en riktig D1 (`scripts/lasttest.js`), och att Cloudflares e-posttjänst tar emot fältnamnen i `server/epost.js` (den lokala simulatorn godtog dem, men tjänsten är i beta och fältnamnen kommer från en tredjepartsbeskrivning).
+- **Mutationstestet** (`npm run test:mutera`, 43 skydd) har konfigurerats men inte körts färdigt: det tar lång tid och körs bara före lansering.
+- **XSS-testet i webbläsare** (`npm run test:xss`) är portat till nya servern. Det körs en gång i slutet av arbetet.
+- **Eskilsminne som första klubb** kräver ett Cloudflare-konto, klubbens skriftliga ok och en administratör i klubben. Det är inte gjort.
+- **Fas 3** (biträdesavtal, radering efter 60 dagar, integritetspolicy) återstår. `wrangler.toml` har inga `[triggers]` än: vaktprovet `test/eu.test.js` förbjuder dem och måste ändras när raderingen läggs till.

@@ -1,0 +1,38 @@
+# Skramlat på Cloudflare: en Worker som svarar på /api och serverar de statiska sidorna (dist/, byggs med npm run bygg).
+# Uppsättning, i ordning (en gång):
+#   1. npx wrangler d1 create skramlat --jurisdiction=eu     (EU-jurisdiktion kan bara sättas när databasen skapas)
+#   2. Klistra in databasens id nedan.
+#   3. npx wrangler d1 migrations apply skramlat --remote
+#   4. npx wrangler email sending enable skramlat.se         (så att inloggningsmejlen kan skickas)
+#   5. npm run bygg && npx wrangler deploy
+#   6. node scripts/kontrollera-eu.js                        (kontrollerar att databasen har jurisdiktion eu)
+# Se README.md och PLAN-gemensam-server.md.
+#
+# Bara det här får användas. Vaktprovet test/eu.test.js fallerar om något annat läggs till (KV, R2, köer, Durable Objects,
+# loggar), eftersom allt som sparas om personer ska ligga i D1 (EU) och ingen annanstans.
+
+name = "skramlat"
+main = "server/worker.js"
+compatibility_date = "2026-08-01"
+
+[assets]
+directory = "./dist"
+binding = "ASSETS"
+run_worker_first = ["/api", "/api/*"]   # bara adresser under /api går till koden, allt annat är statiska filer
+
+[[d1_databases]]
+binding = "DB"
+database_name = "skramlat"
+database_id = "BYT-MOT-ID-FRAN-wrangler-d1-create"
+migrations_dir = "migrations"
+
+[[send_email]]
+name = "EMAIL"
+
+[vars]
+SIDA_ORIGIN = "https://skramlat.se"          # inloggningslänken i mejlet pekar hit, aldrig på värdadressen i förfrågan
+EPOST_FRAN = "inloggning@skramlat.se"
+
+# Inga loggar: servern loggar aldrig uppgifter om personer, och Workers Logs ska vara avstängt.
+[observability]
+enabled = false

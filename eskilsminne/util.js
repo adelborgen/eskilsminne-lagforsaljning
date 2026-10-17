@@ -42,7 +42,7 @@
   function hamtaLag(cb) {
     var K = window.KLUBB;
     if (!K.endpoint) return cb(null, window.DEMO_LAG || []);
-    fetch(K.endpoint + "?action=lag")
+    fetch(K.endpoint + "?action=lag&klubb=" + encodeURIComponent(K.slug))
       .then(function (r) { return r.json(); })
       .then(function (d) { if (d && d.ok && Array.isArray(d.lag)) cb(null, d.lag); else cb(new Error("Felaktigt svar")); })
       .catch(function (e) { cb(e); });

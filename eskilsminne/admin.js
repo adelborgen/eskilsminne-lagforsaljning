@@ -1,9 +1,9 @@
 /* ==========================================================================
    Adminvy för klubbens lagförsäljning.
    Lagföräldern loggar in med lagets adminnyckel och ser bara sitt eget lag: först försäljningen
-   (utkast som skickas till klubben för godkännande), sedan översikt, beställningar, betalningar och utlämning. Klubbens administratör loggar in med
-   superadmin-nyckeln, ser alla lag och lägger till nya.
-   All behörighet kontrolleras av servern (Server.gs). Den här filen visar bara.
+   (utkast som skickas till klubben för godkännande), sedan översikt, beställningar, betalningar och utlämning. Klubbens administratör loggar in
+   med e-post (en länk som gäller i 15 minuter och kan användas en gång), ser alla lag och lägger till nya.
+   All behörighet kontrolleras av servern (server/). Den här filen visar bara.
    Utan KLUBB.endpoint körs demoläge med exempeldata och inget sparas.
    ========================================================================== */
 (function () {
@@ -12,7 +12,7 @@
   var U = window.U, h = U.h, kr = U.kr, nf = U.nf, merge = U.merge;
   var K = window.KLUBB, DEMO = !K.endpoint;
   var app = document.getElementById("app");
-  var S = { lag: null, key: null, roll: null, valt: null };   // inloggning: vilket lag, nyckel, roll, valt lag
+  var S = { lag: null, key: null, roll: null, valt: null };   // inloggning: vilket lag, nyckel (tom för klubbens administratör, som har en session), roll, valt lag
 
   /* ---------- Topbar och sidfot ---------- */
   var topPill = document.getElementById("pill");
@@ -26,7 +26,8 @@
   document.getElementById("foot").appendChild(h("div", { style: "margin-top:8px" }, h("a", { href: "./", text: "Till lagsidan" })));
 
   /* ---------- Inloggningen sparas bara i fliken (försvinner när fliken stängs) ---------- */
-  function sparaSession() { try { sessionStorage.setItem("admin", JSON.stringify({ lag: S.lag, key: S.key })); } catch (e) {} }
+  // Klubbens administratörs inloggning ligger i en cookie hos servern. Här sparas bara att det är en sådan inloggning, så att sidan kan fråga servern efter en omladdning.
+  function sparaSession() { try { sessionStorage.setItem("admin", JSON.stringify({ lag: S.lag, key: S.key, klubbadmin: S.roll === "super" && !DEMO })); } catch (e) {} }
   function lasSession() { try { return JSON.parse(sessionStorage.getItem("admin") || "null"); } catch (e) { return null; } }
   function raderaSession() { try { sessionStorage.removeItem("admin"); } catch (e) {} }
 
@@ -34,7 +35,7 @@
   function api(payload) {
     if (DEMO) return Promise.resolve(demoApi(payload));
     return fetch(K.endpoint, { method: "POST", headers: { "Content-Type": "text/plain;charset=utf-8" },
-      body: JSON.stringify(Object.assign({ action: "admin" }, payload)) })
+      body: JSON.stringify(Object.assign({ action: "admin", klubb: K.slug }, payload)) })
       .then(function (r) { return r.json(); })
       .catch(function () { return { ok: false, fel: "Det gick inte att nå servern. Kontrollera uppkopplingen och försök igen." }; });
   }
@@ -44,7 +45,7 @@
   // Som anrop, men om nyckeln inte gäller längre (till exempel bytt) skickas användaren till inloggningen.
   function anropa(op, extra, lag) {
     return anrop(op, extra, lag).then(function (r) {
-      if (!r.ok && /^Fel lag eller nyckel/.test(r.fel || "")) { visaLogin("Nyckeln gäller inte längre. Logga in igen."); return new Promise(function () {}); }
+      if (!r.ok && /^Fel lag eller nyckel/.test(r.fel || "")) { visaLogin(S.roll === "super" ? "Inloggningen har gått ut. Logga in igen." : "Nyckeln gäller inte längre. Logga in igen."); return new Promise(function () {}); }
       return r;
     });
   }
@@ -110,13 +111,21 @@
   }
 
   /* ---------- Inloggning ---------- */
+  function apiLogin(payload) {
+    if (DEMO) return Promise.resolve({ ok: true, meddelande: "Demoläge: ingen e-post skickas." });
+    return fetch(K.endpoint, { method: "POST", headers: { "Content-Type": "text/plain;charset=utf-8" },
+      body: JSON.stringify(Object.assign({ action: "login", klubb: K.slug }, payload)) })
+      .then(function (r) { return r.json(); })
+      .catch(function () { return { ok: false, fel: "Det gick inte att nå servern. Kontrollera uppkopplingen och försök igen." }; });
+  }
+
   function visaLogin(meddelande, forifyllt) {
     S = { lag: null, key: null, roll: null, valt: null }; raderaSession();
     setTopbar("", "Admin"); document.title = K.namn + " – Admin";
     app.textContent = "";
     app.appendChild(h("h2", { class: "title", text: "Logga in" }));
-    app.appendChild(h("p", { class: "lead", text: "Har du din länk räcker det att öppna den. Annars väljer du ditt lag och skriver in nyckeln. Klubbens administratör väljer \"Klubbadministratör\"." }));
-    if (DEMO) app.appendChild(h("p", { class: "notice", style: "margin-top:12px", text: "Demoläge med exempeldata, inget sparas. Prova nyckeln demo (lagets admin) eller super (klubbadministratör)." }));
+    app.appendChild(h("p", { class: "lead", text: "Är du lagförälder räcker det att öppna din länk. Annars väljer du ditt lag och skriver in nyckeln. Klubbens administratör loggar in med e-post, längre ned." }));
+    if (DEMO) app.appendChild(h("p", { class: "notice", style: "margin-top:12px", text: "Demoläge med exempeldata, inget sparas. Prova nyckeln demo (lagets admin). Klubbadministratör: skriv valfri e-postadress längre ned." }));
     var fel = h("p", { class: "formerror", role: "alert", hidden: "" });
     var sel = h("select", { id: "lag" }, h("option", { value: "", text: "Hämtar lag…" }));
     var key = h("input", { type: "password", id: "key", autocomplete: "off", autocapitalize: "none", spellcheck: "false", placeholder: "xxxx-xxxx-xxxx-…" });
@@ -125,6 +134,7 @@
       h("div", { class: "field" }, h("label", { for: "lag", text: "Lag" }), sel),
       h("div", { class: "field" }, h("label", { for: "key", text: "Adminnyckel" }), key), go);
     app.appendChild(form);
+    app.appendChild(klubbadminKort());
     app.appendChild(h("div", { class: "card", style: "margin-top:16px" },
       h("h3", { style: "margin:0 0 6px", text: "Ny försäljning?" }),
       h("p", { style: "margin:0", text: "Är du lagförälder och vill sälja något med laget? Starta här. Klubben godkänner försäljningen innan något säljs." }),
@@ -136,7 +146,6 @@
       if (err) { sel.appendChild(h("option", { value: "", text: "Kunde inte hämta lagen" })); return; }
       sel.appendChild(h("option", { value: "", text: "Välj lag…" }));
       lista.forEach(function (l) { sel.appendChild(h("option", { value: l.slug, text: l.namn + (l.kampanj ? " – " + l.kampanj : "") })); });
-      sel.appendChild(h("option", { value: "*", text: "Klubbadministratör (alla lag)" }));
       if (forifyllt) sel.value = forifyllt;
     });
     form.addEventListener("submit", function (ev) {
@@ -149,6 +158,56 @@
     });
   }
 
+  // Klubbens administratör: servern skickar en länk till e-postadressen. Länken gäller i 15 minuter och kan användas en gång.
+  function klubbadminKort() {
+    var fel = h("p", { class: "formerror", role: "alert", hidden: "" });
+    var ok = h("p", { class: "notice", role: "status", hidden: "" });
+    var epost = h("input", { type: "email", id: "epost", autocomplete: "email", autocapitalize: "none", spellcheck: "false", placeholder: "namn@klubben.se" });
+    var hp = h("input", { type: "text", name: "website", tabindex: "-1", autocomplete: "off", "aria-hidden": "true" });
+    var go = h("button", { type: "submit", class: "primary", style: "margin-top:12px", text: "Skicka inloggningslänk" });
+    var demoKnapp = h("button", { type: "button", class: "ghost", style: "margin-top:12px", text: "Logga in direkt (demo)", hidden: "",
+      onclick: function () { loggaIn("*", "super", function (t) { fel.textContent = t; fel.hidden = false; }); } });
+    var form = h("form", { novalidate: "" }, fel, ok,
+      h("div", { class: "field" }, h("label", { for: "epost", text: "E-postadress" }), epost),
+      h("div", { class: "hp", "aria-hidden": "true" }, h("label", { text: "Lämna tomt" }), hp), go, demoKnapp);
+    form.addEventListener("submit", function (ev) {
+      ev.preventDefault(); fel.hidden = true; ok.hidden = true;
+      var e = epost.value.trim();
+      if (!e) { fel.textContent = "Skriv din e-postadress."; fel.hidden = false; return; }
+      go.disabled = true; go.textContent = "Skickar…";
+      apiLogin({ op: "begar", epost: e, website: hp.value }).then(function (r) {
+        go.disabled = false; go.textContent = "Skicka inloggningslänk";
+        if (!r.ok) { fel.textContent = r.fel || "Det gick inte att skicka."; fel.hidden = false; return; }
+        ok.textContent = r.meddelande || "Vi har skickat en länk om adressen är registrerad."; ok.hidden = false;
+        if (DEMO) demoKnapp.hidden = false;
+      });
+    });
+    return h("div", { class: "card", style: "margin-top:16px" },
+      h("h3", { style: "margin:0 0 6px", text: "Klubbens administratör" }),
+      h("p", { style: "margin:0 0 12px", text: "Vi skickar en länk till din e-post. Den gäller i 15 minuter och kan användas en gång." }), form);
+  }
+
+  // Länken i e-posten öppnar den här sidan. Först knappen loggar in, så att en länk som bara hämtas av en e-postskanner inte förbrukas.
+  function visaBekrafta(token) {
+    S = { lag: null, key: null, roll: null, valt: null }; raderaSession();
+    setTopbar("", "Admin"); document.title = K.namn + " – Logga in";
+    app.textContent = "";
+    app.appendChild(h("h2", { class: "title", text: "Logga in som klubbens administratör" }));
+    app.appendChild(h("p", { class: "lead", text: "Bekräfta att det är du som loggar in på " + K.namn + "." }));
+    var fel = h("p", { class: "formerror", role: "alert", hidden: "", style: "margin-top:12px" });
+    var go = h("button", { type: "button", class: "primary", style: "margin-top:16px", text: "Logga in" });
+    go.addEventListener("click", function () {
+      fel.hidden = true; go.disabled = true; go.textContent = "Loggar in…";
+      function igen(t) { go.disabled = false; go.textContent = "Logga in"; fel.textContent = t; fel.hidden = false; }
+      apiLogin({ op: "anvand", token: token }).then(function (r) {
+        if (!r.ok) return igen(r.fel || "Det gick inte att logga in.");
+        loggaIn("*", DEMO ? "super" : "", igen);
+      });
+    });
+    app.appendChild(fel); app.appendChild(go);
+    app.appendChild(h("div", null, h("button", { type: "button", class: "linkbtn", style: "margin-top:12px", text: "Till inloggningen", onclick: function () { visaLogin(); } })));
+  }
+
   function loggaIn(lag, key, vidFel) {
     S.lag = lag; S.key = key;
     return anrop(lag === "*" ? "lagLista" : "oversikt").then(function (r) {
@@ -158,13 +217,17 @@
     });
   }
 
-  function loggaUt() { visaLogin(); }
+  function loggaUt() {
+    // Klubbens administratörs inloggning ligger hos servern: logga ut där också, så att cookien slutar gälla
+    if (!DEMO && S.roll === "super") { apiLogin({ op: "utlogga" }).then(function () { visaLogin(); }); return; }
+    visaLogin();
+  }
 
   /* ---------- Lagföräldern startar en försäljning själv. Klubben godkänner den innan något säljs. ---------- */
   function apiStart(payload) {
     if (DEMO) return Promise.resolve(demoStart(payload));
     return fetch(K.endpoint, { method: "POST", headers: { "Content-Type": "text/plain;charset=utf-8" },
-      body: JSON.stringify(Object.assign({ action: "starta" }, payload)) })
+      body: JSON.stringify(Object.assign({ action: "starta", klubb: K.slug }, payload)) })
       .then(function (r) { return r.json(); })
       .catch(function () { return { ok: false, fel: "Det gick inte att nå servern. Kontrollera uppkopplingen och försök igen." }; });
   }
@@ -222,7 +285,7 @@
   }
 
   function renderAdmin() {
-    if (!S.key) return visaLogin();
+    if (!S.roll) return visaLogin();
     if (S.roll === "super" && !S.valt) renderSuper(); else renderLag(S.valt);
   }
 
@@ -1098,6 +1161,11 @@
     // Adminlänken har formen admin.html#lag=<slug>&k=<nyckel>. Nyckeln ligger efter # så att den inte skickas till webbservern.
     if (location.hash === "#starta") return visaStart();   // länk direkt till Starta en försäljning
     var hash = new URLSearchParams(location.hash.slice(1));
+    if (hash.get("lank")) {   // länk från e-posten till klubbens administratör
+      var token = hash.get("lank");
+      try { history.replaceState(null, "", location.pathname + location.search); } catch (e) {}
+      return visaBekrafta(token);
+    }
     if (hash.get("lag") && hash.get("k")) {
       var lag = hash.get("lag"), key = hash.get("k");
       try { history.replaceState(null, "", location.pathname + location.search); } catch (e) {}
@@ -1105,9 +1173,9 @@
       return loggaIn(lag, key, function (t) { visaLogin(t, lag); });
     }
     var sess = lasSession();
-    if (sess && sess.key) {
+    if (sess && (sess.key || sess.klubbadmin)) {
       app.appendChild(h("p", { class: "loading", text: "Hämtar…" }));
-      return loggaIn(sess.lag, sess.key, function () { visaLogin(); });
+      return loggaIn(sess.lag, sess.key || "", function () { visaLogin(); });
     }
     visaLogin();
   }

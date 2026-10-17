@@ -25,7 +25,7 @@ export async function hanteraBestallning(k, d) {
 
   const barn = String(d.barn || "").trim();
   const mobil = normalizeMobil(d.mobil);
-  const antal = Number(d.antal);
+  const antal = typeof d.antal === "number" ? d.antal : NaN;   // sidan skickar alltid ett tal: sant, listor och text godtas inte som antal
   if (!lag) return { ok: false, fel: "Okänt lag." };
   if (lag.status !== "pagar") return { ok: false, fel: "Försäljningen är inte öppen just nu." };
   if (!BARN_RE.test(barn)) return { ok: false, fel: "Skriv barnets namn med bokstäver (2–40 tecken). Mellanslag, bindestreck och & går bra." };
