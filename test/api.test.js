@@ -690,6 +690,20 @@ test("förfrågan från skramlat.se mejlas till Skramlat, med CORS för skramlat
   const allt = JSON.stringify(await Promise.all(["klubb", "klubb_admin", "lag", "logg", "sparr", "bestallning", "session", "inloggningslank"].map((t) => m.rader(t))));
   for (const pu of ["Kim", "nyaif", "0701234567", "070 123 45 67", "Nya IF", "203.0.113.7"]) assert.ok(!allt.includes(pu), pu + " finns i databasen");
   assert.equal((await m.rader("klubb")).length, fore.klubb); assert.equal((await m.rader("logg")).length, fore.logg);
+  // Även ett fel får läsas från skramlat.se, så att sidan kan visa vad som gick fel, och http:// fungerar tills GitHub Pages tvingar https
+  const fel = await forfragan({ namn: "" }, "https://skramlat.se", "203.0.113.9");
+  assert.match(fel.json.fel, /namn/); assert.equal(fel.rubriker.get("Access-Control-Allow-Origin"), "https://skramlat.se");
+  const http = await forfragan({ epost: "http@nyaif.example" }, "http://skramlat.se", "203.0.113.10");
+  assert.equal(http.json.ok, true); assert.equal(http.rubriker.get("Access-Control-Allow-Origin"), "http://skramlat.se");
+  m.dbFel = true;
+  const orig = console.error; console.error = () => {};
+  try {
+    const krasch = await forfragan({}, "https://www.skramlat.se", "203.0.113.11");
+    assert.equal(krasch.status, 500); assert.equal(krasch.rubriker.get("Access-Control-Allow-Origin"), "https://www.skramlat.se");
+  } finally { m.dbFel = false; console.error = orig; }
+  // Andra åtgärder från skramlat.se avvisas som förut (svaret går att läsa, men inget görs)
+  const best = await m.anrop("POST", "/api", { klubb: KL, lag: "x", barn: "Emil", mobil: "070 123 45 67", antal: 1, samtycke: true, website: "", t: 5000 }, { Origin: "https://skramlat.se" });
+  assert.equal(best.json.fel, "Felaktig förfrågan.");
   // Från sidornas egen adress behövs ingen CORS-rubrik
   const egen = await forfragan({ epost: "egen@nyaif.example" }, ORIGIN, "203.0.113.8");
   assert.equal(egen.json.ok, true); assert.equal(egen.rubriker.get("Access-Control-Allow-Origin"), null);

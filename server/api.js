@@ -11,10 +11,10 @@ import { hittaAktivKlubb, lasLag, publik } from "./data.js";
 import { hanteraBestallning, hanteraStart } from "./bestall.js";
 import { hanteraAdmin } from "./ops.js";
 import { hanteraLogin, ursprungOk } from "./auth.js";
-import { hanteraForfragan } from "./forfragan.js";
+import { hanteraForfragan, korsUrsprung } from "./forfragan.js";
 import { migrera } from "./migrera.js";
 
-export const VERSION = "2026-10-17-forfragan";
+export const VERSION = "2026-10-17-forfragan-2";
 const MAX_KROPP = 32 * 1024;   // en förfrågan är aldrig större än så
 
 // Inget svar får cachas (inte heller av Cloudflare runt om i världen), eftersom svaren kan innehålla uppgifter om personer.
@@ -28,16 +28,11 @@ function json(obj, status, extra) {
   return new Response(JSON.stringify(obj), { status: status || 200, headers: rubriker });
 }
 
-// Svaret till en inloggning kan bära en cookie, och svaret på en förfrågan från skramlat.se en CORS-rubrik. De lyfts ur svaret så att
-// de aldrig syns i texten.
+// Svaret till en inloggning kan bära en cookie. Den lyfts ur svaret så att den aldrig syns i texten.
 function svara(obj) {
   if (obj && obj._kaka) {
     const { _kaka, ...resten } = obj;
     return json(resten, 200, [["Set-Cookie", _kaka]]);
-  }
-  if (obj && obj._cors) {
-    const { _cors, ...resten } = obj;
-    return json(resten, 200, [["Access-Control-Allow-Origin", _cors], ["Vary", "Origin"]]);
   }
   return json(obj);
 }
@@ -89,6 +84,15 @@ async function hanteraPost(k) {
 
 // request: anropet. env: bindningarna (DB, EMAIL, vars). ctx: Workers kontext (waitUntil). ctx.nu: klockan, som tester kan styra.
 export async function hantera(request, env, ctx) {
+  const svar = await hanteraAllt(request, env, ctx);
+  // Ett anrop från skramlat.se (formuläret på kom-igang) får läsa svaret, även ett fel, så att sidan kan visa vad som gick fel.
+  // Andra åtgärder än förfrågan avvisar ändå anrop från en annan adress (se hanteraPost).
+  const kors = request.method === "POST" ? korsUrsprung(request) : null;
+  if (kors) { svar.headers.set("Access-Control-Allow-Origin", kors); svar.headers.append("Vary", "Origin"); }
+  return svar;
+}
+
+async function hanteraAllt(request, env, ctx) {
   const k = { env, db: env.DB, request, nu: (ctx && ctx.nu) || Date.now,
     waitUntil: ctx && ctx.waitUntil ? ctx.waitUntil.bind(ctx) : null, ip: request.headers.get("CF-Connecting-IP") || "" };
   try {
