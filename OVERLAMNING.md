@@ -22,6 +22,7 @@ Fas 1 i planen är byggd och testad lokalt, på grenen `fas1-cloudflare-server` 
 | `skramlat.se` | Framsidan (`index.html`): loggan, tre steg, Tryggt för alla, kunder, länkar. Har fortfarande `noindex`, fråga om den ska bort. |
 | `skramlat.se/pris/` | Gratis, Bas, Plus. Bas och Plus: "Kontakta oss för pris", gratis för pilotklubbar under pilotåret. |
 | `skramlat.se/guider/` | Fyra guider med källor: lotter, förenings-Swish eller privat, vem som ansvarar för pengarna, hur länge uppgifter sparas. |
+| `skramlat.adelborg.workers.dev` | Cloudflare-versionen (Worker och D1), byggs automatiskt från `main`. `/api?action=version` visar serverns version. Databasen är tom. |
 | `skramlat.se/eskilsminne/` | Eskilsminnes sida. **Visar demo**: `endpoint` i `eskilsminne/lag.js` är tom. Sätts till `/api` först när Cloudflare-versionen är uppsatt. |
 
 Gamla länkar med `?lag=` skickas vidare till `eskilsminne/`.
@@ -85,6 +86,6 @@ Inför Sally Bauerskolorna, andra kunden:
 ## Arbetssätt
 
 - Fråga innan något nytt byggs. Ändra aldrig i P2019-repot (chokladförsäljningen).
-- Utkast läggs på en egen gren och publiceras först när ägaren säger till.
+- Utkast läggs på en egen gren och publiceras först när ägaren säger till. **Allt som pushas till `main` publiceras både på skramlat.se (GitHub Pages) och hos Cloudflare.**
 - **Kör få tester.** Ägaren tycker att täta testkörningar är överdrivet nu, eftersom inget är köpt hos Cloudflare. Kör bara det som täcker det som ändrats, en gång när ett arbete är klart, och mutationstestet bara före lansering.
 - Skriv på svenska, i vardaglig ton. Nycklar, adminlänkar och e-postadresser skickas aldrig i chattar och läggs aldrig i repot.

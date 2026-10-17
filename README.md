@@ -144,6 +144,7 @@ Det som bara kan bevisas hos riktiga Cloudflare, till exempel många beställnin
 ## Publicera
 
 - **Idag:** sidorna ligger på GitHub Pages (*Settings → Pages*, gren `main`, mapp `/`), och `skramlat.se` pekar dit. Eskilsminne visar demo.
+- **Cloudflare:** Workern `skramlat` är kopplad till GitHub och byggs om automatiskt från `main` (bygg: `npm run bygg`, publicering: `npx wrangler deploy`). Adress: **https://skramlat.adelborg.workers.dev**. **Allt som pushas till `main` publiceras alltså på båda ställena.**
 - **Med Cloudflare (Fas 2):** sidorna och servern ligger i samma Worker, och domänen flyttas dit. Då får varje klubb sin adress `skramlat.se/<klubb>/` utan en egen mapp i repot, och en klubb skapas på `skramlat.se/kom-igang`. Se planen.
 
 ## Flytta P2019 hit

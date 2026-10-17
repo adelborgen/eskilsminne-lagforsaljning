@@ -254,7 +254,7 @@ Fas 1 är byggd (se *Läge efter Fas 1*). Eskilsminne kan gå live när Fas 1 oc
 
 **Det testerna hittade och som är åtgärdat:** servern godtog `antal: true` och `antal: [1]` som 1, och `id: "1; DELETE …"` som ordernummer 1 (`parseInt` läser bara början). Båda kräver nu ett riktigt tal respektive bara siffror. Apps Script-versionen hade samma slarv.
 
-**Hos Cloudflare (17 oktober 2026):** kontot finns (gratisnivån). D1-databasen `skramlat` är skapad i panelen med **jurisdiktion EU**, kontrollerat för hand av ägaren i panelen (D1 → skramlat). Id:t ligger i `wrangler.toml`. Schemat är inte inlagt och Workern är inte publicerad.
+**Hos Cloudflare (17 oktober 2026):** kontot finns (gratisnivån). D1-databasen `skramlat` är skapad i panelen med **jurisdiktion EU**, kontrollerat för hand av ägaren i panelen (D1 → skramlat). Id:t ligger i `wrangler.toml`. Tabellerna är inlagda via konsolen i panelen (med bokföringen i `d1_migrations`, så att `wrangler` ser dem som inlagda). Workern `skramlat` är kopplad till GitHub och byggs från `main`: https://skramlat.adelborg.workers.dev. Grenen sammanfogades med `main` samma dag, på ägarens begäran.
 
 **Inte gjort, och varför:**
 - **Inget är uppsatt hos Cloudflare** (ingen databas, ingen Worker, inget konto). Därför är det som bara går att visa där inte visat: att databasen verkligen fick jurisdiktion `eu` (`scripts/kontrollera-eu.js`), samtidighet mot en riktig D1 (`scripts/lasttest.js`), och att Cloudflares e-posttjänst tar emot fältnamnen i `server/epost.js` (den lokala simulatorn godtog dem, men tjänsten är i beta och fältnamnen kommer från en tredjepartsbeskrivning).
