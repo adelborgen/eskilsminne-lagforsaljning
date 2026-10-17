@@ -45,6 +45,15 @@ Gamla länkar med `?lag=` skickas vidare till `eskilsminne/`.
 - **Logga:** genomskinlig insamlingsbössa med mynt. Filer i `logga/` (används av sidorna) och `material/logga/` (alla varianter, PNG, rörliga SVG, `gen.py` som ritar dem).
 - **Ton:** du-form, vardagligt, rollnamn (förälder, lagförälder, klubbens administratör), inga kanaler i texten, inga bilder på barn, inga stockbilder.
 
+## Utkast till juridiska dokument (17 oktober 2026, inte granskade)
+
+Claude-dokument som någon som kan dataskydd ska granska innan de används. Det som inte är byggt eller bekräftat är markerat **[Kontrollera]**, och varje dokument slutar med öppna frågor.
+- Integritetspolicy: https://claude.ai/code/artifact/5e5cce04-e008-4fb9-89c3-2e62c67f7c97
+- Personuppgiftsbiträdesavtal: https://claude.ai/code/artifact/2967a9b2-5762-44dc-8f5f-a76a7a0190a4
+- Villkor för klubbar och skolor: https://claude.ai/code/artifact/798b808b-b642-4e81-a444-d8cd7687856f
+
+Granskare är inte utsedd. Automatisk radering efter 60 dagar måste byggas innan dokumenten används.
+
 ## Marknadsföring
 
 - **Inlägg för sociala medier:** https://claude.ai/artifact/6UV22ao2tioSKLjTRo4RCy (Design-arbetsyta). 17 inlägg plus en karusell. Inlägg 13 har platshållaren [Ditt förnamn].
