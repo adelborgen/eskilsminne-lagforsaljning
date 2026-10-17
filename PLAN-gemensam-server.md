@@ -290,10 +290,9 @@ Testerna har attacker för det nya: lagföräldern gör klubbens jobb, klubben �
 
 `skramlat.se/kom-igang/` har ett formulär: klubb eller skola, förening eller skola, namn, e-post, telefon (valfritt), ungefär hur många lag och ett meddelande. Servern mejlar förfrågan till ägaren och sparar ingenting i databasen, bara en räknare mot spam med en hash av IP-numret (5 per IP-nummer och 30 totalt i timmen). Mottagaren är hemligheten `FORFRAGAN_TILL` hos Cloudflare. Förfrågan finns alltså bara i ägarens inkorg, och den som frågar får veta det på sidan. Formuläret är inte Fas 2:s ansökan, där klubben skapar sitt konto själv. Den kommer senare.
 
-### Ett lag eller en klass utan klubb (öppen fråga, 17 oktober 2026)
+### Inriktning efter diskussion med ägaren (17 oktober 2026)
 
-**Inte bestämt.** Ska ett lag eller en klass kunna använda Skramlat utan att hela klubben eller skolan är med? Prissidan säger att gratisnivån är "för ett lag eller en klass", men idag måste en klubbadministratör godkänna varje försäljning. Det diskuteras med ägaren. Inget är byggt.
-
-Alternativ:
-- **En andra förälder godkänner**, till exempel lagets kassör, i stället för klubben. Principen att två personer tittar finns kvar. Kräver `klubb.typ` (klubb eller lag), andra ord i sidorna och mejlen ("klubben" blir till exempel "kassören"), och att pengasteget till klubbens bankgiro inte visas. Hör ihop med *Ord per kund* inför Sally Bauerskolorna. Den som godkänner måste vara en annan person än lagföräldern, vilket bara kan kontrolleras när laget läggs upp.
-- **Klubben måste vara med**, som idag. Då skrivs prissidan om så att den inte lovar mer än produkten gör.
+- **Ett lag eller en klass kan använda Skramlat utan klubben.** En andra förälder, till exempel lagets kassör, godkänner försäljningarna i stället för klubben, så att två personer alltid tittar. Inte byggt. Förslag på genomförande: `klubb.typ` (klubb eller lag), samma inloggning, godkännande, notiser och ändringsgranskning som för en klubb, andra ord i sidorna och mejlen ("klubben" blir till exempel "kassören"), och inget pengasteg till klubbens bankgiro. Hör ihop med *Ord per kund* inför Sally Bauerskolorna. Den som godkänner måste vara en annan person än lagföräldern, vilket bara kan kontrolleras när laget läggs upp.
+- **Guiderna skrivs för lagföräldern och klassföräldern**, de som väljer vad laget ska sälja och sköter försäljningen. Inga nya guider skrivs förrän ägaren säger till.
+- **Klubben eller skolan betalar** efter pilotåret: ett årspris per klubb för överblick, alla lag, egna färger och godkännande. Enskilda lag och klasser är gratis. Ingen avgift per köp och ingen provision.
+- **Öppet:** ska guiderna tipsa om leverantörer? Ägaren har inte bestämt sig. Provision från leverantörer krockar med löftet att Skramlat aldrig tar del av pengarna.
