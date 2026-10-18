@@ -19,7 +19,7 @@ Fas 1 i planen är byggd, testad lokalt och ligger på `main` (publiceras hos Cl
 
 | Adress | Vad |
 |---|---|
-| `skramlat.se` | Framsidan (`index.html`): loggan, tre steg, Tryggt för alla, kunder, länkar. Har fortfarande `noindex`, fråga om den ska bort. |
+| `skramlat.se` | Framsidan (`index.html`): loggan, tre steg, Tryggt för alla, kunder, länkar. Syns i Google sedan 18 oktober 2026 (ägarens val: `noindex` borttaget, Eskilsminne märkt *pilotklubb*). `eskilsminne/` har kvar `noindex`. |
 | `skramlat.se/pris/` | Gratis, Bas 999 kr och Plus 1 999 kr per år exklusive moms, gratis för pilotklubbar under pilotåret. |
 | `skramlat.se/demo/` | Demosidan (Skramlats färger): förälderns och lagförälderns vy för ett påhittat lag, utan inloggning. Länkad från framsidan. Publicerad 17 oktober 2026. |
 | `skramlat.se/kom-igang/` | Formulär för förfrågningar från klubbar och skolor. Servern mejlar dem till ägaren (hemligheten `FORFRAGAN_TILL` hos Cloudflare, inlagd av ägaren 17 oktober 2026) och sparar inget i databasen. |
