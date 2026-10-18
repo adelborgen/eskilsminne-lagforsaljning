@@ -91,7 +91,7 @@ Inför Sally Bauerskolorna, andra kunden:
 6. **Domänen till Cloudflare: klar 18 oktober 2026.** skramlat.se och www är Custom domains på Workern, GitHub Pages är avstängt och `CNAME`-filen borttagen. Kvar: *Always Use HTTPS*.
 7. **Fas 2:** ansökan på `skramlat.se/kom-igang`, ägarens godkännande, utseende (färger och märke), `skramlat.se/<klubb>`, e-post från skramlat.se.
 8. Testa hej@skramlat.se.
-9. **Prova formuläret på kom-igang hos riktiga Cloudflare.** Första försöket gav "Det gick inte att nå servern", troligen för att sidan låg på http:// eller att servern inte hunnit uppdateras. Sedan 18 oktober 2026 anropar formuläret `/api` på sin egen adress, eftersom sidan och servern ligger i samma Worker. Hemligheten `FORFRAGAN_TILL` är inlagd enligt ägaren, men inte bekräftad med ett mejl.
+9. **Formuläret på kom-igang fungerar hos riktiga Cloudflare:** ägaren skickade en förfrågan på skramlat.se 18 oktober 2026 och mejlet kom fram (hemligheten `FORFRAGAN_TILL` är alltså rätt inlagd).
 
 ## Säkerhet och tester
 
