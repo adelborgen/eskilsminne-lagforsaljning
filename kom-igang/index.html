@@ -126,8 +126,8 @@
 </main>
 <script>
   (function () {
-    // Sidan ligger på skramlat.se medan servern ligger hos Cloudflare: anropet går dit. När domänen har flytt blir det "/api".
-    var API = /\.workers\.dev$/.test(location.hostname) ? "/api" : "https://skramlat.adelborg.workers.dev/api";
+    // Sidan och servern ligger i samma Worker hos Cloudflare (skramlat.se, www och workers.dev), så anropet går till samma adress
+    var API = "/api";
     var MIN_TID = 3500;   // servern avvisar svar som kommer snabbare än så efter att sidan laddats (robotar)
     var laddad = Date.now();
     var form = document.getElementById("form"), knapp = document.getElementById("skicka"), fel = document.getElementById("fel");

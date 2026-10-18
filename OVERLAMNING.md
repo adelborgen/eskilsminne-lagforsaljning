@@ -6,35 +6,35 @@ Läs den här filen först när arbetet fortsätter i en ny session. Senast uppd
 
 **Skramlat** (skramlat.se) är en enkel tjänst för lagförsäljning i föreningar och skolor. Föräldrar beställer i mobilen och swishar direkt till laget eller skolan. Pengarna går aldrig via Skramlat. Lagföräldern lägger upp försäljningen och skickar den till klubben eller skolan, som godkänner (då öppnar den). Lagföräldern avslutar och öppnar igen, bockar av betalt och hämtat, och ändringar efter godkännandet granskas av klubben igen. När försäljningen är avslutad skickar lagföräldern pengarna till klubbens bankgiro och klubben kvitterar. Klubben får mejl när något väntar på den. Se *Rollerna efter genomgången med ägaren* och *Notiser, pengarna och utlämningen* i planen.
 
-- Sidorna är statiska filer. Idag ligger de på GitHub Pages och visar demo.
-- **Servern är byggd för Cloudflare** (en Worker med statiska filer och databasen D1, EU-jurisdiktion), en gemensam server för alla klubbar, så att en klubb kan onboarda sig själv utan Google. Den gamla Apps Script-servern (`Server.gs`) används inte längre och tas bort när Eskilsminne har flyttat. **Inget är uppsatt hos Cloudflare, och ingenting är köpt.**
+- Sidorna är statiska filer i samma Worker som servern hos Cloudflare, på skramlat.se sedan 18 oktober 2026. Eskilsminnes sida visar demo på skramlat.se.
+- **Servern är byggd för Cloudflare** (en Worker med statiska filer och databasen D1, EU-jurisdiktion), en gemensam server för alla klubbar, så att en klubb kan onboarda sig själv utan Google. Den gamla Apps Script-servern (`Server.gs`) används inte längre och tas bort när Eskilsminne har flyttat. Cloudflare är uppsatt på gratisnivån, och ingenting är köpt.
 - Varje kund har idag en egen mapp: `eskilsminne/` är den första. README.md beskriver roller, säkerhet, uppsättning och tester. **PLAN-gemensam-server.md** är planen och beslutsunderlaget (fyra faser, kostnader, lagring i EU, vem som får skapa en klubb, att börja utan bolag).
 - Ägaren är Andreas (adelborgen), förälder i P2019 i Eskilsminne IF. Skramlat ägs privat tills vidare, utan bolag.
 
 ## Läge
 
-Fas 1 i planen är byggd, testad lokalt och ligger på `main` (publiceras hos Cloudflare på skramlat.adelborg.workers.dev). Rollerna ändrades 17 oktober 2026 efter en genomgång med ägaren. Se *Läge efter Fas 1* längst ned i planen: vad som är gjort, vad testerna hittade, och vad som bara går att visa hos Cloudflare. De lokala testerna kostar ingenting och körs mot en riktig D1 på datorn.
+Fas 1 i planen är byggd, testad lokalt och ligger på `main` (publiceras hos Cloudflare på skramlat.se och skramlat.adelborg.workers.dev). Rollerna ändrades 17 oktober 2026 efter en genomgång med ägaren. Se *Läge efter Fas 1* längst ned i planen: vad som är gjort, vad testerna hittade, och vad som bara går att visa hos Cloudflare. De lokala testerna kostar ingenting och körs mot en riktig D1 på datorn.
 
 ## Live på skramlat.se
 
 | Adress | Vad |
 |---|---|
 | `skramlat.se` | Framsidan (`index.html`): loggan, tre steg, Tryggt för alla, kunder, länkar. Har fortfarande `noindex`, fråga om den ska bort. |
-| `skramlat.se/pris/` | Gratis, Bas, Plus. Bas och Plus: "Kontakta oss för pris", gratis för pilotklubbar under pilotåret. |
+| `skramlat.se/pris/` | Gratis, Bas 999 kr och Plus 1 999 kr per år exklusive moms, gratis för pilotklubbar under pilotåret. |
 | `skramlat.se/demo/` | Demosidan (Skramlats färger): förälderns och lagförälderns vy för ett påhittat lag, utan inloggning. Länkad från framsidan. Publicerad 17 oktober 2026. |
 | `skramlat.se/kom-igang/` | Formulär för förfrågningar från klubbar och skolor. Servern mejlar dem till ägaren (hemligheten `FORFRAGAN_TILL` hos Cloudflare, inlagd av ägaren 17 oktober 2026) och sparar inget i databasen. |
 | `skramlat.se/om/` | Om Skramlat: varför det finns, vad vi lovar, vem som står bakom (Andreas Adelborg, med ägarens ok). Räknaren (17 340 kr swishat) finns här och på framsidan och uppdateras för hand i båda filerna. |
 | `skramlat.se/guider/` | Fyra guider med källor: lotter, förenings-Swish eller privat, vem som ansvarar för pengarna, hur länge uppgifter sparas. |
 | `skramlat.adelborg.workers.dev` | Cloudflare-versionen (Worker och D1), byggs automatiskt från `main`. `/api?action=version` visar serverns version. Databasen är tom. |
-| `skramlat.se/eskilsminne/` | Eskilsminnes sida. **Visar demo**: `endpoint` i `eskilsminne/lag.js` är tom. Sätts till `/api` först när Cloudflare-versionen är uppsatt. |
+| `skramlat.se/eskilsminne/` | Eskilsminnes sida. **Visar demo**: `endpoint` i `eskilsminne/lag.js` är tom. Sätts till `/api` när Eskilsminne går live (se *Nästa steg*, punkt 4). |
 
 Gamla länkar med `?lag=` skickas vidare till `eskilsminne/`.
 
 ## Domän, DNS och e-post
 
 - **skramlat.se** köpt hos Loopia (förnyas 2027-10-16; slå på automatisk förnyelse). Namnservrarna pekar på **Cloudflare** (gratis).
-- Hos Cloudflare: fyra A-poster till GitHub (185.199.108–111.153) och CNAME `www` → `adelborgen.github.io`, alla **DNS only** (grått moln). TXT-post för GitHubs domänverifiering.
-- GitHub Pages: DNS-kontrollen är grön. **Att göra:** kryssa i *Enforce HTTPS*, och verifiera domänen på github.com/settings/pages (TXT-posten fanns men GitHub hade inte sett den än).
+- Hos Cloudflare: `skramlat.se` och `www.skramlat.se` är *Custom domains* på Workern `skramlat` (lagda av ägaren 18 oktober 2026), så Cloudflare serverar sidorna med https. TXT-posten för GitHubs domänverifiering är kvar med flit: den hindrar att någon annan kopplar domänen till GitHub Pages. **Att göra:** slå på *Always Use HTTPS* (SSL/TLS → Edge Certificates).
+- GitHub Pages: avstängt av ägaren 18 oktober 2026. `CNAME`-filen är borttagen.
 - **hej@skramlat.se** vidarebefordras till ägarens Gmail med Cloudflare Email Routing. Inte testad än. Utgående e-post (inloggningslänkar) kräver Cloudflares e-posttjänst (beta) och Workers Paid.
 
 ## Varumärket
@@ -88,10 +88,10 @@ Inför Sally Bauerskolorna, andra kunden:
 3. **Lasttest och kontroll av jurisdiktionen** mot en testdatabas (`scripts/lasttest.js`, `scripts/kontrollera-eu.js`).
 4. **Eskilsminne (nästa steg enligt ägaren, 17 oktober 2026):** styrelsens skriftliga ok och en administratör i klubben (inte ägaren). Ägaren frågar klubben. Ingen startdag bestämd. Sedan: töm testklubben, Workers Paid, och växla både `SIDA_ORIGIN` i `wrangler.toml` och `endpoint` i `eskilsminne/lag.js` till skramlat.se samtidigt. Fram till dess visar skramlat.se/eskilsminne/ demo och allt riktigt provas på workers.dev. Integritetspolicy, biträdesavtal och villkor skrivs som utkast som granskas av någon som kan juridik, och automatisk radering efter 60 dagar behöver finnas innan start (byggs när klubben har sagt ja).
 5. **Fas 3:** biträdesavtal (granskat av någon som kan), integritetspolicy, automatisk radering efter 60 dagar (kräver `[triggers]` i `wrangler.toml` och en ändring av vaktprovet `test/eu.test.js`), rutin för incidenter, säkerhetskopior, en reserv i familjen med åtkomst (med tystnadsplikt och en kort instruktion om ägaren inte nås).
-6. **Domänen till Cloudflare (ägaren gör det, 17 oktober 2026):** skramlat.se läggs som Custom domain på Workern `skramlat`, så att Cloudflare serverar alla sidor och https fungerar direkt. Ingen kodändring behövs för själva flytten. Därefter kan GitHub Pages stängas av och `CNAME`-filen tas bort.
-7. **Fas 2:** ansökan på `skramlat.se/kom-igang`, ägarens godkännande, utseende (färger och märke), `skramlat.se/<klubb>`, flytt av domänen från GitHub Pages till Cloudflare, e-post från skramlat.se.
-8. HTTPS och domänverifiering hos GitHub så länge sidorna ligger där (17 oktober 2026: ägaren väntar på att GitHub skapar certifikatet, upp till ett dygn, och kryssar sedan i *Enforce HTTPS*). Testa hej@skramlat.se.
-9. **Prova formuläret på kom-igang hos riktiga Cloudflare.** Första försöket gav "Det gick inte att nå servern", troligen för att sidan låg på http:// eller att servern inte hunnit uppdateras. Servern tillåter nu http://skramlat.se och visar det riktiga felet (version `2026-10-17-forfragan-2`). Hemligheten `FORFRAGAN_TILL` är inlagd enligt ägaren, men inte bekräftad med ett mejl.
+6. **Domänen till Cloudflare: klar 18 oktober 2026.** skramlat.se och www är Custom domains på Workern, GitHub Pages är avstängt och `CNAME`-filen borttagen. Kvar: *Always Use HTTPS*.
+7. **Fas 2:** ansökan på `skramlat.se/kom-igang`, ägarens godkännande, utseende (färger och märke), `skramlat.se/<klubb>`, e-post från skramlat.se.
+8. Testa hej@skramlat.se.
+9. **Prova formuläret på kom-igang hos riktiga Cloudflare.** Första försöket gav "Det gick inte att nå servern", troligen för att sidan låg på http:// eller att servern inte hunnit uppdateras. Sedan 18 oktober 2026 anropar formuläret `/api` på sin egen adress, eftersom sidan och servern ligger i samma Worker. Hemligheten `FORFRAGAN_TILL` är inlagd enligt ägaren, men inte bekräftad med ett mejl.
 
 ## Säkerhet och tester
 
@@ -100,6 +100,6 @@ Inför Sally Bauerskolorna, andra kunden:
 ## Arbetssätt
 
 - Fråga innan något nytt byggs. Ändra aldrig i P2019-repot (chokladförsäljningen).
-- Utkast läggs på en egen gren och publiceras först när ägaren säger till. **Allt som pushas till `main` publiceras både på skramlat.se (GitHub Pages) och hos Cloudflare.**
+- Utkast läggs på en egen gren och publiceras först när ägaren säger till. **Allt som pushas till `main` publiceras direkt på skramlat.se (Cloudflare).**
 - **Kör få tester.** Ägaren tycker att täta testkörningar är överdrivet nu, eftersom inget är köpt hos Cloudflare. Kör bara det som täcker det som ändrats, en gång när ett arbete är klart, och mutationstestet bara före lansering.
 - Skriv på svenska, i vardaglig ton. Nycklar, adminlänkar och e-postadresser skickas aldrig i chattar och läggs aldrig i repot.
