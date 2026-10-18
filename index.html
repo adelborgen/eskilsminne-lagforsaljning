@@ -26,6 +26,8 @@
   .hjalte { display: grid; grid-template-columns: minmax(0, 1.2fr) minmax(0, .8fr); gap: 32px; align-items: center; }
   .hjalte h1 { margin: 0; font: 900 clamp(44px, 9vw, 84px)/.93 var(--display); font-stretch: 112%; letter-spacing: -.01em; color: var(--kram); text-wrap: balance; }
   .hjalte p { margin: 18px 0 0; font-size: 20px; max-width: 46ch; }
+  .hjalte .etikett { margin: 26px 0 0; font-size: 13px; }   /* Vad är Skramlat? */
+  .hjalte .etikett + p { margin-top: 8px; }
   .knappar { display: flex; gap: 12px; flex-wrap: wrap; margin-top: 26px; }
   .knapp { display: inline-flex; align-items: center; min-height: 52px; padding: 0 22px; border-radius: 14px; font: 900 18px/1 var(--display); font-stretch: 106%; text-decoration: none; border: 3px solid var(--black); }
   .knapp.primar { background: var(--mint); color: var(--black); box-shadow: 0 4px 0 #050b1c; }
@@ -66,6 +68,7 @@
   <section class="hjalte">
     <div>
       <h1>Lagets försäljning, enkelt.</h1>
+      <p class="etikett">Vad är Skramlat?</p>
       <p>Skramlat underlättar administrationen av lagens och skolornas försäljningar och insamlingar, och gör processen säker och trygg för alla.</p>
       <div class="knappar"><a class="knapp primar" href="#kunder">Hitta ditt lag</a><a class="knapp sekundar" href="demo/">Prova demon</a></div>
     </div>
