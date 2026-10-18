@@ -33,7 +33,7 @@ Gamla länkar med `?lag=` skickas vidare till `eskilsminne/`.
 ## Domän, DNS och e-post
 
 - **skramlat.se** köpt hos Loopia (förnyas 2027-10-16; slå på automatisk förnyelse). Namnservrarna pekar på **Cloudflare** (gratis).
-- Hos Cloudflare: `skramlat.se` och `www.skramlat.se` är *Custom domains* på Workern `skramlat` (lagda av ägaren 18 oktober 2026), så Cloudflare serverar sidorna med https. TXT-posten för GitHubs domänverifiering är kvar med flit: den hindrar att någon annan kopplar domänen till GitHub Pages. **Att göra:** slå på *Always Use HTTPS* (SSL/TLS → Edge Certificates).
+- Hos Cloudflare: `skramlat.se` och `www.skramlat.se` är *Custom domains* på Workern `skramlat` (lagda av ägaren 18 oktober 2026), så Cloudflare serverar sidorna med https. TXT-posten för GitHubs domänverifiering är kvar med flit: den hindrar att någon annan kopplar domänen till GitHub Pages. *Always Use HTTPS* är påslaget (ägaren, 18 oktober 2026).
 - GitHub Pages: avstängt av ägaren 18 oktober 2026. `CNAME`-filen är borttagen.
 - **hej@skramlat.se** vidarebefordras till ägarens Gmail med Cloudflare Email Routing. Inte testad än. Utgående e-post (inloggningslänkar) kräver Cloudflares e-posttjänst (beta) och Workers Paid.
 
@@ -88,7 +88,7 @@ Inför Sally Bauerskolorna, andra kunden:
 3. **Lasttest och kontroll av jurisdiktionen** mot en testdatabas (`scripts/lasttest.js`, `scripts/kontrollera-eu.js`).
 4. **Eskilsminne (nästa steg enligt ägaren, 17 oktober 2026):** styrelsens skriftliga ok och en administratör i klubben (inte ägaren). Ägaren frågar klubben. Ingen startdag bestämd. Sedan: töm testklubben, Workers Paid, och växla både `SIDA_ORIGIN` i `wrangler.toml` och `endpoint` i `eskilsminne/lag.js` till skramlat.se samtidigt. Fram till dess visar skramlat.se/eskilsminne/ demo och allt riktigt provas på workers.dev. Integritetspolicy, biträdesavtal och villkor skrivs som utkast som granskas av någon som kan juridik, och automatisk radering efter 60 dagar behöver finnas innan start (byggs när klubben har sagt ja).
 5. **Fas 3:** biträdesavtal (granskat av någon som kan), integritetspolicy, automatisk radering efter 60 dagar (kräver `[triggers]` i `wrangler.toml` och en ändring av vaktprovet `test/eu.test.js`), rutin för incidenter, säkerhetskopior, en reserv i familjen med åtkomst (med tystnadsplikt och en kort instruktion om ägaren inte nås).
-6. **Domänen till Cloudflare: klar 18 oktober 2026.** skramlat.se och www är Custom domains på Workern, GitHub Pages är avstängt och `CNAME`-filen borttagen. Kvar: *Always Use HTTPS*.
+6. **Domänen till Cloudflare: klar 18 oktober 2026.** skramlat.se och www är Custom domains på Workern, GitHub Pages är avstängt, `CNAME`-filen borttagen och *Always Use HTTPS* påslaget.
 7. **Fas 2:** ansökan på `skramlat.se/kom-igang`, ägarens godkännande, utseende (färger och märke), `skramlat.se/<klubb>`, e-post från skramlat.se.
 8. Testa hej@skramlat.se.
 9. **Formuläret på kom-igang fungerar hos riktiga Cloudflare:** ägaren skickade en förfrågan på skramlat.se 18 oktober 2026 och mejlet kom fram (hemligheten `FORFRAGAN_TILL` är alltså rätt inlagd).

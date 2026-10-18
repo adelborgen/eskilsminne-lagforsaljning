@@ -68,7 +68,7 @@ Görs av den som driver Skramlat. Kräver ett Cloudflare-konto med **Workers Pai
 7. **Lasttest mot en testdatabas** innan skarp drift: `scripts/lasttest.js`.
 8. **Förfrågningar från kom-igang.** Lägg in mottagarens adress som hemlighet: Workers & Pages → skramlat → Settings → Variables and Secrets → Add, typ *Secret*, namn `FORFRAGAN_TILL`. Utan Workers Paid måste adressen vara en verifierad mottagare i Email Routing. Adressen läggs aldrig i repot. Saknas hemligheten får den som frågar beskedet att mejla hej@skramlat.se.
 
-Domänen: `skramlat.se` och `www.skramlat.se` är *Custom domains* på Workern sedan 18 oktober 2026 (Workers & Pages → skramlat → Settings → Domains & Routes), så Cloudflare serverar alla sidor med https. GitHub Pages är avstängt. Slå på *Always Use HTTPS* (SSL/TLS → Edge Certificates) så att http:// skickas vidare.
+Domänen: `skramlat.se` och `www.skramlat.se` är *Custom domains* på Workern sedan 18 oktober 2026 (Workers & Pages → skramlat → Settings → Domains & Routes), så Cloudflare serverar alla sidor med https. GitHub Pages är avstängt. *Always Use HTTPS* (SSL/TLS → Edge Certificates) är påslaget, så http:// skickas vidare till https://.
 
 ## Så går en försäljning till (alla försäljningar godkänns av klubben)
 
