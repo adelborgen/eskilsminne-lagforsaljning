@@ -65,8 +65,8 @@ var KLUBB = {
   }
 };
 
-// Sidorna som Cloudflare serverar (skramlat.<konto>.workers.dev) pratar med servern på samma adress. Samma filer på GitHub Pages
-// (skramlat.se) visar demo, eftersom servern inte finns där. Sätt endpoint till "/api" ovan när domänen har flyttat till Cloudflare.
+// På workers.dev pratar sidorna med servern på samma adress. På skramlat.se visar samma filer demo tills Eskilsminne går live: sätt då
+// endpoint till "/api" ovan och SIDA_ORIGIN i wrangler.toml till https://skramlat.se i samma commit (se skillen ny-klubb-och-go-live).
 if (/\.workers\.dev$/.test(location.hostname)) KLUBB.endpoint = "/api";
 
 /* --------------------------------------------------------------------------

@@ -39,11 +39,7 @@ Gamla länkar med `?lag=` skickas vidare till `eskilsminne/`.
 
 ## Varumärket
 
-- **Brand-manual / designsystem:** https://claude.ai/artifact/TPCYXxUVyUBVnhxuszmFeh (Design System-artefakten "Skramlat").
-- **Färger:** grafit `#16191d`, krämvit `#fff8d6`, mint `#6fe3b4`, mörk mint `#1c8a5f` (grafik på ljust), mint-text `#187a54`. Aldrig vit bakgrund.
-- **Typsnitt:** Archivo (rubriker, siffror) och Atkinson Hyperlegible Next (text). Ligger i `fonts/`.
-- **Logga:** genomskinlig insamlingsbössa med mynt. Filer i `logga/` (används av sidorna) och `material/logga/` (alla varianter, PNG, rörliga SVG, `gen.py` som ritar dem).
-- **Ton:** du-form, vardagligt, rollnamn (förälder, lagförälder, klubbens administratör), inga kanaler i texten, inga bilder på barn, inga stockbilder.
+Färger, typsnitt, logga och ton står i skillen `ton-och-varumarke`. Brand-manualen (Design System-artefakten "Skramlat") finns på https://claude.ai/artifact/TPCYXxUVyUBVnhxuszmFeh.
 
 ## Utkast till juridiska dokument (17 oktober 2026, inte granskade)
 
@@ -99,7 +95,4 @@ Inför Sally Bauerskolorna, andra kunden:
 
 ## Arbetssätt
 
-- Fråga innan något nytt byggs. Ändra aldrig i P2019-repot (chokladförsäljningen).
-- Utkast läggs på en egen gren och publiceras först när ägaren säger till. **Allt som pushas till `main` publiceras direkt på skramlat.se (Cloudflare).**
-- **Kör få tester.** Ägaren tycker att täta testkörningar är överdrivet nu, eftersom inget är köpt hos Cloudflare. Kör bara det som täcker det som ändrats, en gång när ett arbete är klart, och mutationstestet bara före lansering.
-- Skriv på svenska, i vardaglig ton. Nycklar, adminlänkar och e-postadresser skickas aldrig i chattar och läggs aldrig i repot.
+Reglerna som alltid gäller står i `CLAUDE.md`. Återkommande arbetsgångar ligger som skills i `.claude/skills/`: `utkast-och-publicering`, `ton-och-varumarke` och `ny-klubb-och-go-live`.
