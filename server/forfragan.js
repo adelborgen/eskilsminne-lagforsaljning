@@ -4,15 +4,15 @@
    Mottagarens adress är en hemlighet hos Cloudflare (FORFRAGAN_TILL), aldrig i koden. Den måste vara en verifierad mottagare
    i Email Routing så länge kontot inte har Workers Paid.
 
-   Sidan ligger på skramlat.se (GitHub Pages) tills domänen har flyttat till Cloudflare, så anropet kommer från en annan adress än
-   servern. Därför får just den här åtgärden anrop från skramlat.se. Alla svar till skramlat.se får en CORS-rubrik (se api.js), även
-   felsvar, så att sidan kan visa vad som gick fel. */
+   Sidan låg först på GitHub Pages och anropade servern från en annan adress. Sedan 18 oktober 2026 ligger sidan och servern i samma
+   Worker och sidan anropar /api på sin egen adress. Rubrikerna för anrop från skramlat.se till en annan adress (se api.js) finns
+   kvar, men behövs bara om sidan åter skulle ligga någon annanstans än servern. */
 import { raknaUpp } from "./data.js";
 import { sha256 } from "./krypto.js";
 import { CFG, normEpost } from "./regler.js";
 import { skickaForfragan } from "./epost.js";
 
-// http:// också, så länge GitHub Pages inte tvingar https för skramlat.se (Enforce HTTPS)
+// http:// också, så länge Cloudflare inte skickar http:// vidare till https:// (Always Use HTTPS)
 const URSPRUNG = ["https://skramlat.se", "https://www.skramlat.se", "http://skramlat.se", "http://www.skramlat.se"];
 
 // Skramlats sidor på en annan adress än servern (skramlat.se). Ger adressen om anropet kommer därifrån, annars null.

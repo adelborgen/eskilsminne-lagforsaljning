@@ -53,7 +53,7 @@ npx wrangler d1 execute skramlat --local --file ny-klubb.sql            # först
 npm run dev -- --var SIDA_ORIGIN:http://localhost:8787                  # bygger och startar Worker, sidor och lokal D1 (tabellerna läggs in vid första anropet)
 ```
 
-Sätt `endpoint: "/api"` i `eskilsminne/lag.js` för att sidorna ska prata med servern (ändra tillbaka till `""` innan du publicerar på GitHub Pages: servern finns bara på Cloudflare). Inloggningsmejlet skickas inte på riktigt lokalt: det skrivs som en fil under `.wrangler/tmp/email/` och loggas i terminalen, och länken i det är den du öppnar.
+Sätt `endpoint: "/api"` i `eskilsminne/lag.js` för att sidorna ska prata med servern (ändra tillbaka till `""` innan du pushar: på skramlat.se ska Eskilsminne visa demo tills klubben har sagt ja). Inloggningsmejlet skickas inte på riktigt lokalt: det skrivs som en fil under `.wrangler/tmp/email/` och loggas i terminalen, och länken i det är den du öppnar.
 
 ## Sätt upp Cloudflare (en gång)
 
@@ -68,7 +68,7 @@ Görs av den som driver Skramlat. Kräver ett Cloudflare-konto med **Workers Pai
 7. **Lasttest mot en testdatabas** innan skarp drift: `scripts/lasttest.js`.
 8. **Förfrågningar från kom-igang.** Lägg in mottagarens adress som hemlighet: Workers & Pages → skramlat → Settings → Variables and Secrets → Add, typ *Secret*, namn `FORFRAGAN_TILL`. Utan Workers Paid måste adressen vara en verifierad mottagare i Email Routing. Adressen läggs aldrig i repot. Saknas hemligheten får den som frågar beskedet att mejla hej@skramlat.se.
 
-Domänen `skramlat.se` pekar idag på GitHub Pages. Flytten till Cloudflare görs i Fas 2.
+Domänen: `skramlat.se` och `www.skramlat.se` är *Custom domains* på Workern sedan 18 oktober 2026 (Workers & Pages → skramlat → Settings → Domains & Routes), så Cloudflare serverar alla sidor med https. GitHub Pages är avstängt. Slå på *Always Use HTTPS* (SSL/TLS → Edge Certificates) så att http:// skickas vidare.
 
 ## Så går en försäljning till (alla försäljningar godkänns av klubben)
 
@@ -149,9 +149,9 @@ Det som bara kan bevisas hos riktiga Cloudflare, till exempel många beställnin
 
 ## Publicera
 
-- **Idag:** sidorna ligger på GitHub Pages (*Settings → Pages*, gren `main`, mapp `/`), och `skramlat.se` pekar dit. Eskilsminne visar demo.
-- **Cloudflare:** Workern `skramlat` är kopplad till GitHub och byggs om automatiskt från `main` (publicering: `npx wrangler deploy`, som bygger själv). Workern lägger in nya migreringar i databasen själv vid första anropet efter en publicering, så bygget behöver ingen behörighet till databasen. Migreringarna i `migrations/` ska tåla att köras igen (`IF NOT EXISTS`), och `server/schema.js` skapas från dem av `npm run bygg`. Adress: **https://skramlat.adelborg.workers.dev**. Där pratar sidorna med servern (`lag.js` väljer `/api` på workers.dev), medan samma filer på skramlat.se visar demo. Inloggningslänkarna pekar på workers.dev-adressen tills domänen flyttas (`SIDA_ORIGIN` i `wrangler.toml`). Utan Workers Paid går inloggningsmejl bara till adresser som är verifierade mottagare i Email Routing, vilket räcker för att testa med sin egen adress. **Allt som pushas till `main` publiceras alltså på båda ställena.**
-- **Med Cloudflare (Fas 2):** sidorna och servern ligger i samma Worker, och domänen flyttas dit. Då får varje klubb sin adress `skramlat.se/<klubb>/` utan en egen mapp i repot, och en klubb skapas på `skramlat.se/kom-igang`. Se planen.
+- **Idag:** Workern `skramlat` hos Cloudflare serverar både sidorna och servern, på `skramlat.se`, `www.skramlat.se` och `skramlat.adelborg.workers.dev`. GitHub Pages är avstängt sedan 18 oktober 2026. Eskilsminne visar demo på skramlat.se.
+- **Cloudflare:** Workern `skramlat` är kopplad till GitHub och byggs om automatiskt från `main` (publicering: `npx wrangler deploy`, som bygger själv). Workern lägger in nya migreringar i databasen själv vid första anropet efter en publicering, så bygget behöver ingen behörighet till databasen. Migreringarna i `migrations/` ska tåla att köras igen (`IF NOT EXISTS`), och `server/schema.js` skapas från dem av `npm run bygg`. Adress: **https://skramlat.adelborg.workers.dev**. Där pratar sidorna med servern (`lag.js` väljer `/api` på workers.dev), medan samma filer på skramlat.se visar demo. Inloggningslänkarna pekar på workers.dev-adressen tills Eskilsminne går live (`SIDA_ORIGIN` i `wrangler.toml`). Utan Workers Paid går inloggningsmejl bara till adresser som är verifierade mottagare i Email Routing, vilket räcker för att testa med sin egen adress. **Allt som pushas till `main` publiceras alltså direkt på skramlat.se.**
+- **Fas 2:** varje klubb får sin adress `skramlat.se/<klubb>/` utan en egen mapp i repot, och en klubb skapas på `skramlat.se/kom-igang`. Se planen.
 
 ## Flytta P2019 hit
 
