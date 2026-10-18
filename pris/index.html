@@ -33,6 +33,8 @@
   .niva ul { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 10px; }
   .niva li { display: flex; gap: 10px; align-items: flex-start; }
   .niva li svg { flex: none; margin-top: 3px; }
+  .pilot { margin: -14px 0 0; font-size: 18px; color: var(--dampad); }
+  .pilot b { color: var(--mint); }
   .antal { font: 900 22px/1.2 var(--display); }
   .alltid { background: var(--upphojd); border-radius: 22px; padding: 26px 24px; display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 18px 28px; }
   .alltid h2 { grid-column: 1 / -1; margin: 0; font: 900 28px/1.1 var(--display); font-stretch: 108%; color: var(--kram); }
@@ -63,7 +65,7 @@
   <header>
     <p class="etikett">Pris</p>
     <h1>Gratis att börja. Enkelt att växa.</h1>
-    <p class="ingress">Ni betalar för verktyget, aldrig per köp. Skramlat tar aldrig del av betalningen, och pengarna swishas direkt till laget eller skolan.</p>
+    <p class="ingress">Ni betalar för verktyget, aldrig per köp. Pengarna swishas direkt till laget eller skolan.</p>
   </header>
 
   <section class="nivaer" aria-label="Nivåer">
@@ -72,48 +74,47 @@
       <p class="for">För ett lag eller en klass.</p>
       <div class="pris"><b>0 kr</b><span>Alltid</span></div>
       <ul>
-        <li><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#17612b" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 12.5l5 5L20 6.5"/></svg><span><span class="antal">1–3</span> försäljningar samtidigt</span></li>
+        <li><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#17612b" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 12.5l5 5L20 6.5"/></svg><span><span class="antal">1</span> försäljning åt gången</span></li>
         <li><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#17612b" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 12.5l5 5L20 6.5"/></svg><span>Klubbens eller skolans märke</span></li>
         <li><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#17612b" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 12.5l5 5L20 6.5"/></svg><span>Guider om lagförsäljning</span></li>
       </ul>
     </article>
     <article class="niva mitt">
       <h2>Bas</h2>
-      <p class="for">För en klubb eller skola med flera lag.</p>
-      <div class="pris"><b>999 kr</b><span>per år, exkl. moms. Gratis för pilotklubbar under pilotåret.</span></div>
+      <p class="for">För en mindre klubb eller skola.</p>
+      <div class="pris"><b>999 kr</b><span>per år, exkl. moms.</span></div>
       <ul>
-        <li><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#17612b" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 12.5l5 5L20 6.5"/></svg><span><span class="antal">10</span> försäljningar samtidigt</span></li>
+        <li><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#17612b" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 12.5l5 5L20 6.5"/></svg><span><span class="antal">3</span> försäljningar samtidigt</span></li>
         <li><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#17612b" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 12.5l5 5L20 6.5"/></svg><span>Era egna färger och ert märke</span></li>
         <li><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#17612b" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 12.5l5 5L20 6.5"/></svg><span>Hjälp via e-post</span></li>
       </ul>
     </article>
     <article class="niva">
       <h2>Plus</h2>
-      <p class="for">För en större klubb.</p>
-      <div class="pris"><b>1&nbsp;999 kr</b><span>per år, exkl. moms. Gratis för pilotklubbar under pilotåret.</span></div>
+      <p class="for">För en större klubb eller skola.</p>
+      <div class="pris"><b>1&nbsp;999 kr</b><span>per år, exkl. moms.</span></div>
       <ul>
-        <li><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#17612b" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 12.5l5 5L20 6.5"/></svg><span><span class="antal">20</span> försäljningar samtidigt</span></li>
+        <li><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#17612b" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 12.5l5 5L20 6.5"/></svg><span>Upp till <span class="antal">10</span> försäljningar samtidigt</span></li>
         <li><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#17612b" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 12.5l5 5L20 6.5"/></svg><span>Era egna färger och ert märke</span></li>
         <li><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#17612b" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 12.5l5 5L20 6.5"/></svg><span>Svar inom ett dygn och hjälp att komma igång</span></li>
       </ul>
     </article>
   </section>
+  <p class="pilot"><b>Pilotklubb?</b> Då använder ni Skramlat gratis under pilotåret.</p>
 
   <section class="alltid">
     <h2>Ingår alltid</h2>
     <div><b>Swish med ordernummer</b><span>Varje betalning går att para ihop med en beställning.</span></div>
-    <div><b>Mätaren</b><span>Alla ser hur långt laget har kommit.</span></div>
-    <div><b>Bocka av betalt och hämtat</b><span>Lagföräldern har koll utan listor.</span></div>
+        <div><b>Bocka av betalt och hämtat</b><span>Lagföräldern har koll utan listor.</span></div>
     <div><b>Export till Excel och CSV</b><span>Underlaget till kassören, när ni vill.</span></div>
-    <div><b>Lite uppgifter, inom EU</b><span>Bara barnets förnamn och ett mobilnummer. Beställningarna lagras i en databas inom EU.</span></div>
-    <div><b>Klubben godkänner</b><span>Ingen försäljning öppnar utan att klubben eller skolan har sagt ja.</span></div>
+    <div><b>Lite uppgifter, inom EU</b><span>Bara barnets förnamn och ett mobilnummer.</span></div>
+    <div><b>Klubben godkänner</b><span>Ingen försäljning öppnar utan klubbens ja.</span></div>
   </section>
 
   <section class="fragor">
     <h2>Frågor om priset</h2>
-    <details><summary>Vad räknas som en försäljning?</summary><p>En försäljning som pågår, till exempel P2015 Kanelbullar. Avslutade försäljningar räknas inte, så samma lag kan sälja många gånger om året.</p></details>
-    <details><summary>Tar Skramlat en avgift per köp?</summary><p>Nej. Föräldrarna swishar direkt till laget eller skolan, och Skramlat tar aldrig del av betalningen.</p></details>
-    <details><summary>Vad kostar Bas och Plus?</summary><p>Bas kostar 999 kr och Plus 1&nbsp;999 kr per år, exklusive moms. Ni betalar med en faktura om året, så att styrelsen bara behöver godkänna det en gång. Pilotklubbar använder Skramlat gratis under pilotåret.</p></details>
+    <details><summary>Vad räknas som en försäljning?</summary><p>En försäljning som pågår, till exempel P2015 Kanelbullar. Avslutade försäljningar räknas inte, så samma lag kan sälja många gånger om året. Behöver ni fler än 10 samtidigt, hör av er.</p></details>
+    <details><summary>Hur betalar vi?</summary><p>Med en faktura om året, så att styrelsen bara behöver godkänna det en gång.</p></details>
     <details><summary>Vad händer när pilotåret är slut?</summary><p>Ni får besked i god tid och väljer själva om ni vill fortsätta med Bas eller Plus. Gratisnivån finns kvar.</p></details>
   </section>
 

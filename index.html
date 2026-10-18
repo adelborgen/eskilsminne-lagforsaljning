@@ -48,11 +48,6 @@
   .kund.snart { background: var(--upphojd); color: var(--text); box-shadow: none; }
   .kund.snart small { color: var(--dampad); }
   .kund svg { flex: none; }
-  .lankar { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 16px; }
-  .lank { display: block; background: var(--upphojd); border-radius: 22px; padding: 22px; text-decoration: none; color: var(--text); }
-  .lank b { display: block; font: 900 24px/1.1 var(--display); font-stretch: 106%; color: var(--kram); margin-bottom: 6px; }
-  .lank span { color: var(--dampad); }
-  .lank:hover { background: #2b3138; }
   .kontakt { background: var(--mint); color: var(--black); border-radius: 22px; padding: 26px 24px; display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 16px; box-shadow: 0 5px 0 #050b1c; }
   .kontakt h2 { margin: 0; color: var(--black); max-width: 18ch; }
   .kontakt a { display: inline-flex; align-items: center; min-height: 56px; font: 900 22px/1 var(--display); font-stretch: 106%; background: var(--grafit); color: var(--kram); border-radius: 14px; padding: 0 22px; text-decoration: none; box-shadow: 0 4px 0 #050b1c; }
@@ -72,8 +67,8 @@
   <section class="hjalte">
     <div>
       <h1>Lagets försäljning, enkelt.</h1>
-      <p>Föräldrar beställer i mobilen och swishar direkt till laget eller skolan. Lagföräldern bockar av betalt och hämtat. Inga listor, och alla ser hur långt laget har kommit.</p>
-      <div class="knappar"><a class="knapp primar" href="#kunder">Hitta ditt lag</a><a class="knapp sekundar" href="pris/">Se pris</a></div>
+      <p>Föräldrar beställer i mobilen och swishar direkt till laget eller skolan. Lagföräldern bockar av betalt och hämtat.</p>
+      <div class="knappar"><a class="knapp primar" href="#kunder">Hitta ditt lag</a><a class="knapp sekundar" href="demo/">Prova demon</a></div>
     </div>
     <svg class="bossa" viewBox="0 0 64 64" fill="none" role="img" aria-label="Skramlats symbol: en genomskinlig insamlingsbössa med mynt">
       <g stroke="#6fe3b4" stroke-width="3" stroke-linecap="round"><path d="M14 11 l4 3"/><path d="M20 4 l1 5"/><path d="M50 11 l-4 3"/><path d="M44 4 l-1 5"/></g>
@@ -88,7 +83,7 @@
 
   <section class="matare" aria-label="Swishat med Skramlat">
     <p class="matare-tal" data-varde="17340"><span class="siffra">17&nbsp;340</span><small>kr</small></p>
-    <p class="matare-text">har föräldrar swishat direkt till lagen med Skramlat.<span>Pengarna går aldrig via Skramlat, och siffran växer med varje försäljning.</span></p>
+    <p class="matare-text">har föräldrar swishat direkt till lagen med Skramlat.</p>
   </section>
 
   <section>
@@ -96,16 +91,16 @@
     <ol class="steg">
       <li><b>1</b><span>Lagföräldern lägger upp försäljningen, och klubben eller skolan godkänner.</span></li>
       <li><b>2</b><span>Föräldrar beställer i mobilen och swishar direkt till laget eller skolan.</span></li>
-      <li><b>3</b><span>Lagföräldern bockar av betalt och hämtat. Underlaget går att ta ut till Excel.</span></li>
+      <li><b>3</b><span>Lagföräldern bockar av betalt och hämtat.</span></li>
     </ol>
   </section>
 
   <section class="alltid">
     <h2>Tryggt för alla</h2>
-    <div><b>Pengarna går direkt</b><span>Till laget eller skolan. Skramlat tar aldrig del av dem.</span></div>
-    <div><b>Varje krona går att följa</b><span>Ordernumret följer med i Swish och kan paras ihop med beställningen.</span></div>
-    <div><b>Lite uppgifter, inom EU</b><span>Bara barnets förnamn och ett mobilnummer. Beställningarna lagras i en databas inom EU.</span></div>
-    <div><b>Klubben godkänner</b><span>Ingen försäljning öppnar utan att klubben eller skolan har sagt ja.</span></div>
+    <div><b>Pengarna går direkt</b><span>Skramlat tar aldrig del av dem.</span></div>
+    <div><b>Varje krona går att följa</b><span>Ordernumret följer med i Swish.</span></div>
+    <div><b>Lite uppgifter, inom EU</b><span>Bara barnets förnamn och ett mobilnummer.</span></div>
+    <div><b>Klubben godkänner</b><span>Ingen försäljning öppnar utan klubbens ja.</span></div>
   </section>
 
   <section id="kunder">
@@ -115,13 +110,6 @@
       <a class="kund" href="eskilsminne/"><span>Eskilsminne IF<small>Förening</small></span><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#0f1a33" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 12h15M13 6l6 6-6 6"/></svg></a>
       <div class="kund snart"><span>Sally Bauerskolorna<small>Skola · kommer snart</small></span></div>
     </div>
-  </section>
-
-  <section class="lankar">
-    <a class="lank" href="pris/"><b>Pris</b><span>Gratis att börja. Inga avgifter per köp.</span></a>
-    <a class="lank" href="guider/"><b>Guider</b><span>Vad gäller för lotter, Swish och personuppgifter?</span></a>
-    <a class="lank" href="demo/"><b>Demo</b><span>Prova som förälder och lagförälder, utan inloggning.</span></a>
-    <a class="lank" href="om/"><b>Om Skramlat</b><span>Varför Skramlat finns, och vad vi lovar.</span></a>
   </section>
 
   <section class="kontakt">
