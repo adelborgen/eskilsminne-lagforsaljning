@@ -818,7 +818,7 @@
     ["meddelande", "Meddelande i Swish", "Förifylls för föräldern, följt av ordernumret. Tomt = lagets namn + försäljning.", "text"],
     ["pris", "Pris (kr)", "Det föräldern swishar per styck.", "number", 1], ["inkopspris", "Inköpspris (kr)", "Det laget betalar per styck. 0 om ni får det gratis.", "number", 1],
     ["minimum", "Minimum", "Minst så många krävs för att beställa. Skriv 0 om ni har ett lager.", "number", 2], ["mal", "Mål", "För lotter: samma som antal i lager.", "number", 2],
-    ["lager", "Antal i lager (valfritt)", "Har laget fått ett bestämt antal, till exempel bingolotter? Skriv antalet. Då kan inte fler beställas än så. Tomt = ingen gräns.", "number", 5],
+    ["lager", "Antal i lager (valfritt)", "Har laget fått ett bestämt antal, till exempel tulpaner? Skriv antalet. Då kan inte fler beställas än så. Tomt = ingen gräns.", "number", 5],
     ["maxAntal", "Max per beställning", "", "number", 3], ["kartong", "Antal per kartong", "0 om det inte säljs i kartonger.", "number", 3]
   ];
 

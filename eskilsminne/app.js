@@ -70,7 +70,7 @@
   var IK_CIRKEL = '<svg class="cirkel" viewBox="0 0 220 220" aria-hidden="true" focusable="false"><circle cx="110" cy="110" r="100"/><circle cx="110" cy="110" r="5" class="spot"/></svg>';
 
   // Lagets namn på brickan: "F2017" blir F över 2017. Andra namn visas som de är.
-  // "P2019", "F2014" och "P2019 Bingolotter" blir bokstav över årtal; resten av namnet står redan i rubriken.
+  // "P2019", "F2014" och "P2019 Tulpaner" blir bokstav över årtal; resten av namnet står redan i rubriken.
   function platta(namn) {
     var m = /^([A-Za-zÅÄÖåäö])[A-Za-zÅÄÖåäö]*\s*(\d{4})(?!\d)/.exec(String(namn).trim());
     if (m) return h("span", { class: "plate" }, h("b", { text: m[1].toUpperCase() }), h("i", { text: m[2] }));

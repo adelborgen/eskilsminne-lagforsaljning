@@ -88,10 +88,10 @@ var DEMO_LAG = [
     pris: 60, inkopspris: 25, minimum: 50, mal: 120, maxAntal: 10, kartong: 0 },
   { slug: "f2016", namn: "F2016", status: "snart" },
   { slug: "p2017", namn: "P2017", status: "pagar",
-    produkt: { namn: "Bingolotter", detalj: "Fysisk lott som hämtas på träningen", enhetEn: "lott", enhet: "lotter" },
-    intro: "Köp bingolotter och stötta laget. Lotterna får du när du hämtar din beställning.",
-    utlamningsText: "Lotterna delas ut på träningen.", belonning: "",
-    pris: 50, inkopspris: 40, minimum: 0, mal: 120, lager: 120, maxAntal: 20, kartong: 0, demoBestallt: 74 },
+    produkt: { namn: "Tulpaner", detalj: "Bunt med tio tulpaner", enhetEn: "bunt", enhet: "buntar" },
+    intro: "Köp tulpaner och stötta laget. Tulpanerna får du när du hämtar din beställning.",
+    utlamningsText: "Tulpanerna delas ut på träningen.", belonning: "",
+    pris: 50, inkopspris: 30, minimum: 0, mal: 120, lager: 120, maxAntal: 5, kartong: 0, demoBestallt: 74 },
   // Exempel på försäljningar som ännu inte är godkända. De syns inte för föräldrarna, bara i adminvyn.
   { slug: "f2015", namn: "F2015", status: "utkast" },   // helt tomt, som när klubben just har lagt till laget
   { slug: "p2016", namn: "P2016", status: "granskas",
