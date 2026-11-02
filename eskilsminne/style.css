@@ -97,7 +97,7 @@ details p { margin: 0 0 14px; }
 /* ---------- Formulär ---------- */
 label, .label { display: block; font-weight: 800; margin: 0 0 6px; font-size: 15px; }
 .hint { font-weight: 400; color: var(--sub, var(--fg2)); font-size: 13px; display: block; margin-top: 2px; }
-input[type=text], input[type=tel], input[type=number], input[type=password], input[type=search], select, textarea {
+input[type=text], input[type=tel], input[type=number], input[type=password], input[type=search], input[type=email], select, textarea {
   width: 100%; font: inherit; color: var(--ink); background: var(--cream2); border: 2px solid var(--edge); border-radius: 14px; padding: 12px 14px; min-height: 52px; }
 textarea { min-height: 0; resize: vertical; }
 .field + .field { margin-top: 16px; }

@@ -111,7 +111,7 @@ const MUTATIONER = [
   M("Inledande = + - @ tas bort ur lagförälderns texter", "attack", "Formler i texter som exporteras",
     ["regler.js", 'ut[k] = String(d[k]).trim().replace(/^[=+\\-@\\s]+/, "").slice(0, max);', "ut[k] = String(d[k]).trim().slice(0, max);"]),
   M("Alla frågor använder parametrar (ingen text från en användare i SQL)", "attack", "SQL-injektion i alla fält",
-    ["data.js", '"SELECT id, slug, namn, motto, status, bankgiro FROM klubb WHERE slug = ?1").bind(slug)', "\"SELECT id, slug, namn, motto, status, bankgiro FROM klubb WHERE slug = '\" + slug + \"'\")"]),
+    ["data.js", '"SELECT id, slug, namn, motto, status, bankgiro, guide_klar FROM klubb WHERE slug = ?1").bind(slug)', "\"SELECT id, slug, namn, motto, status, bankgiro, guide_klar FROM klubb WHERE slug = '\" + slug + \"'\")"]),
 
   // ----- Personuppgifter -----
   M("Laglistan innehåller aldrig nyckelns hash", "attack", "Läsa laglistan och leta efter personuppgifter",

@@ -164,7 +164,7 @@
     var ok = h("p", { class: "notice", role: "status", hidden: "" });
     var epost = h("input", { type: "email", id: "epost", autocomplete: "email", autocapitalize: "none", spellcheck: "false", placeholder: "namn@klubben.se" });
     var hp = h("input", { type: "text", name: "website", tabindex: "-1", autocomplete: "off", "aria-hidden": "true" });
-    var go = h("button", { type: "submit", class: "primary", style: "margin-top:12px", text: "Skicka inloggningslänk" });
+    var go = h("button", { type: "submit", class: "primary", style: "margin-top:12px", text: "Mejla mig en länk" });
     var demoKnapp = h("button", { type: "button", class: "ghost", style: "margin-top:12px", text: "Logga in direkt (demo)", hidden: "",
       onclick: function () { loggaIn("*", "super", function (t) { fel.textContent = t; fel.hidden = false; }); } });
     var form = h("form", { novalidate: "" }, fel, ok,
@@ -176,7 +176,7 @@
       if (!e) { fel.textContent = "Skriv din e-postadress."; fel.hidden = false; return; }
       go.disabled = true; go.textContent = "Skickar…";
       apiLogin({ op: "begar", epost: e, website: hp.value }).then(function (r) {
-        go.disabled = false; go.textContent = "Skicka inloggningslänk";
+        go.disabled = false; go.textContent = "Mejla mig en länk";
         if (!r.ok) { fel.textContent = r.fel || "Det gick inte att skicka."; fel.hidden = false; return; }
         ok.textContent = r.meddelande || "Vi har skickat en länk om adressen är registrerad."; ok.hidden = false;
         if (DEMO) demoKnapp.hidden = false;
@@ -184,21 +184,25 @@
     });
     return h("div", { class: "card", style: "margin-top:16px" },
       h("h3", { style: "margin:0 0 6px", text: "Klubbens administratör" }),
-      h("p", { style: "margin:0 0 12px", text: "Vi skickar en länk till din e-post. Den gäller i 15 minuter och kan användas en gång." }), form);
+      h("p", { style: "margin:0 0 12px", text: "Vi mejlar dig en länk som loggar in dig. Den gäller i 15 minuter. Sedan minns sidan dig i 30 dagar." }), form);
   }
 
   // Länken i e-posten öppnar den här sidan. Först knappen loggar in, så att en länk som bara hämtas av en e-postskanner inte förbrukas.
-  function visaBekrafta(token) {
+  // Välkomstlänken till en ny administratör fungerar likadant, men sidan hälsar välkommen.
+  function visaBekrafta(token, valkommen) {
     S = { lag: null, key: null, roll: null, valt: null }; raderaSession();
-    setTopbar("", "Admin"); document.title = K.namn + " – Logga in";
+    setTopbar("", "Admin"); document.title = K.namn + (valkommen ? " – Välkommen" : " – Logga in");
     app.textContent = "";
-    app.appendChild(h("h2", { class: "title", text: "Logga in som klubbens administratör" }));
-    app.appendChild(h("p", { class: "lead", text: "Bekräfta att det är du som loggar in på " + K.namn + "." }));
+    var knappText = valkommen ? "Kom igång" : "Logga in";
+    app.appendChild(h("h2", { class: "title", text: valkommen ? "Välkommen till Skramlat" : "Logga in som klubbens administratör" }));
+    app.appendChild(h("p", { class: "lead", text: valkommen
+      ? "Du är administratör för " + K.namn + ". Här godkänner du lagens försäljningar och ser när pengarna har kommit. Tryck på knappen, så visar vi vad som behövs för att komma igång."
+      : "Bekräfta att det är du som loggar in på " + K.namn + "." }));
     var fel = h("p", { class: "formerror", role: "alert", hidden: "", style: "margin-top:12px" });
-    var go = h("button", { type: "button", class: "primary", style: "margin-top:16px", text: "Logga in" });
+    var go = h("button", { type: "button", class: "primary", style: "margin-top:16px", text: knappText });
     go.addEventListener("click", function () {
-      fel.hidden = true; go.disabled = true; go.textContent = "Loggar in…";
-      function igen(t) { go.disabled = false; go.textContent = "Logga in"; fel.textContent = t; fel.hidden = false; }
+      fel.hidden = true; go.disabled = true; go.textContent = valkommen ? "Ett ögonblick…" : "Loggar in…";
+      function igen(t) { go.disabled = false; go.textContent = knappText; fel.textContent = t; fel.hidden = false; }
       apiLogin({ op: "anvand", token: token }).then(function (r) {
         if (!r.ok) return igen(r.fel || "Det gick inte att logga in.");
         loggaIn("*", DEMO ? "super" : "", igen);
@@ -1027,10 +1031,11 @@
     var startLank = DEMO ? "[sidans adress]/admin.html#starta" : new URL("admin.html#starta", location.href).href;
     var startKnapp = h("button", { type: "button", class: "mini", text: "Kopiera" });
     startKnapp.addEventListener("click", function () { kopiera(startLank, startKnapp); });
-    app.appendChild(h("div", { class: "card", style: "margin-top:16px" },
+    var startKort = h("div", { class: "card", style: "margin-top:16px" },
       h("h3", { style: "margin:0 0 6px", text: "Länk för lagföräldrar som vill starta en försäljning" }),
       h("p", { style: "margin:0", text: "Lagföräldrarna startar sina försäljningar själva och skickar dem till dig för godkännande. Dela länken med lagens ansvariga, till exempel i ett utskick. Den innehåller inget lösenord." }),
-      h("div", { class: "keybox" }, h("code", { text: startLank }), startKnapp)));
+      h("div", { class: "keybox" }, h("code", { text: startLank }), startKnapp));
+    app.appendChild(startKort);
 
     // Klubbens bankgiro: dit lagen skickar pengarna när en försäljning är avslutad. Lagföräldrarna ser det i sin vy.
     var bgInp = h("input", { type: "text", id: "bankgiro", inputmode: "numeric", autocomplete: "off", placeholder: "1234-5678", maxlength: "12" });
@@ -1044,13 +1049,93 @@
         if (!r.ok) { bgFel.textContent = r.fel || "Det gick inte att spara."; return; }
         klubb.bankgiro = (r.klubb && r.klubb.bankgiro) || ""; bgInp.value = klubb.bankgiro;
         bgOk.textContent = klubb.bankgiro ? "Sparat." : "Bankgirot är borttaget.";
+        ritaGuide();
       });
     });
-    app.appendChild(h("div", { class: "card", style: "margin-top:16px" },
+    var bgKort = h("div", { class: "card", style: "margin-top:16px" },
       h("h3", { style: "margin:0 0 6px", text: "Klubbens bankgiro" }),
       h("p", { style: "margin:0 0 10px", text: "Lagen skickar pengarna hit när en försäljning är avslutad. Lagföräldern ser numret i sin vy och markerar när pengarna är skickade. Du får ett mejl och kvitterar här när de har kommit." }),
       h("label", { for: "bankgiro", text: "Bankgiro" }), bgInp,
-      h("div", { class: "btnrow" }, bgKnapp), bgOk, bgFel));
+      h("div", { class: "btnrow" }, bgKnapp), bgOk, bgFel);
+    app.appendChild(bgKort);
+
+    // Klubbens administratörer: de som godkänner försäljningar och kvitterar pengarna. Den som bjuds in får ett välkomstmejl.
+    var adLista = h("div"), adFel = h("p", { class: "error", role: "alert" }), adOk = h("p", { class: "okline", role: "status" });
+    var adInp = h("input", { type: "email", id: "ny-admin", autocomplete: "off", autocapitalize: "none", spellcheck: "false", placeholder: "namn@klubben.se" });
+    var adKnapp = h("button", { type: "button", class: "mini go", text: "Bjud in" });
+    function ritaAdmin(lst) {
+      adLista.textContent = "";
+      klubb.antalAdmin = lst.length;
+      lst.forEach(function (ad) {
+        var hoger;
+        if (ad.du) hoger = h("span", { class: "small", text: "Du" });
+        else {
+          var tb = h("button", { type: "button", class: "mini", text: "Ta bort" }), redo = false;
+          tb.addEventListener("click", function () {
+            if (!redo) { redo = true; tb.textContent = "Säker? Ta bort"; tb.classList.add("danger"); return; }
+            tb.disabled = true; adFel.textContent = ""; adOk.textContent = "";
+            anropa("adminTaBort", { epost: ad.epost }).then(function (r) {
+              if (!r.ok) { tb.disabled = false; adFel.textContent = r.fel || "Det gick inte att ta bort."; return; }
+              ritaAdmin(r.admin || []); ritaGuide();
+            });
+          });
+          hoger = tb;
+        }
+        adLista.appendChild(h("div", { class: "o-head", style: "margin:8px 0" }, h("span", { style: "overflow-wrap:anywhere", text: ad.epost }), hoger));
+      });
+    }
+    adKnapp.addEventListener("click", function () {
+      adFel.textContent = ""; adOk.textContent = "";
+      if (!adInp.value.trim()) { adFel.textContent = "Skriv en e-postadress."; return; }
+      adKnapp.disabled = true;
+      anropa("adminBjudIn", { epost: adInp.value }).then(function (r) {
+        adKnapp.disabled = false;
+        if (!r.ok) { adFel.textContent = r.fel || "Det gick inte att bjuda in."; return; }
+        adOk.textContent = DEMO ? "Inbjuden. I demoläget skickas inget mejl." : "Inbjuden. Ett välkomstmejl med en länk är på väg.";
+        adInp.value = ""; ritaAdmin(r.admin || []); ritaGuide();
+      });
+    });
+    var adKort = h("div", { class: "card", style: "margin-top:16px" },
+      h("h3", { style: "margin:0 0 6px", text: "Klubbens administratörer" }),
+      h("p", { style: "margin:0 0 6px", text: "De som godkänner försäljningar och kvitterar pengarna. Det är bra att vara två. Den du bjuder in får ett välkomstmejl med en länk." }),
+      adLista,
+      h("label", { for: "ny-admin", style: "margin-top:12px", text: "Bjud in med e-postadress" }), adInp,
+      h("div", { class: "btnrow" }, adKnapp), adOk, adFel);
+    app.appendChild(adKort);
+    anropa("adminLista").then(function (r) { if (r.ok) { ritaAdmin(r.admin || []); ritaGuide(); } });
+
+    // Guiden Kom igång: tre saker, så är klubben redo. Visas överst tills administratören har gått igenom den eller stängt den.
+    var guideEl = h("div"), delatLank = false;
+    nyckelPlats.parentNode.insertBefore(guideEl, nyckelPlats);
+    function ritaGuide() {
+      guideEl.textContent = "";
+      if (klubb.guideKlar) return;
+      function steg(nr, klart, rubrik, text, knapp) {
+        return h("div", { style: "display:flex; gap:12px; align-items:flex-start; margin-top:14px" },
+          h("span", { class: "badge " + (klart ? "live" : "unpaid"), style: "flex:none", text: klart ? "Klart" : String(nr) }),
+          h("div", { style: "flex:1" }, h("p", { style: "margin:0; font-weight:700", text: rubrik }), h("p", { class: "small", style: "margin:2px 0 0", text: text }), klart ? null : knapp));
+      }
+      function tillKort(kort, falt) {
+        return function () { kort.scrollIntoView({ behavior: "smooth", block: "center" }); if (falt) setTimeout(function () { falt.focus(); }, 400); };
+      }
+      var kopKnapp = h("button", { type: "button", class: "mini go", style: "margin-top:8px", text: "Kopiera länken" });
+      kopKnapp.addEventListener("click", function () { kopiera(startLank, kopKnapp); delatLank = true; setTimeout(ritaGuide, 1200); });
+      var stang = h("button", { type: "button", class: "mini", style: "margin-top:18px", text: "Klart, dölj guiden" });
+      stang.addEventListener("click", function () {
+        stang.disabled = true;
+        anropa("guideKlar").then(function (r) { if (r.ok) { klubb.guideKlar = true; ritaGuide(); } else stang.disabled = false; });
+      });
+      guideEl.appendChild(h("div", { class: "card", style: "margin-top:16px; border: 2px solid var(--yellow)" },
+        h("h3", { style: "margin:0 0 4px", text: "Kom igång" }),
+        h("p", { style: "margin:0", text: "Tre saker, så är " + (klubb.namn || K.namn) + " redo för lagens försäljningar." }),
+        steg(1, !!klubb.bankgiro, "Skriv in klubbens bankgiro", "Hit skickar lagen pengarna när en försäljning är slut.",
+          h("button", { type: "button", class: "mini go", style: "margin-top:8px", text: "Skriv in bankgiro", onclick: tillKort(bgKort, bgInp) })),
+        steg(2, (klubb.antalAdmin || 0) >= 2, "Bjud in en administratör till", "Valfritt, men bra: då hänger det inte på en person.",
+          h("button", { type: "button", class: "mini go", style: "margin-top:8px", text: "Bjud in", onclick: tillKort(adKort, adInp) })),
+        steg(3, delatLank, "Dela länken med lagföräldrarna", "Där startar de sina försäljningar och skickar dem till dig för godkännande.", kopKnapp),
+        stang));
+    }
+    ritaGuide();
     ritaLag();
   }
 
@@ -1084,7 +1169,7 @@
       }) : [];
       ordrar[l.slug].forEach(function (o) { o.belopp = o.antal * lag[l.slug].pris; });
     });
-    demo = { lag: lag, ordrar: ordrar, nycklar: {}, bankgiro: "" };
+    demo = { lag: lag, ordrar: ordrar, nycklar: {}, bankgiro: "", admin: ["du@klubben.se"], guideKlar: false };
     Object.keys(lag).forEach(demoHamtaNya);
     return demo;
   }
@@ -1180,6 +1265,7 @@
     }
     svar.roll = roll;
     svar.klubb = { namn: K.namn, bankgiro: s.bankgiro };
+    if (arSuper) { svar.klubb.guideKlar = s.guideKlar; svar.klubb.antalAdmin = s.admin.length; }
     return svar;
   }
 
@@ -1310,6 +1396,21 @@
           if (bg && !/^\d{3,4}-?\d{4}$/.test(bg)) svar = { ok: false, fel: "Bankgirot ska vara sju eller åtta siffror, till exempel 1234-5678." };
           else { bg = bg.replace("-", ""); s.bankgiro = bg ? bg.slice(0, -4) + "-" + bg.slice(-4) : ""; svar = { ok: true }; }
         }
+        else if (p.op === "adminLista" || p.op === "adminBjudIn" || p.op === "adminTaBort") {
+          var ep = String(p.epost || "").trim().toLowerCase(), adLst = function () { return s.admin.map(function (e, i) { return { epost: e, du: i === 0 }; }); };
+          if (p.op === "adminLista") svar = { ok: true, admin: adLst() };
+          else if (p.op === "adminBjudIn") {
+            if (!/^[^\s@]{1,64}@[^\s@.]+(\.[^\s@.]+)+$/.test(ep)) svar = { ok: false, fel: "Skriv en e-postadress, till exempel namn@klubben.se." };
+            else if (s.admin.indexOf(ep) >= 0) svar = { ok: false, fel: "Adressen är redan administratör." };
+            else if (s.admin.length >= 5) svar = { ok: false, fel: "Klubben kan ha högst 5 administratörer. Ta bort någon först." };
+            else { s.admin.push(ep); svar = { ok: true, admin: adLst() }; }
+          } else {
+            if (ep === s.admin[0]) svar = { ok: false, fel: "Du kan inte ta bort dig själv. Be en annan administratör göra det." };
+            else if (s.admin.indexOf(ep) < 0) svar = { ok: false, fel: "Okänd administratör." };
+            else { s.admin.splice(s.admin.indexOf(ep), 1); svar = { ok: true, admin: adLst() }; }
+          }
+        }
+        else if (p.op === "guideKlar") { s.guideKlar = true; svar = { ok: true }; }
         else if (p.op === "lagTaBort") {
           var tl = s.lag[p.slug];
           if (!tl) svar = { ok: false, fel: "Okänt lag." };
@@ -1343,10 +1444,10 @@
     if (K.visning && DEMO && (window.DEMO_LAG || [])[0]) return loggaIn(window.DEMO_LAG[0].slug, "demo", visaFelSida);
     if (location.hash === "#starta") return visaStart();   // länk direkt till Starta en försäljning
     var hash = new URLSearchParams(location.hash.slice(1));
-    if (hash.get("lank")) {   // länk från e-posten till klubbens administratör
-      var token = hash.get("lank");
+    if (hash.get("lank") || hash.get("valkommen")) {   // länk från e-posten till klubbens administratör, eller välkomstmejlet till en ny
+      var token = hash.get("lank") || hash.get("valkommen");
       try { history.replaceState(null, "", location.pathname + location.search); } catch (e) {}
-      return visaBekrafta(token);
+      return visaBekrafta(token, !!hash.get("valkommen"));
     }
     if (hash.get("lag") && hash.get("k")) {
       var lag = hash.get("lag"), key = hash.get("k");

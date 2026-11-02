@@ -5,8 +5,9 @@
    Till andra adresser krävs Workers Paid och Cloudflare Email Service (npx wrangler email sending enable skramlat.se).
 
    Förfrågningar från klubbar (kom-igang) går till Skramlat och innehåller det som den som frågar själv skrev in.
-   Mejlen till klubbarna innehåller bara mottagarens egen adress, lagets namn, antal och belopp, och en länk. Aldrig barnens namn eller mobilnummer,
+   Mejlen till klubbarna innehåller bara mottagarens egen adress, klubbens och lagets namn, antal och belopp, och en länk. Aldrig barnens namn eller mobilnummer,
    och aldrig Swish-nummer eller andra värden som lagföräldern skrivit in: notisen säger vilka fält som ändrats, och värdena syns i adminvyn. */
+import { CFG } from "./regler.js";
 
 export async function skickaInloggningslank(k, till, lank) {
   if (!k.env.EMAIL || typeof k.env.EMAIL.send !== "function") throw new Error("e-postbindningen saknas");
@@ -26,6 +27,31 @@ export async function skickaInloggningslank(k, till, lank) {
     to: till,
     from: { email: k.env.EPOST_FRAN || "inloggning@skramlat.se", name: "Skramlat" },
     subject: "Din inloggningslänk till Skramlat",
+    text
+  });
+}
+
+// Välkomstmejlet till en ny administratör för en klubb. Länken loggar in och öppnar guiden Kom igång.
+export async function skickaValkomst(k, till, klubbNamn, lank) {
+  if (!k.env.EMAIL || typeof k.env.EMAIL.send !== "function") throw new Error("e-postbindningen saknas");
+  const text = [
+    "Hej!",
+    "",
+    "Du är administratör för " + klubbNamn + " i Skramlat. Där godkänner du lagens försäljningar och ser när pengarna har kommit till klubben.",
+    "",
+    "Öppna länken och tryck Kom igång:",
+    lank,
+    "",
+    "Länken gäller i " + CFG.VALKOMST_DAGAR + " dagar och kan användas en gång. Sedan minns sidan dig i " + CFG.SESSION_DAGAR + " dagar.",
+    "",
+    "Visste du inte om det här? Då kan du strunta i mejlet. Ingen kommer in utan länken.",
+    "",
+    "Skramlat"
+  ].join("\n");
+  await k.env.EMAIL.send({
+    to: till,
+    from: { email: k.env.EPOST_FRAN || "inloggning@skramlat.se", name: "Skramlat" },
+    subject: "Välkommen till Skramlat, " + klubbNamn,
     text
   });
 }

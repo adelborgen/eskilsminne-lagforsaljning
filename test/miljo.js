@@ -59,6 +59,8 @@ export async function skapaMiljo() {
     const r = await db.prepare("INSERT INTO klubb (slug, namn, status, skapad) VALUES (?1, ?2, ?3, ?4) RETURNING id")
       .bind(slug, namn || slug, o.status || "aktiv", new Date(m.klocka).toISOString()).first();
     for (const e of o.admins || []) await db.prepare("INSERT INTO klubb_admin (klubb_id, epost, skapad) VALUES (?1, ?2, ?3)").bind(r.id, e, new Date(m.klocka).toISOString()).run();
+    // Nya administratörer, som får ett välkomstmejl vid nästa anrop (så som scripts/ny-klubb.js lägger in dem)
+    for (const e of o.nyaAdmins || []) await db.prepare("INSERT INTO klubb_admin (klubb_id, epost, skapad, valkommen) VALUES (?1, ?2, ?3, 0)").bind(r.id, e, new Date(m.klocka).toISOString()).run();
     return r.id;
   };
   m.rader = async (tabell) => (await db.prepare("SELECT * FROM " + tabell).all()).results;

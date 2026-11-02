@@ -10,11 +10,11 @@
 import { hittaAktivKlubb, lasLag, publik } from "./data.js";
 import { hanteraBestallning, hanteraStart } from "./bestall.js";
 import { hanteraAdmin } from "./ops.js";
-import { hanteraLogin, ursprungOk } from "./auth.js";
+import { hanteraLogin, ursprungOk, skickaVantandeValkomst } from "./auth.js";
 import { hanteraForfragan, korsUrsprung } from "./forfragan.js";
 import { migrera } from "./migrera.js";
 
-export const VERSION = "2026-10-17-utan-ruta";
+export const VERSION = "2026-11-02-valkomst";
 const MAX_KROPP = 32 * 1024;   // en förfrågan är aldrig större än så
 
 // Inget svar får cachas (inte heller av Cloudflare runt om i världen), eftersom svaren kan innehålla uppgifter om personer.
@@ -97,6 +97,9 @@ async function hanteraAllt(request, env, ctx) {
     waitUntil: ctx && ctx.waitUntil ? ctx.waitUntil.bind(ctx) : null, ip: request.headers.get("CF-Connecting-IP") || "" };
   try {
     await migrera(k.db);   // databasens tabeller, en gång per instans (se migrera.js)
+    // Välkomstmejl till nya administratörer skickas i bakgrunden, efter svaret (se auth.js). Ett fel där stoppar aldrig anropet.
+    const valkomst = skickaVantandeValkomst(k).catch(() => { console.error("välkomstmejlen kunde inte skickas"); });
+    if (k.waitUntil) k.waitUntil(valkomst); else await valkomst;
     if (request.method === "GET") return svara(await hanteraGet(k, new URL(request.url)));
     if (request.method === "POST") return svara(await hanteraPost(k));
     return json({ ok: false, fel: "Okänd förfrågan." }, 405);

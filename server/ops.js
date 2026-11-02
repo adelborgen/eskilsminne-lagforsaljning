@@ -6,11 +6,11 @@
    försäljningens uppgifter och lägger inte till lag. Klubben får mejl när en försäljning väntar på godkännande, när den är avslutad och
    när pengarna är skickade.
    Där det går sker ändringen och loggraden i samma körning, och loggraden skrivs bara om ändringen träffade en rad. */
-import { hittaKlubb, hittaLag, lasLag, lasOrdrar, adminLag, utOrder, loggOmAndrat, loggUttryck, iso } from "./data.js";
-import { autentisera } from "./auth.js";
+import { hittaKlubb, hittaLag, lasLag, lasOrdrar, adminLag, utOrder, loggOmAndrat, loggUttryck, iso, raknaUpp } from "./data.js";
+import { autentisera, skickaVantandeValkomst } from "./auth.js";
 import { nyNyckelText, hashNyckel } from "./krypto.js";
 import { skickaNotis } from "./epost.js";
-import { oversikt, rensaLag, saknas, kontrolleraSiffror, normBankgiro, LAG_EGNA_FALT, LAG_KOLUMN } from "./regler.js";
+import { oversikt, rensaLag, saknas, kontrolleraSiffror, normBankgiro, normEpost, CFG, LAG_EGNA_FALT, LAG_KOLUMN } from "./regler.js";
 
 const har = (o, k) => Object.prototype.hasOwnProperty.call(o, k);
 const EJ_INLOGGAD = { ok: false, fel: "Fel lag eller nyckel." };
@@ -27,7 +27,8 @@ export async function hanteraAdmin(k, d) {
     lagSpara: opLagSpara, skickaGodkannande: opSkickaGodkannande, dragTillbaka: opDragTillbaka,
     oppna: opOppna, avsluta: opAvsluta, andra: opAndra, pengarSkickade: opPengarSkickade };
   const superOps = { lagLista: opLagLista, godkann: opGodkann, skickaTillbaka: opSkickaTillbaka, stoppa: opStoppa,
-    nyNyckel: opNyNyckel, lagTaBort: opLagTaBort, pengarMottagna: opPengarMottagna, klubbSpara: opKlubbSpara };
+    nyNyckel: opNyNyckel, lagTaBort: opLagTaBort, pengarMottagna: opPengarMottagna, klubbSpara: opKlubbSpara,
+    adminLista: opAdminLista, adminBjudIn: opAdminBjudIn, adminTaBort: opAdminTaBort, guideKlar: opGuideKlar };
   let svar;
   if (har(delade, op)) {
     if (!a.lag) return { ok: false, fel: "Okänt lag." };
@@ -37,12 +38,17 @@ export async function hanteraAdmin(k, d) {
     svar = await lagOps[op](k, klubb, a.lag, d);
   } else if (har(superOps, op)) {
     if (a.roll !== "super") return { ok: false, fel: "Bara klubbens administratör får göra det här." };
-    svar = await superOps[op](k, klubb, d);
+    svar = await superOps[op](k, klubb, d, a);
   } else {
     return { ok: false, fel: "Okänd åtgärd." };
   }
   svar.roll = a.roll;
   svar.klubb = { namn: klubb.namn, bankgiro: klubb.bankgiro || "" };
+  if (a.roll === "super") {   // det guiden Kom igång behöver: om den är klar och hur många administratörer klubben har
+    const g = await k.db.prepare("SELECT guide_klar, (SELECT COUNT(*) FROM klubb_admin WHERE klubb_id = ?1) AS n FROM klubb WHERE id = ?1").bind(klubb.id).first();
+    svar.klubb.guideKlar = !!(g && g.guide_klar);
+    svar.klubb.antalAdmin = g ? g.n : 0;
+  }
   return svar;
 }
 
@@ -406,4 +412,51 @@ async function opNyNyckel(k, klubb, d) {
     loggUttryck(k, klubb.id, lag.slug, "ny nyckel", "", "")
   ]);
   return { ok: true, slug: lag.slug, key };
+}
+
+/* ---------- Klubbens administratörer och guiden Kom igång ---------- */
+// Klubbens administratörer ser varandras adresser, och vem som är inloggad. Adresserna loggas aldrig.
+async function opAdminLista(k, klubb, d, a) {
+  const { results } = await k.db.prepare("SELECT epost, valkommen FROM klubb_admin WHERE klubb_id = ?1 ORDER BY skapad, epost").bind(klubb.id).all();
+  return { ok: true, admin: results.map((r) => ({ epost: r.epost, du: r.epost === a.epost })) };
+}
+
+// En administratör bjuder in en till. Den nya får ett välkomstmejl med en länk, direkt efter svaret.
+async function opAdminBjudIn(k, klubb, d, a) {
+  const epost = normEpost(d.epost);
+  if (!epost) return { ok: false, fel: "Skriv en e-postadress, till exempel namn@klubben.se." };
+  const { results } = await k.db.prepare("SELECT epost FROM klubb_admin WHERE klubb_id = ?1").bind(klubb.id).all();
+  if (results.some((r) => r.epost === epost)) return { ok: false, fel: "Adressen är redan administratör." };
+  if (results.length >= CFG.MAX_ADMIN) return { ok: false, fel: "Klubben kan ha högst " + CFG.MAX_ADMIN + " administratörer. Ta bort någon först." };
+  if ((await raknaUpp(k, "bjudin:" + klubb.id, 3600000)) > CFG.INBJUDAN_PER_TIMME) return { ok: false, fel: "Många inbjudningar på kort tid. Försök igen om en stund." };
+  await k.db.batch([
+    k.db.prepare("INSERT OR IGNORE INTO klubb_admin (klubb_id, epost, skapad, valkommen) VALUES (?1, ?2, ?3, 0)").bind(klubb.id, epost, iso(k)),
+    loggOmAndrat(k, klubb.id, "", "administratör inbjuden", "", "")
+  ]);
+  const skicka = skickaVantandeValkomst(k).catch(() => { console.error("välkomstmejlet kunde inte skickas"); });
+  if (k.waitUntil) k.waitUntil(skicka); else await skicka;
+  return await opAdminLista(k, klubb, d, a);
+}
+
+// En administratör tar bort en annan. Ingen kan ta bort sig själv, så klubben har alltid minst en administratör.
+// Den borttagna kommer inte in längre: varje anrop kontrollerar att personen fortfarande är administratör för klubben.
+async function opAdminTaBort(k, klubb, d, a) {
+  const epost = normEpost(d.epost);
+  if (!epost) return { ok: false, fel: "Okänd administratör." };
+  if (epost === a.epost) return { ok: false, fel: "Du kan inte ta bort dig själv. Be en annan administratör göra det." };
+  const svar = await k.db.batch([
+    k.db.prepare("DELETE FROM klubb_admin WHERE klubb_id = ?1 AND epost = ?2").bind(klubb.id, epost),
+    loggOmAndrat(k, klubb.id, "", "administratör borttagen", "", "")
+  ]);
+  if (!svar[0].meta.changes) return { ok: false, fel: "Okänd administratör." };
+  return await opAdminLista(k, klubb, d, a);
+}
+
+// Guiden Kom igång är klar, eller stängd. Den visas inte igen.
+async function opGuideKlar(k, klubb) {
+  await k.db.batch([
+    k.db.prepare("UPDATE klubb SET guide_klar = 1 WHERE id = ?1 AND guide_klar = 0").bind(klubb.id),
+    loggOmAndrat(k, klubb.id, "", "guiden klar", "", "")
+  ]);
+  return { ok: true };
 }

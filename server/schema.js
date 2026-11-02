@@ -24,5 +24,12 @@ export const MIGRERINGAR = [
       "ALTER TABLE lag ADD COLUMN pengar_skickat_tid TEXT NOT NULL DEFAULT ''",
       "ALTER TABLE lag ADD COLUMN pengar_mottaget_tid TEXT NOT NULL DEFAULT ''"
     ]
+  },
+  {
+    "namn": "0003_valkomst.sql",
+    "uttryck": [
+      "ALTER TABLE klubb_admin ADD COLUMN valkommen INTEGER NOT NULL DEFAULT 1",
+      "ALTER TABLE klubb ADD COLUMN guide_klar INTEGER NOT NULL DEFAULT 0"
+    ]
   }
 ];

@@ -89,6 +89,10 @@ Inför Sally Bauerskolorna, andra kunden:
 8. Testa hej@skramlat.se.
 9. **Formuläret på kom-igang fungerar hos riktiga Cloudflare:** ägaren skickade en förfrågan på skramlat.se 18 oktober 2026 och mejlet kom fram (hemligheten `FORFRAGAN_TILL` är alltså rätt inlagd).
 
+## Välkomstmejl och guiden Kom igång (2 november 2026)
+
+En ny administratör för en klubb får ett välkomstmejl av sig själv, med en länk som gäller i sju dagar. Länken loggar in och öppnar guiden *Kom igång* med tre steg: skriv in bankgirot, bjud in en administratör till och dela länken med lagföräldrarna. Klubben bjuder själv in och tar bort administratörer (högst fem). Knappen för vanlig inloggning heter nu *Mejla mig en länk*. Mejlen kommer bara fram till verifierade adresser tills Workers Paid och Email Service är påslagna.
+
 ## Säkerhet och tester
 
 `npm test` (api, inloggning, attacker och vaktprov för EU-reglerna), `npm run test:mutera` (bevis för att testerna biter, långsamt), `npm run test:xss` (XSS i webbläsare), `npm run test:gammal` (den gamla Apps Script-servern). Se README.md. Alla körs lokalt och kostar ingenting.

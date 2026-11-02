@@ -9,7 +9,7 @@ export function iso(k) { return new Date(k.nu()).toISOString(); }
 export async function hittaKlubb(k, slug) {
   slug = String(slug || "").toLowerCase().slice(0, 40);
   if (!slug) return null;
-  return await k.db.prepare("SELECT id, slug, namn, motto, status, bankgiro FROM klubb WHERE slug = ?1").bind(slug).first();
+  return await k.db.prepare("SELECT id, slug, namn, motto, status, bankgiro, guide_klar FROM klubb WHERE slug = ?1").bind(slug).first();
 }
 
 // Klubben som besökare ser: bara en godkänd klubb finns för dem. En väntande eller avstängd klubb svarar som en okänd.

@@ -4,12 +4,13 @@
    - Föräldern: ingen inloggning.
    - Lagföräldern: lagets nyckel (som i Apps Script-versionen). Bara hashen sparas.
    - Klubbens administratör: e-post med en inloggningslänk. Länken gäller i 15 minuter och kan användas en gång. Sedan en session
-     i en cookie. Bara hashar av länken och sessionen sparas.
+     i en cookie. Bara hashar av länken och sessionen sparas. En ny administratör får i stället ett välkomstmejl med en länk som
+     gäller i sju dagar, utan att be om det (se skickaVantandeValkomst).
    All behörighet kontrolleras här, aldrig av sidan. */
 import { hittaLag, lasRakning, raknaUpp, iso, stada, loggUttryck } from "./data.js";
 import { sha256, slumpHex, normNyckel, likaHash } from "./krypto.js";
 import { CFG, normEpost, SLUG_RE } from "./regler.js";
-import { skickaInloggningslank } from "./epost.js";
+import { skickaInloggningslank, skickaValkomst } from "./epost.js";
 
 const KAKA = "__Host-session";   // __Host-: bara över https, bara för den här adressen, ingen annan domän kan sätta den
 
@@ -65,7 +66,7 @@ export async function autentisera(k, klubb, slug, key) {
   const s = await aktuellSession(k);
   if (s && await arAdmin(k, klubb.id, s.epost)) {
     if (!ursprungOk(k, true)) return { fel: "Felaktig förfrågan." };
-    return { roll: "super", lag };
+    return { roll: "super", lag, epost: s.epost };
   }
 
   // Lagförälderns nyckel. Gäller bara i en godkänd klubb.
@@ -114,12 +115,37 @@ async function loginBegar(k, d) {
     loggUttryck(k, admin.id, "", "inloggningslänk begärd", "", "")
   ]);
   // Själva länken ligger efter # så att den inte skickas till någon server, och inte syns i loggar eller referenser.
-  const bas = (k.env.SIDA_ORIGIN || new URL(k.request.url).origin).replace(/\/$/, "");
-  const lank = bas + "/" + slug + "/admin.html#lank=" + token;
+  const lank = sidansBas(k) + "/" + slug + "/admin.html#lank=" + token;
   // E-posten skickas efter svaret, så att svarstiden inte visar om adressen finns.
   const skicka = skickaInloggningslank(k, epost, lank).catch(() => { console.error("inloggningslänken kunde inte skickas"); });
   if (k.waitUntil) k.waitUntil(skicka); else await skicka;
   return GRANSKA;
+}
+
+function sidansBas(k) {
+  return (k.env.SIDA_ORIGIN || new URL(k.request.url).origin).replace(/\/$/, "");
+}
+
+/* ---------- Välkomstmejl till nya administratörer ---------- */
+// En ny administratör (valkommen = 0) får ett mejl med en länk som loggar in och öppnar guiden Kom igång. Det händer i bakgrunden:
+// när Skramlat har lagt in en klubb (scripts/ny-klubb.js) skickas mejlet vid nästa anrop till servern, och när klubben bjuder in en
+// administratör till skickas det direkt. Kommer mejlet inte fram kan administratören ändå be om en vanlig inloggningslänk.
+export async function skickaVantandeValkomst(k) {
+  const { results } = await k.db.prepare(`SELECT a.klubb_id, a.epost, kl.slug, kl.namn FROM klubb_admin a JOIN klubb kl ON kl.id = a.klubb_id
+    WHERE a.valkommen = 0 AND kl.status != 'avstangd' LIMIT 5`).all();
+  for (const r of results) {
+    // Uppgiften tas i ett enda uttryck, så att två samtidiga anrop aldrig skickar samma välkomstmejl två gånger
+    const tog = await k.db.prepare("UPDATE klubb_admin SET valkommen = 1 WHERE klubb_id = ?1 AND epost = ?2 AND valkommen = 0").bind(r.klubb_id, r.epost).run();
+    if (!tog.meta.changes) continue;
+    const token = slumpHex(32);
+    await k.db.batch([
+      k.db.prepare("INSERT INTO inloggningslank (hash, epost, giltig_till) VALUES (?1, ?2, ?3)")
+        .bind(await sha256(token), r.epost, k.nu() + CFG.VALKOMST_DAGAR * 86400000),
+      loggUttryck(k, r.klubb_id, "", "välkomstmejl skickat", "", "")
+    ]);
+    try { await skickaValkomst(k, r.epost, r.namn, sidansBas(k) + "/" + r.slug + "/admin.html#valkommen=" + token); }
+    catch (e) { console.error("välkomstmejlet kunde inte skickas"); }
+  }
 }
 
 async function loginAnvand(k, d) {

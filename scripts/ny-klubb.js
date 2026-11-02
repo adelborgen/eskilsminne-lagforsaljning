@@ -1,4 +1,6 @@
 /* Skriver SQL som lägger in en klubb och dess första administratör. Används tills ansökan på skramlat.se/kom-igang finns (Fas 2).
+   Administratören får ett välkomstmejl med en länk (giltig i sju dagar) vid nästa anrop till servern, till exempel när någon öppnar
+   klubbens sida. Länken loggar in och öppnar guiden Kom igång. Klubben bjuder själv in fler administratörer.
      node scripts/ny-klubb.js --slug eskilsminne --namn "Eskilsminne IF" --epost kassor@klubben.se [--motto "…"] [--status aktiv] > ny-klubb.sql
      npx wrangler d1 execute skramlat --remote --file ny-klubb.sql
    E-postadressen läggs in i databasen och ska inte skrivas in i någon fil i repot. Radera ny-klubb.sql efteråt. */
@@ -18,4 +20,4 @@ if (fel.length) { console.error("Fel:\n - " + fel.join("\n - ")); process.exit(1
 const q = (s) => "'" + String(s).replace(/'/g, "''") + "'";
 const nu = new Date().toISOString();
 console.log(`INSERT INTO klubb (slug, namn, motto, status, skapad) VALUES (${q(slug)}, ${q(namn)}, ${q(motto)}, ${q(status)}, ${q(nu)});
-INSERT INTO klubb_admin (klubb_id, epost, skapad) SELECT id, ${q(epost)}, ${q(nu)} FROM klubb WHERE slug = ${q(slug)};`);
+INSERT INTO klubb_admin (klubb_id, epost, skapad, valkommen) SELECT id, ${q(epost)}, ${q(nu)}, 0 FROM klubb WHERE slug = ${q(slug)};`);

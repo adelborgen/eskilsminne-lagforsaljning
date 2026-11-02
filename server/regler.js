@@ -13,6 +13,9 @@ export const CFG = {
   SESSION_DAGAR: 30,       // en inloggning gäller så här länge (klubbens administratör behöver en ny länk bara på en ny enhet eller efter en månad)
   LANK_PER_EPOST_TIMME: 5, // högst så många inloggningslänkar per e-postadress ...
   LANK_PER_IP_TIMME: 20,   // ... och per IP-nummer och timme
+  VALKOMST_DAGAR: 7,       // länken i välkomstmejlet till en ny administratör gäller så här länge och kan användas en gång
+  MAX_ADMIN: 5,            // högst så många administratörer per klubb
+  INBJUDAN_PER_TIMME: 10,  // högst så många inbjudningar av nya administratörer per klubb och timme
   FORFRAGAN_PER_IP_TIMME: 5,   // förfrågningar från klubbar (kom-igang) per IP-nummer och timme ...
   FORFRAGAN_PER_TIMME: 30      // ... och totalt per timme
 };
