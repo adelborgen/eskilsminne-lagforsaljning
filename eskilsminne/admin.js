@@ -875,7 +875,7 @@
       nyckelPlats.textContent = "";
       nyckelPlats.appendChild(h("div", { class: "card", style: "margin-top:16px; border: 2px solid var(--yellow)" },
         h("h3", { style: "margin:0 0 6px", text: rubrik }),
-        h("p", { style: "margin:0", text: "Länken är lagförälderns nya inloggning och innehåller lagets lösenord, koden efter k=. Den visas bara nu. Skicka den direkt till lagföräldern, aldrig i en grupp. Den gamla länken fungerar inte längre." }),
+        h("p", { style: "margin:0", text: "Visas bara nu. Skicka den direkt till lagföräldern." }),
         h("div", { class: "keybox" }, h("code", { text: lank }), b),
         h("button", { type: "button", class: "ghost", style: "margin-top:12px", text: "Stäng", onclick: function () { nyckelPlats.textContent = ""; } })));
       nyckelPlats.scrollIntoView({ block: "start", behavior: "smooth" });
@@ -906,9 +906,9 @@
       var ov = l.oversikt, godkand = ["snart", "pagar", "avslutad"].indexOf(l.status) >= 0, p = l.pengar || {};
       var pengar = null, pengaKnapp = null;
       if (l.status === "avslutad") {
-        pengar = h("div", { class: "o-sub", style: "margin-top:6px", text: p.mottagetTid ? "Pengarna: " + kr(p.skickatKr) + " har kommit ✓"
-          : p.skickatTid ? "Pengarna: laget har skickat " + kr(p.skickatKr) + " (" + datum(p.skickatTid) + "). Kvittera när de har kommit."
-          : "Pengarna: inte skickade än. Betalt till laget: " + kr(ov.betaltKr) + "." });
+        pengar = h("div", { class: "o-sub", style: "margin-top:6px", text: p.mottagetTid ? kr(p.skickatKr) + " har kommit ✓"
+          : p.skickatTid ? "Laget har skickat " + kr(p.skickatKr) + " · " + datum(p.skickatTid)
+          : "Inte skickat än · " + kr(ov.betaltKr) + " betalt" });
         if (p.skickatTid) {
           pengaKnapp = h("button", { type: "button", class: "mini" + (p.mottagetTid ? "" : " go"), text: p.mottagetTid ? "Ångra kvittensen" : "Pengarna har kommit" });
           pengaKnapp.addEventListener("click", function () { kvittera(l, !p.mottagetTid, pengaKnapp); });
@@ -923,9 +923,8 @@
           } }),
           h("button", { type: "button", class: "mini", text: "Avbryt", onclick: function () { bekrafta.hidden = true; } })));
       // Stoppa i nödfall, till exempel om Swish-numret är fel: försäljningen går tillbaka till lagföräldern med kommentaren
-      var stoppKom = h("textarea", { rows: "2", maxlength: "300", placeholder: "Varför stoppas försäljningen? Lagföräldern ser texten.", "aria-label": "Varför " + l.namn + " stoppas" });
+      var stoppKom = h("textarea", { rows: "2", maxlength: "300", placeholder: "Varför? Lagföräldern ser texten.", "aria-label": "Varför " + l.namn + " stoppas" });
       var stoppBox = h("div", { class: "notice", hidden: "", style: "margin-top:12px" },
-        h("p", { style: "margin:0 0 8px", text: "Försäljningen stängs direkt och syns inte för föräldrarna. Lagföräldern rättar den och skickar den till dig igen. Beställningarna finns kvar." }),
         stoppKom,
         h("div", { class: "btnrow" },
           h("button", { type: "button", class: "mini danger", text: "Stoppa försäljningen", onclick: function () {
@@ -934,13 +933,14 @@
           } }),
           h("button", { type: "button", class: "mini", text: "Avbryt", onclick: function () { stoppBox.hidden = true; } })));
       var kort = h("details", { class: "card teamadmin" },
-        h("summary", null, h("span", { class: "o-name", text: l.namn + (l.kampanj ? " · " + l.kampanj : "") }), h("span", { class: "badge", text: STATUS_TEXT[l.status] || l.status })),
-        h("div", { class: "o-sub num", text: l.status === "utkast" ? "Laget fyller i uppgifterna." + (l.kommentar ? " " + l.kommentar : "")
-          : "Beställt " + nf.format(ov.bestallt) + " av " + nf.format(l.mal) + " · Betalt " + nf.format(ov.betalt) + " · Obetalt " + nf.format(ov.obetalt) + " · Hämtat " + nf.format(ov.hamtat || 0) }),
+        // Raden har bara lagets namn och en kort status, så att namnet aldrig bryts. Produkten och siffrorna står under.
+        h("summary", null, h("span", { class: "o-name", text: l.namn }), h("span", { class: "badge", text: l.status === "snart" ? "Snart" : STATUS_TEXT[l.status] || l.status })),
+        h("div", { class: "o-sub num", text: [l.kampanj || (l.produkt && l.produkt.namn) || "", l.status === "utkast" ? (l.kommentar || "")
+          : nf.format(ov.bestallt) + " av " + nf.format(l.mal) + " · " + kr(ov.betaltKr) + " betalt" + (ov.obetalt ? " · " + nf.format(ov.obetalt) + " obetalda" : "")].filter(Boolean).join(" · ") }),
         pengar,
         h("div", { class: "btnrow" },
           pengaKnapp,
-          h("button", { type: "button", class: "mini" + (pengaKnapp && !p.mottagetTid ? "" : " go"), text: "Visa försäljningen", onclick: function () { S.valt = l.slug; renderAdmin(); } }),
+          h("button", { type: "button", class: "mini" + (pengaKnapp && !p.mottagetTid ? "" : " go"), text: "Visa", onclick: function () { S.valt = l.slug; renderAdmin(); } }),
           h("button", { type: "button", class: "mini", text: "Ny länk", onclick: function () { bekrafta.hidden = false; } }),
           godkand ? h("button", { type: "button", class: "mini", text: "Stoppa…", onclick: function () { stoppBox.hidden = false; stoppKom.focus(); } }) : null,
           l.status === "utkast" ? taBortKnapp(l) : null),
@@ -972,7 +972,6 @@
         h("div", { class: "o-head" }, h("span", { class: "o-name", text: l.namn }), h("span", { class: "badge unpaid", text: STATUS_TEXT.granskas })),
         andrEl,
         villkorKort(l),
-        h("p", { class: "small", style: "margin:12px 0 0", text: "Kontrollera att Swish-numret ägs av någon som vet om det, att priserna stämmer och att laget bara säljer sådant som klubben har godkänt att laget får sälja." }),
         h("div", { class: "btnrow" },
           h("button", { type: "button", class: "mini go", text: "Godkänn och öppna", onclick: godkann }),
           h("button", { type: "button", class: "mini", text: "Skicka tillbaka…", onclick: function () { tillbakaBox.hidden = !tillbakaBox.hidden; if (!tillbakaBox.hidden) kom.focus(); } }),
@@ -982,15 +981,13 @@
 
     function ritaLag() {
       listEl.textContent = ""; kogEl.textContent = "";
+      // Det som väntar på klubben står först, under en rubrik: försäljningar att godkänna och pengar att kvittera
       var vantar = lista.filter(function (l) { return l.status === "granskas"; });
-      if (vantar.length) {
-        kogEl.appendChild(h("h3", { style: "margin:0 0 12px", text: "Väntar på godkännande (" + vantar.length + ")" }));
-        vantar.forEach(function (l) { kogEl.appendChild(kogKort(l)); });
-      }
       var attKvittera = function (l) { return l.status === "avslutad" && l.pengar && l.pengar.skickatTid && !l.pengar.mottagetTid; };
       var kv2 = lista.filter(attKvittera);
-      if (kv2.length) {
-        kogEl.appendChild(h("h3", { style: "margin:" + (vantar.length ? "16px" : "0") + " 0 12px", text: "Pengar att kvittera (" + kv2.length + ")" }));
+      if (vantar.length || kv2.length) {
+        kogEl.appendChild(h("h3", { style: "margin:0 0 12px", text: "Att göra (" + (vantar.length + kv2.length) + ")" }));
+        vantar.forEach(function (l) { kogEl.appendChild(kogKort(l)); });
         kv2.forEach(function (l) { kogEl.appendChild(lagKort(l, true)); });
       }
       var ovriga = lista.filter(function (l) { return l.status !== "granskas" && !attKvittera(l); });
@@ -1007,7 +1004,7 @@
       var vis = ovriga.filter(function (l) {
         return (!manga || statusFilter === "alla" || l.status === statusFilter) && (!sokTxt || (l.namn + (l.kampanj || "")).toLowerCase().replace(/\s+/g, "").indexOf(sokTxt) >= 0);
       });
-      if (!lista.length) listEl.appendChild(h("p", { class: "notice", text: "Inga försäljningar ännu. Lagföräldrarna startar dem själva, med länken längre ned." }));
+      if (!lista.length) listEl.appendChild(h("p", { class: "notice", text: "Inga försäljningar än. Dela länken nedan med lagföräldrarna." }));
       else if (!vis.length && ovriga.length) listEl.appendChild(h("p", { class: "notice", text: "Inget lag matchar." }));
       vis.forEach(function (l) { listEl.appendChild(lagKort(l, !manga)); });
     }
@@ -1017,12 +1014,11 @@
     var startKnapp = h("button", { type: "button", class: "mini", text: "Kopiera" });
     startKnapp.addEventListener("click", function () { kopiera(startLank, startKnapp); });
     app.appendChild(h("div", { class: "card", style: "margin-top:16px" },
-      h("h3", { style: "margin:0 0 6px", text: "Länk för lagföräldrar som vill starta en försäljning" }),
-      h("p", { style: "margin:0", text: "Lagföräldrarna startar sina försäljningar själva och skickar dem till dig för godkännande. Dela länken med lagens ansvariga, till exempel i ett utskick. Den innehåller inget lösenord." }),
+      h("h3", { style: "margin:0", text: "Länk till lagföräldrarna" }),
       h("div", { class: "keybox" }, h("code", { text: startLank }), startKnapp)));
 
     // Klubbens bankgiro: dit lagen skickar pengarna när en försäljning är avslutad. Lagföräldrarna ser det i sin vy.
-    var bgInp = h("input", { type: "text", id: "bankgiro", inputmode: "numeric", autocomplete: "off", placeholder: "1234-5678", maxlength: "12" });
+    var bgInp = h("input", { type: "text", id: "bankgiro", inputmode: "numeric", autocomplete: "off", placeholder: "1234-5678", maxlength: "12", "aria-label": "Klubbens bankgiro" });
     bgInp.value = klubb.bankgiro || "";
     var bgFel = h("p", { class: "error", role: "alert" }), bgOk = h("p", { class: "okline", role: "status" });
     var bgKnapp = h("button", { type: "button", class: "mini go", text: "Spara" });
@@ -1036,9 +1032,7 @@
       });
     });
     app.appendChild(h("div", { class: "card", style: "margin-top:16px" },
-      h("h3", { style: "margin:0 0 6px", text: "Klubbens bankgiro" }),
-      h("p", { style: "margin:0 0 10px", text: "Lagen skickar pengarna hit när en försäljning är avslutad. Lagföräldern ser numret i sin vy och markerar när pengarna är skickade. Du får ett mejl och kvitterar här när de har kommit." }),
-      h("label", { for: "bankgiro", text: "Bankgiro" }), bgInp,
+      h("h3", { style: "margin:0 0 10px", text: "Klubbens bankgiro" }), bgInp,
       h("div", { class: "btnrow" }, bgKnapp), bgOk, bgFel));
     ritaLag();
   }
