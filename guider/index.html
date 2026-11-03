@@ -10,16 +10,7 @@
 <link rel="stylesheet" href="../fonts/fonts.css">
 <link rel="stylesheet" href="../skramlat.css">
 <style>
-  /* Skramlats egna sidor: grafit, krämvita kort, mint som detaljfärg. Se brand-manualen. */
-  :root { --grafit: #16191d; --upphojd: #20252b; --kram: #fff8d6; --mint: #6fe3b4; --black: #0f1a33; --text: #ece8d8; --dampad: #a9b0b8; --dampad-kort: #4a5575; --linje-kort: #d4c98a; --mint-text: #187a54;
-    --display: Archivo, "Arial Black", system-ui, sans-serif;
-    --body: "Atkinson Hyperlegible Next", system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
-  * { box-sizing: border-box; }
-  body { margin: 0; background: var(--grafit); color: var(--text); font: 17px/1.55 var(--body); }
-  a { color: var(--mint); }
-  :focus-visible { outline: 3px solid var(--mint); outline-offset: 3px; border-radius: 6px; }
   .sida { max-width: 760px; margin: 0 auto; padding: calc(env(safe-area-inset-top, 0px) + 32px) max(16px, env(safe-area-inset-right, 0px)) calc(env(safe-area-inset-bottom, 0px) + 56px) max(16px, env(safe-area-inset-left, 0px)); display: flex; flex-direction: column; gap: 28px; }
-  .etikett { font: 800 13px/1.2 var(--display); font-stretch: 125%; letter-spacing: .12em; text-transform: uppercase; color: var(--mint); margin: 0; }
   h1 { margin: 6px 0 0; font: 900 clamp(40px, 9vw, 64px)/.95 var(--display); font-stretch: 112%; letter-spacing: -.01em; color: var(--kram); text-wrap: balance; }
   .ingress { margin: 14px 0 0; font-size: 19px; color: var(--text); max-width: 60ch; }
   .innehall { display: flex; flex-wrap: wrap; gap: 10px; margin: 0; padding: 0; list-style: none; }
@@ -159,7 +150,7 @@
       <li>Spara underlaget: vad som beställts, betalats och lämnats ut.</li>
     </ul>
 
-    <div class="skramlat"><strong>Med Skramlat:</strong> mätaren visar alla hur mycket som är beställt, lagföräldern bockar av betalt och hämtat, och allt underlag kan tas ut till Excel eller CSV för kassören.</div>
+    <div class="skramlat"><strong>Med Skramlat:</strong> mätaren visar alla hur mycket som är beställt, lagföräldern bockar av betalt och hämtat, och allt underlag kan tas ut som en CSV-fil till kassören, som öppnas i Excel.</div>
 
     <div class="kallor"><strong>Källor</strong>
       <ul>

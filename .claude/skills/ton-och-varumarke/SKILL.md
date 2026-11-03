@@ -25,14 +25,14 @@ Skriv bara det som är sant i tjänsten idag. Är du osäker, kontrollera i kode
 - Bara barnets förnamn och ett mobilnummer sparas, i en databas inom EU.
 - Det finns ingen ruta att kryssa i, eftersom uppgifterna behövs för att hantera beställningen. Under beställningsknappen står vad som sparas.
 - Ingen försäljning öppnar utan klubbens eller skolans godkännande. Ändras Swish-numret efter godkännandet måste klubben godkänna igen.
-- Lagföräldern bockar av betalt och hämtat, i den ordningen, och kan ta ut underlaget till Excel och CSV.
+- Lagföräldern bockar av betalt och hämtat, i den ordningen, och kan ta ut underlaget som en CSV-fil, som öppnas i Excel.
 - När försäljningen är slut skickar lagföräldern pengarna till klubbens bankgiro, och klubben kvitterar.
 - Pris, exklusive moms:
   - Gratis: 1 försäljning åt gången.
   - Bas: 999 kr per år, 3 försäljningar samtidigt.
   - Plus: 1 999 kr per år, upp till 10 samtidigt (fler efter kontakt).
   - Pilotklubbar använder Skramlat gratis under pilotåret.
-- Räknaren står på 17 340 kr swishat, från det första lagets försäljning. Den uppdateras för hand i `index.html` och `om/index.html`.
+- Räknaren står på 17 340 kr swishat, från det första lagets försäljning. Den står bara på framsidan och uppdateras för hand i `index.html`, både i `data-varde` och i texten.
 - Lova inget som inte är byggt utan att skriva att det kommer. Exempel: automatisk radering efter 60 dagar, ansökan för klubbar, klubbens kontaktuppgift på klubbsidan.
 
 ## Det här använder vi inte

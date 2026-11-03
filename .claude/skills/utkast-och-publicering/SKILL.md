@@ -13,7 +13,7 @@ Allt som hamnar på `main` publiceras direkt på skramlat.se. Cloudflare (Worker
 2. **Gör ändringen.** Här finns sakerna:
    - Sidorna är fristående HTML-filer, var och en med egen `<style>` och egna färger i `:root`: `index.html`, `pris/`, `om/`, `demo/`, `guider/` och `kom-igang/`.
    - Menyn och räknaren använder `skramlat.css` och `skramlat.js`. Menyn står också som HTML i varje sida, så en ny menypunkt läggs in i alla sidor.
-   - Räknaren (kronor swishat) står i både `index.html` och `om/index.html`, och i varje fil både i `data-varde` och i texten. Ändra alla fyra ställena.
+   - Räknaren (kronor swishat) står bara i `index.html`, både i `data-varde` och i texten. Ändra båda ställena.
    - En ny mapp på toppnivå måste läggas till i `MED` i `scripts/bygg.js`. Annars publiceras den inte.
    - `eskilsminne/` visar demo på skramlat.se tills klubben går live. Se skillen `ny-klubb-och-go-live`.
    - Texten ska följa skillen `ton-och-varumarke`. Ägaren vill ha lite text.

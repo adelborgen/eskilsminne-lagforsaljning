@@ -15,13 +15,6 @@
 <link rel="stylesheet" href="skramlat.css">
 <style>
   /* Skramlats framsida: grafit, krämvita kort, mint som detaljfärg. Se brand-manualen. */
-  :root { --grafit: #16191d; --upphojd: #20252b; --kram: #fff8d6; --mint: #6fe3b4; --black: #0f1a33; --text: #ece8d8; --dampad: #a9b0b8; --dampad-kort: #4a5575;
-    --display: Archivo, "Arial Black", system-ui, sans-serif;
-    --body: "Atkinson Hyperlegible Next", system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
-  * { box-sizing: border-box; }
-  body { margin: 0; background: var(--grafit); color: var(--text); font: 17px/1.55 var(--body); }
-  a { color: var(--mint); }
-  :focus-visible { outline: 3px solid var(--mint); outline-offset: 3px; border-radius: 6px; }
   .sida { max-width: 1080px; margin: 0 auto; padding: calc(env(safe-area-inset-top, 0px) + 28px) max(16px, env(safe-area-inset-right, 0px)) calc(env(safe-area-inset-bottom, 0px) + 56px) max(16px, env(safe-area-inset-left, 0px)); display: flex; flex-direction: column; gap: 44px; }
   .hjalte { display: grid; grid-template-columns: minmax(0, 1.2fr) minmax(0, .8fr); gap: 32px; align-items: center; }
   .hjalte h1 { margin: 0; font: 900 clamp(44px, 9vw, 84px)/.93 var(--display); font-stretch: 112%; letter-spacing: -.01em; color: var(--kram); text-wrap: balance; }
@@ -49,10 +42,7 @@
   .kund.snart { background: var(--upphojd); color: var(--text); box-shadow: none; }
   .kund.snart small { color: var(--dampad); }
   .kund svg { flex: none; }
-  .kontakt { background: var(--mint); color: var(--black); border-radius: 22px; padding: 26px 24px; display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 16px; box-shadow: 0 5px 0 #050b1c; }
   .kontakt h2 { margin: 0; color: var(--black); max-width: 18ch; }
-  .kontakt a { display: inline-flex; align-items: center; min-height: 56px; font: 900 22px/1 var(--display); font-stretch: 106%; background: var(--grafit); color: var(--kram); border-radius: 14px; padding: 0 22px; text-decoration: none; box-shadow: 0 4px 0 #050b1c; }
-  .kontakt a:hover { color: var(--mint); }
   .fot { color: var(--dampad); font-size: 14.5px; }
   @media (max-width: 720px) { .hjalte { grid-template-columns: 1fr; } .bossa { order: -1; width: 160px; justify-self: start; } }
 </style>
@@ -68,8 +58,7 @@
   <section class="hjalte">
     <div>
       <h1>Lagets försäljning, enkelt.</h1>
-      <p class="etikett">Vad är Skramlat?</p>
-      <p>Skramlat underlättar administrationen av lagens och skolornas försäljningar och insamlingar, och gör processen säker och trygg för alla.</p>
+      <p>Föräldrar beställer i mobilen och swishar direkt till laget. Klubben ser allt.</p>
       <div class="knappar"><a class="knapp primar" href="#kunder">Hitta ditt lag</a><a class="knapp sekundar" href="demo/">Prova demon</a></div>
     </div>
     <svg class="bossa" viewBox="0 0 64 64" fill="none" role="img" aria-label="Skramlats symbol: en genomskinlig insamlingsbössa med mynt">
@@ -97,16 +86,7 @@
     </ol>
   </section>
 
-  <section class="alltid">
-    <h2>Tryggt för alla</h2>
-    <div><b>Pengarna går direkt</b><span>Skramlat tar aldrig del av dem.</span></div>
-    <div><b>Varje krona går att följa</b><span>Ordernumret följer med i Swish.</span></div>
-    <div><b>Lite uppgifter, inom EU</b><span>Bara barnets förnamn och ett mobilnummer.</span></div>
-    <div><b>Klubben godkänner</b><span>Ingen försäljning öppnar utan klubbens ja.</span></div>
-  </section>
-
   <section id="kunder">
-    <p class="etikett">Hitta ditt lag</p>
     <h2>Klubbar och skolor</h2>
     <div class="kunder">
       <a class="kund" href="eskilsminne/"><span>Eskilsminne IF<small>Förening · pilotklubb</small></span><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#0f1a33" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 12h15M13 6l6 6-6 6"/></svg></a>
@@ -119,7 +99,6 @@
     <a href="kom-igang/">Skicka en förfrågan →</a>
   </section>
 
-  <footer class="fot">Skramlat tar aldrig emot pengar. Pengarna swishas direkt till laget eller skolan.</footer>
 </main>
 <script src="skramlat.js"></script>
 </body>
