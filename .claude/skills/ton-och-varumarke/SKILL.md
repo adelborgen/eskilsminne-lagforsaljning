@@ -10,8 +10,8 @@ Skramlat gör lagförsäljning enkel. Föräldrar beställer i mobilen och swish
 ## Ton
 
 - **Du-form och vardagligt.** Skriv korta meningar, med en sak per mening.
-- **Lite text.** Ägaren tycker att det lätt blir för mycket.
-  - Säg varje sak en gång. Upprepa inte samma löfte i flera avsnitt på samma sida.
+- **Lite text.** Ägaren tycker att det lätt blir för mycket. Inga taglines, hjälptexter eller etiketter som bara upprepar. Behöver en sida dem för att gå att förstå, ändra hellre sidan.
+  - Säg varje sak en gång. Löftena (pengarna, uppgifterna, klubbens godkännande) står på Om Skramlat, inte på varje sida.
   - Berätta vad Skramlat är innan du beskriver hur det går till.
 - **Rollnamn i stället för personer:** förälder, lagförälder, klubbens administratör, klubben eller skolan, laget eller klassen.
 - **Nämn inga kanaler.** Skriv "där du brukar få besked från laget" i stället för Facebook, WhatsApp eller sms, eftersom lagen använder olika kanaler.
@@ -58,9 +58,9 @@ Skriv bara det som är sant i tjänsten idag. Är du osäker, kontrollera i kode
 
 ## Exempel
 
-Framsidan, som säger vad Skramlat är innan scenariot:
+Framsidan, under rubriken *Lagets försäljning, enkelt.*: vad som händer, inte vad tjänsten "underlättar".
 
-> **Vad är Skramlat?** Skramlat underlättar administrationen av lagens och skolornas försäljningar och insamlingar, och gör processen säker och trygg för alla.
+> Föräldrar beställer i mobilen och swishar direkt till laget. Klubben ser allt.
 
 Under beställningsknappen, där en ruta att kryssa i annars hade stått:
 
