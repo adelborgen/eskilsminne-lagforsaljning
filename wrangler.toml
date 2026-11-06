@@ -39,7 +39,7 @@ migrations_dir = "migrations"
 name = "EMAIL"
 
 [vars]
-SIDA_ORIGIN = "https://skramlat.adelborg.workers.dev"   # inloggningslänken i mejlet pekar hit, aldrig på värdadressen i förfrågan. Byt till https://skramlat.se när domänen har flyttat till Cloudflare.
+SIDA_ORIGIN = "https://skramlat.se"   # inloggningslänken i mejlet pekar hit, aldrig på värdadressen i förfrågan
 EPOST_FRAN = "inloggning@skramlat.se"
 
 # Inga loggar: servern loggar aldrig uppgifter om personer, och Workers Logs ska vara avstängt.

@@ -54,7 +54,7 @@
   }
   function navLank(slug, attrs, text) {
     var a = h("a", Object.assign({ href: slug ? "?lag=" + encodeURIComponent(slug) : "./" }, attrs));
-    if (text) a.textContent = text;
+    if (text) a.textContent = U.ord(text);
     a.addEventListener("click", function (ev) {
       if (ev.defaultPrevented || ev.button !== 0 || ev.metaKey || ev.ctrlKey || ev.shiftKey || ev.altKey) return;
       ev.preventDefault(); gaTill(slug);
@@ -71,7 +71,10 @@
 
   // Lagets namn på brickan: "F2017" blir F över 2017. Andra namn visas som de är.
   // "P2019", "F2014" och "P2019 Tulpaner" blir bokstav över årtal; resten av namnet står redan i rubriken.
+  // En klass: "Klass 1" och "Klass 6B" visar bara 1 och 6B, resten står redan i rubriken.
   function platta(namn) {
+    var klass = /^klass\s+(\d{1,2}[A-Za-zÅÄÖåäö]?)(?![\wÅÄÖåäö])/i.exec(String(namn).trim());
+    if (klass) return h("span", { class: "plate" }, h("b", { text: klass[1].toUpperCase() }));
     var m = /^([A-Za-zÅÄÖåäö])[A-Za-zÅÄÖåäö]*\s*(\d{4})(?!\d)/.exec(String(namn).trim());
     if (m) return h("span", { class: "plate" }, h("b", { text: m[1].toUpperCase() }), h("i", { text: m[2] }));
     return h("span", { class: "plate lang" }, h("b", { text: namn }));

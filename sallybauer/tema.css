@@ -1,0 +1,9 @@
+/* Sally Bauerskolorna: skolans marinblå och vitt, ovanpå klubbsidornas utseende (eskilsminne/style.css).
+   Vitt används till knappar och brickor, aldrig som bakgrund. Krämvita kort som vanligt. Se brand-manualen, Kundlagret. */
+:root {
+  --yellow: #ffffff; --blue: #1d345f; --sky: #c9d4ea; --hard: #0c1a33;
+  --bg-a: #1d345f; --bg-b: #213a69; --fg2: #d3dcef;
+}
+@media (prefers-color-scheme: dark) {
+  :root { --bg-a: #12213d; --bg-b: #152645; --hard: #070f1f; --fg2: #c3cee6; }
+}
