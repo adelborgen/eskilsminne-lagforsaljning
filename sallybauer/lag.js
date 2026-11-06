@@ -14,7 +14,7 @@ var KLUBB = {
   namn: "Sally Bauerskolorna",
   titel: "Klassförsäljning",
   motto: "",
-  logo: "",                              // skolans logga läggs här när den finns (till exempel assets/logga.png)
+  logo: "assets/logga.png",              // skolans logga. Skolan har gett tillåtelse att använda den.
   ord: "skola",                          // klass, klassförälder och skolan i stället för lag, lagförälder och klubben
   valjLagText: "Du swishar direkt till klassen, och pengarna går till klassens kassa.",
   kontakt: "Hittar du inte svaret? Hör av dig där du brukar få besked från klassen.",
