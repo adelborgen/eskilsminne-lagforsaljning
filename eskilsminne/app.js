@@ -225,6 +225,16 @@
     var swish = h("div", { class: "swish" },
       h("h3", { text: "Swisha " + kr(belopp) }),
       nummer && cfg.swish.namnPaKonto ? h("p", { class: "till", text: "till " + cfg.swish.namnPaKonto }) : null);
+    // Knappen Öppna Swish: Swish egen länk (developer.swish.nu, Generate QR codes) öppnar appen med nummer, belopp och meddelande
+    // ifyllda och låsta, så att ordernumret alltid följer med. Bara i mobilen, där appen finns, och aldrig i demoläget.
+    // Ett mobilnummer skrivs med landskod (4670…), ett Swish-nummer (123…) som det är. Uppgifterna står kvar under, om knappen inte fungerar.
+    var mobil = (window.matchMedia && window.matchMedia("(pointer: coarse)").matches) || (navigator.maxTouchPoints > 0 && Math.min(screen.width, screen.height) < 820);
+    if (nummer && !demo && mobil) {
+      var sw = String(nummer).replace(/\D/g, "");
+      if (/^07\d{8}$/.test(sw)) sw = "46" + sw.slice(1);
+      swish.appendChild(h("a", { class: "primary", style: "margin:10px 0 6px; display:flex; align-items:center; justify-content:center", rel: "noopener",
+        href: "https://app.swish.nu/1/p/sw/?sw=" + sw + "&amt=" + Number(belopp).toFixed(2) + "&msg=" + encodeURIComponent(meddelande), text: "Öppna Swish" }));
+    }
     if (nummer) {
       var row = function (k, v, raw) {
         var b = h("button", { type: "button", class: "copy", text: "Kopiera", "aria-label": "Kopiera " + k.toLowerCase() });
