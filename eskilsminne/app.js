@@ -20,24 +20,22 @@
     var c = merge(merge(K.standard, (window.LAG_EXTRA || {})[lag.slug] || {}), egna);
     c.titel = lag.titel || lag.kampanj || c.produkt.namn || K.titel;
     // Knapparna under antalet: efter största antal, om laget inte har egna
-    if (!c.snabbval) c.snabbval = c.maxAntal >= 20 ? [5, 10, 15, 20] : [1, 2, 3, 5].filter(function (n) { return n <= c.maxAntal; });
     c.endpoint = K.endpoint;   // tom i demoläge
     if (!c.swish.meddelande) c.swish.meddelande = lag.namn + " försäljning";
     return c;
   }
 
   /* ---------- Topbar och sidfot ---------- */
-  var topPill = document.getElementById("pill");
-  function setTopbar(pill, title) {
-    topPill.hidden = !pill; topPill.textContent = pill || "";
+  function setTopbar(lag, title) {
+    document.getElementById("pill").hidden = true;
     document.getElementById("club").textContent = K.namn;
-    document.getElementById("apptitle").textContent = title;
+    document.getElementById("apptitle").textContent = lag ? lag + " · " + title : title;
   }
   if (K.logo) { var lg = document.getElementById("logo"); lg.src = K.logo; lg.hidden = false; }
   var foot = document.getElementById("foot");
   foot.appendChild(h("strong", { text: K.namn }));
   if (K.motto) foot.appendChild(h("div", { text: K.motto }));
-  if (!K.visning) foot.appendChild(h("div", { style: "margin-top:8px" }, h("a", { href: "admin.html", text: "Admin" })));   // demosidan visar adminvyn bredvid
+  if (!K.visning) foot.appendChild(h("div", { style: "margin-top:8px" }, h("a", { href: "admin.html", text: "Logga in" })));   // demosidan visar adminvyn bredvid
 
   var app = document.getElementById("app");
 
@@ -154,6 +152,7 @@
         host.appendChild(det);
       }
       if (info) info.textContent = q ? (vis.length ? vis.length + (vis.length === 1 ? " lag" : " lag") + " matchar" : "") : "";
+      if (!q && !pagande.length && avslutade.length) host.insertBefore(h("p", { class: "notice", text: "Ingen försäljning pågår just nu." }), host.firstChild);
       if (!vis.length) host.appendChild(h("p", { class: "notice", style: "margin-top:22px", text: LAG.length
         ? "Inget lag matchar. Kolla stavningen, eller be om länken där du brukar prata med laget." : "Inga lag är tillagda ännu." }));
     }
@@ -172,7 +171,7 @@
 
   /* ---------- Delat för beställningen ---------- */
   var MIN_VANTA_MS = 3500;   // servern nekar beställningar som kommer snabbare än 3 sekunder efter att sidan visades. Sidan väntar själv.
-  var KVITTO_DAGAR = 14;     // så länge kvittot finns kvar i webbläsaren
+  var KVITTO_DAGAR = 60;     // så länge kvittot finns kvar i webbläsaren: tills varorna är hämtade, även när försäljningen har hunnit avslutas
   var BARN_RE = /^[\p{L}][\p{L}\p{M} '’\-.&\/,()]{1,39}$/u;   // samma regel som på servern
 
   // En kod per beställning. Försöker föräldern igen med samma uppgifter efter ett svar som uteblev får hen samma beställning, inte en ny.
@@ -182,10 +181,77 @@
   }
   function litenHash(s) { var x = 5381; for (var i = 0; i < s.length; i++) x = ((x << 5) + x + s.charCodeAt(i)) | 0; return (x >>> 0).toString(36); }
 
-  /* ---------- Ett lag: beställning, översikt, vanliga frågor ---------- */
+  // Lagets texter med {lag}, {mal}, {pris} och så vidare ifyllda. {belonning} fylls inte i inuti belöningen själv.
+  function fyll(cfg, s, utanBelonning) {
+    var E = cfg.produkt.enhet || "st", En = cfg.produkt.enhetEn || "st";
+    s = String(s);
+    if (!utanBelonning) s = s.replace(/\{belonning\}/g, fyll(cfg, cfg.belonning, true));
+    return s.replace(/\{lag\}/g, cfg.namn).replace(/\{mal\}/g, nf.format(cfg.mal)).replace(/\{minimum\}/g, nf.format(cfg.minimum))
+      .replace(/\{pris\}/g, cfg.pris + " kr").replace(/\{produkt\}/g, cfg.produkt.namn).replace(/\{enhetEn\}/g, En).replace(/\{enhet\}/g, E);
+  }
+
+  // Kvittot (ordernummer, belopp, antal) sparas i webbläsaren, så att det finns kvar om sidan laddas om medan föräldern är i Swish
+  // och när hen kommer tillbaka för att se när varorna ska hämtas. Varken barnets namn eller mobilnummer sparas.
+  function sparaKvitto(cfg, p, id, belopp) {
+    if (!cfg.endpoint) return;
+    try { localStorage.setItem("kvitto:" + cfg.slug, JSON.stringify({ id: id, belopp: belopp, antal: p.antal, t: Date.now() })); } catch (e) {}
+  }
+  function hamtaKvitto(cfg) {
+    if (!cfg.endpoint) return null;
+    try {
+      var s = JSON.parse(localStorage.getItem("kvitto:" + cfg.slug) || "null");
+      if (s && /^\d{4,}$/.test(String(s.id)) && typeof s.belopp === "number" && typeof s.antal === "number" && Date.now() - s.t < KVITTO_DAGAR * 864e5) return s;
+    } catch (e) {}
+    return null;
+  }
+  function rensaKvitto(cfg) { try { localStorage.removeItem("kvitto:" + cfg.slug); } catch (e) {} }
+
+  function kopieraText(text, btn) {
+    function flash() { var old = btn.textContent; btn.textContent = "Kopierat ✓"; btn.classList.add("ok"); setTimeout(function () { btn.textContent = old; btn.classList.remove("ok"); }, 1600); }
+    if (navigator.clipboard && navigator.clipboard.writeText) { navigator.clipboard.writeText(text).then(flash, fallback); } else fallback();
+    function fallback() {
+      var t = h("textarea", { style: "position:fixed;opacity:0" }); t.value = text; document.body.appendChild(t); t.select();
+      try { document.execCommand("copy"); flash(); } catch (e) {} document.body.removeChild(t);
+    }
+  }
+
+  // Det föräldern behöver efter beställningen: vad som beställdes, Swish-uppgifterna och när varorna hämtas.
+  // Används direkt efter beställningen, när sidan öppnas igen och när försäljningen har avslutats.
+  function kvittoKort(cfg, p, orderId, belopp, o) {
+    o = o || {};
+    var demo = !cfg.endpoint;
+    var nummer = cfg.swish.nummer || (demo ? cfg.demoSwish : "");
+    var meddelande = (cfg.swish.meddelande + " " + orderId).slice(0, 50);
+    var swish = h("div", { class: "swish" },
+      h("h3", { text: "Swisha " + kr(belopp) }),
+      nummer && cfg.swish.namnPaKonto ? h("p", { class: "till", text: "till " + cfg.swish.namnPaKonto }) : null);
+    if (nummer) {
+      var row = function (k, v, raw) {
+        var b = h("button", { type: "button", class: "copy", text: "Kopiera", "aria-label": "Kopiera " + k.toLowerCase() });
+        b.addEventListener("click", function () { kopieraText(raw || v, b); });
+        return h("div", { class: "copyrow" }, h("div", null, h("div", { class: "k", text: k }), h("div", { class: "v num", text: v })), b);
+      };
+      swish.appendChild(row("Swish-nummer", nummer, String(nummer).replace(/\s/g, "")));
+      swish.appendChild(row("Belopp", kr(belopp), String(belopp)));
+      swish.appendChild(row("Meddelande", meddelande, meddelande));
+      swish.appendChild(h("p", { class: "small", style: "margin:10px 0 0", text: "Skriv meddelandet precis så, då hittar laget din betalning." }));
+    } else {
+      swish.appendChild(h("p", { text: "Swish-uppgifterna kommer snart. Vi hör av oss där du brukar prata med laget." }));
+    }
+    return h("div", { class: "card done", style: "margin-top:16px" },
+      demo ? h("p", { class: "okline", text: K.visning ? "Demo: beställningen syns nu hos lagföräldern" : "Förhandsvisning (inget skickades)" }) : null,
+      h("h2", { text: p.barn ? "Tack, " + p.barn + "!" : "Din beställning" }),
+      h("div", { class: "sumrow" }, h("span", { class: "num", text: p.antal + " × " + cfg.produkt.namn }), h("span", { class: "num", text: "Order " + orderId })),
+      o.aterstalld ? h("p", { class: "small", style: "margin:12px 0 0", text: "Har du redan swishat är du klar." }) : null,
+      swish,
+      cfg.utlamning ? h("div", { class: "hamtas" }, h("div", { class: "k", text: "Hämtning" }), h("p", { text: fyll(cfg, cfg.utlamning) })) : null,
+      o.nyBestallning ? h("button", { type: "button", class: "ghost", style: "margin-top:16px", text: "Beställ fler", onclick: o.nyBestallning }) : null);
+  }
+
+  /* ---------- Ett lag: beställningen, hur långt laget har kommit och vanliga frågor ---------- */
   function renderTeam(cfg) {
     var loadedAt = Date.now();
-    var state = { bestallt: null, antal: 0, barn: "", mobil: "" };
+    var state = { bestallt: null, antal: 1, barn: "", mobil: "" };
     var demo = !cfg.endpoint;
     var kodBas = slumpKod();
 
@@ -196,80 +262,44 @@
       return typeof n === "number" ? Math.max(0, cfg.lager - n) : null;
     }
     function maxNu() { var kv = kvarNu(); return kv === null ? cfg.maxAntal : Math.min(cfg.maxAntal, kv); }
-
-    // Kvittot (ordernummer, belopp, antal) sparas i webbläsaren så att det finns kvar om sidan laddas om medan föräldern är i Swish.
-    // Varken barnets namn eller mobilnummer sparas.
-    function sparaKvitto(p, id, belopp) {
-      if (demo) return;
-      try { localStorage.setItem("kvitto:" + cfg.slug, JSON.stringify({ id: id, belopp: belopp, antal: p.antal, t: Date.now() })); } catch (e) {}
-    }
-    function hamtaKvitto() {
-      if (demo) return null;
-      try {
-        var s = JSON.parse(localStorage.getItem("kvitto:" + cfg.slug) || "null");
-        if (s && /^\d{4,}$/.test(String(s.id)) && typeof s.belopp === "number" && typeof s.antal === "number" && Date.now() - s.t < KVITTO_DAGAR * 864e5) return s;
-      } catch (e) {}
-      return null;
-    }
-    function rensaKvitto() { try { localStorage.removeItem("kvitto:" + cfg.slug); } catch (e) {} }
     var marginal = cfg.pris - cfg.inkopspris;
     var E = cfg.produkt.enhet || "st", En = cfg.produkt.enhetEn || "st";
+    function fill(s) { return fyll(cfg, s); }
 
     setTopbar(cfg.namn, cfg.titel);
     document.title = cfg.titel + " – " + cfg.namn;
 
-    function fill(s) {
-      return String(s).replace(/\{belonning\}/g, fill2(cfg.belonning)).replace(/\{lag\}/g, cfg.namn)
-        .replace(/\{mal\}/g, nf.format(cfg.mal)).replace(/\{minimum\}/g, nf.format(cfg.minimum))
-        .replace(/\{pris\}/g, cfg.pris + " kr").replace(/\{produkt\}/g, cfg.produkt.namn)
-        .replace(/\{enhetEn\}/g, En).replace(/\{enhet\}/g, E);
-    }
-    function fill2(s) { // utan {belonning}, så att texten inte kan referera till sig själv
-      return String(s).replace(/\{lag\}/g, cfg.namn).replace(/\{mal\}/g, nf.format(cfg.mal))
-        .replace(/\{minimum\}/g, nf.format(cfg.minimum)).replace(/\{pris\}/g, cfg.pris + " kr")
-        .replace(/\{produkt\}/g, cfg.produkt.namn).replace(/\{enhetEn\}/g, En).replace(/\{enhet\}/g, E);
-    }
-
-    // En enda sida, uppifrån och ned: lagets egen text, hur långt laget har kommit, beställningen och vanliga frågor.
+    // En enda sida, uppifrån och ned: lagets egen text, beställningen, hur långt laget har kommit och vanliga frågor.
+    // Beställningen står först, eftersom det är den föräldern har kommit för.
     var intro = h("div");
     if (demo) intro.appendChild(h("p", { class: "notice", text: "Förhandsvisning med exempeldata. Inget skickas eller sparas." }));
-    if (cfg.intro) intro.appendChild(h("p", { class: "lead", style: "margin-top:16px", text: fill(cfg.intro) }));
-    var metersBox = h("div", { class: "card meters", style: "margin-top:16px", hidden: "" });
+    if (cfg.intro) intro.appendChild(h("p", { class: "lead", style: "margin-top:12px", text: fill(cfg.intro) }));
     var content = h("section");
+    var metersBox = h("div", { class: "card meters", style: "margin-top:16px", hidden: "" });
     var viewF = h("section", { id: "fragor", style: "margin-top:32px" });
 
     app.textContent = "";
     app.appendChild(navLank(null, { class: "back" }, "← Alla lag"));
-    app.appendChild(intro); app.appendChild(metersBox); app.appendChild(content); app.appendChild(viewF);
-    function visaOvanfor(ja) { intro.hidden = !ja; metersBox.hidden = !ja || state.bestallt == null; }
+    app.appendChild(intro); app.appendChild(content); app.appendChild(metersBox); app.appendChild(viewF);
+    var visarFormular = true;
+    function visaRunt(ja) { visarFormular = ja; intro.hidden = !ja; renderMeters(); }
     function tillFragor(e) { if (e) e.preventDefault(); viewF.scrollIntoView({ behavior: "smooth", block: "start" }); }
 
-    /* ---------- Mätare ---------- */
-    function pct(v, max) { return max > 0 ? Math.max(0, Math.min(100, v / max * 100)) : 0; }
-
-    function meter(o) {
-      var bar = h("span"); bar.style.width = pct(o.value, o.max) + "%";
-      var track = h("div", { class: "track", role: "progressbar", "aria-label": o.aria, "aria-valuemin": "0",
-        "aria-valuemax": String(o.max), "aria-valuenow": String(Math.min(o.value, o.max)) }, bar);
-      var wrap = h("div", { class: "track-wrap" }, track);
-      var cap = h("p", { class: "m-cap" });
-      o.cap.forEach(function (part) { cap.appendChild(typeof part === "string" ? document.createTextNode(part) : h("strong", { text: part.b })); });
-      return h("div", null,
-        h("div", { class: "m-head" }, o.label ? h("span", { class: "m-label", text: o.label }) : null,
-          h("span", { class: "m-value num" }, o.big, h("small", { text: " " + o.small }))),
-        wrap, cap);
-    }
-
+    /* ---------- Mätare: visas först när någon har beställt, så att ingen möts av en nolla ---------- */
     function renderMeters() {
       metersBox.textContent = "";
       var n = state.bestallt, mal = cfg.mal;
-      if (n == null) { metersBox.hidden = true; return; }
-      var cap = [{ b: "Ungefär " + kr(n * marginal) + " till lagkassan. " }];
-      if (n < mal) { if (cfg.belonning) cap.push(fill(cfg.belonning)); }
-      else cap.push([n >= mal ? "Målet är nått!" : "", fill(cfg.belonningNatt)].filter(Boolean).join(" "));
-      metersBox.appendChild(meter({ label: "", big: nf.format(n), small: "av " + nf.format(mal) + " " + E, value: n, max: mal,
-        aria: "Beställda " + E, cap: cap }));
-      metersBox.hidden = intro.hidden;
+      if (!visarFormular || !n) { metersBox.hidden = true; return; }
+      var bar = h("span"); bar.style.width = (mal > 0 ? Math.max(0, Math.min(100, n / mal * 100)) : 0) + "%";
+      var cap = h("p", { class: "m-cap" });
+      if (n >= mal || marginal > 0) cap.appendChild(h("strong", { text: n >= mal ? "Målet är nått! " : "Ungefär " + kr(n * marginal) + " till lagkassan. " }));
+      var extra = n >= mal ? fill(cfg.belonningNatt) : cfg.belonning ? fill(cfg.belonning) : "";
+      if (extra) cap.appendChild(document.createTextNode(U.ord(extra)));
+      metersBox.appendChild(h("div", null,
+        h("div", { class: "m-head" }, h("span", { class: "m-value num" }, nf.format(n), h("small", { text: " av " + nf.format(mal) + " " + E + " beställda" }))),
+        h("div", { class: "track", role: "progressbar", "aria-label": "Beställda " + E, "aria-valuemin": "0", "aria-valuemax": String(mal), "aria-valuenow": String(Math.min(n, mal)) }, bar),
+        cap));
+      metersBox.hidden = false;
     }
 
     function loadStatus() {
@@ -288,7 +318,7 @@
     function renderForm() {
       kodBas = slumpKod();
       content.textContent = "";
-      visaOvanfor(true);
+      visaRunt(true);
       if (kvarNu() === 0) {
         content.appendChild(h("div", { class: "card", style: "margin-top:16px" }, h("h3", { style: "margin:0", text: "Slutsåld" }),
           h("p", { style: "margin:6px 0 0", text: "Alla " + nf.format(cfg.lager) + " " + E + " är beställda." })));
@@ -299,50 +329,40 @@
       var form = h("form", { class: "card", novalidate: "", autocomplete: "off", style: "margin-top:16px" }, errBox);
 
       var P = cfg.produkt;
-      var antalInp = h("input", { type: "number", inputmode: "numeric", id: "antal", min: "0", max: String(maxNu()), value: String(state.antal), "aria-label": "Antal " + E });
-      // Raden har alltid sin plats, så att inget hoppar när antalet ändras (annars kan ett tryck på knappen missa)
-      var summa = h("p", { class: "small", style: "margin:10px 0 0; min-height:1.45em", "aria-live": "polite" });
+      // Antalet börjar på 1, så att priset och knappen stämmer direkt och ingen behöver välja först
+      var antalInp = h("input", { type: "number", inputmode: "numeric", id: "antal", min: "1", max: String(maxNu()), value: String(state.antal), "aria-label": "Antal " + E, "aria-describedby": "err-antal" });
+      var summa = h("p", { class: "small", style: "margin:10px 0 0; text-align:center", "aria-live": "polite" });
       var submit = h("button", { type: "submit", class: "primary", style: "margin-top:20px" });
-      var presetBtns = [];
-      function knappText() { return state.antal ? "Beställ för " + kr(state.antal * cfg.pris) : "Beställ"; }
-      function setAntal(v) {
-        state.antal = Math.max(0, Math.min(maxNu(), v | 0));
-        antalInp.value = String(state.antal);
-        presetBtns.forEach(function (b) { b.btn.setAttribute("aria-pressed", String(b.n === state.antal)); });
-        summa.textContent = state.antal ? kr(state.antal * marginal) + " går till lagkassan." : "";
+      var minus = h("button", { type: "button", "aria-label": "Minska antal", text: "−", onclick: function () { setAntal(state.antal - 1); } });
+      var plus = h("button", { type: "button", "aria-label": "Öka antal", text: "+", onclick: function () { setAntal(state.antal + 1); } });
+      function knappText() { return "Beställ för " + kr(state.antal * cfg.pris); }
+      function visaAntal(v) {
+        state.antal = v;
+        minus.disabled = v <= 1; plus.disabled = v >= maxNu();
+        summa.textContent = marginal > 0 ? U.ord(kr(v * marginal) + " går till lagkassan.") : "";
         submit.textContent = knappText();
       }
-      antalInp.addEventListener("change", function () { setAntal(parseInt(antalInp.value, 10) || 0); });
+      function setAntal(v) { v = Math.max(1, Math.min(maxNu(), v | 0)); antalInp.value = String(v); visaAntal(v); }
+      antalInp.addEventListener("change", function () { setAntal(parseInt(antalInp.value, 10) || 1); });
       // Medan föräldern skriver: summan och knappen följer med direkt, utan att fältet skrivs om
-      antalInp.addEventListener("input", function () {
-        var v = Math.max(0, Math.min(maxNu(), parseInt(antalInp.value, 10) || 0));
-        state.antal = v; summa.textContent = v ? kr(v * marginal) + " går till lagkassan." : ""; submit.textContent = knappText();
-        presetBtns.forEach(function (b) { b.btn.setAttribute("aria-pressed", String(b.n === v)); });
-      });
+      antalInp.addEventListener("input", function () { visaAntal(Math.max(1, Math.min(maxNu(), parseInt(antalInp.value, 10) || 1))); });
 
-      var presets = h("div", { class: "presets", role: "group", "aria-label": "Snabbval" });
-      cfg.snabbval.forEach(function (n) {
-        if (n > maxNu()) return;   // fler än det som finns kvar kan inte väljas
-        var btn = h("button", { type: "button", class: "preset num", text: String(n), "aria-pressed": "false", onclick: function () { setAntal(n); } });
-        presetBtns.push({ n: n, btn: btn }); presets.appendChild(btn);
-      });
-
-      var meta = [P.detalj, kr(cfg.pris) + " per " + En, kvarNu() !== null ? nf.format(kvarNu()) + " kvar" : ""].filter(Boolean).join(" · ");
-      // Produktens namn står redan i sidhuvudet: här bara beskrivningen och priset
+      // Produktens namn står redan i sidhuvudet: här står vad en är och vad den kostar
       form.appendChild(h("div", { class: "field" },
-        h("p", { style: "margin:0 0 12px; font-weight:700", text: meta }),
-        h("div", { class: "stepper" },
-          h("button", { type: "button", "aria-label": "Minska antal", text: "−", onclick: function () { setAntal(state.antal - 1); } }), antalInp,
-          h("button", { type: "button", "aria-label": "Öka antal", text: "+", onclick: function () { setAntal(state.antal + 1); } })),
-        presets, summa,
+        h("div", { class: "prisrad" },
+          h("div", null, h("div", { class: "vad", text: P.detalj || P.namn }),
+            kvarNu() !== null ? h("div", { class: "small", text: nf.format(kvarNu()) + " kvar" }) : null),
+          h("div", { class: "pris num" }, kr(cfg.pris), h("small", { text: "per " + En }))),
+        h("div", { class: "stepper" }, minus, antalInp, plus),
+        summa,
         h("p", { class: "error", id: "err-antal" })));
 
-      var barn = h("input", { type: "text", id: "barn", name: "barn", maxlength: "40", autocomplete: "off", autocapitalize: "words", value: state.barn });
-      barn.addEventListener("input", function () { state.barn = barn.value; });
+      var barn = h("input", { type: "text", id: "barn", name: "barn", maxlength: "40", autocomplete: "off", autocapitalize: "words", value: state.barn, "aria-describedby": "err-barn" });
+      barn.addEventListener("input", function () { state.barn = barn.value; setErr("barn"); });
       form.appendChild(h("div", { class: "field" }, h("label", { for: "barn", text: "Barnets förnamn" }), barn, h("p", { class: "error", id: "err-barn" })));
 
-      var mobil = h("input", { type: "tel", id: "mobil", name: "mobil", inputmode: "tel", autocomplete: "tel", placeholder: "07x xxx xx xx", maxlength: "20", value: state.mobil });
-      mobil.addEventListener("input", function () { state.mobil = mobil.value; });
+      var mobil = h("input", { type: "tel", id: "mobil", name: "mobil", inputmode: "tel", autocomplete: "tel", maxlength: "20", value: state.mobil, "aria-describedby": "err-mobil" });
+      mobil.addEventListener("input", function () { state.mobil = mobil.value; setErr("mobil"); });
       form.appendChild(h("div", { class: "field" }, h("label", { for: "mobil", text: "Ditt mobilnummer" }), mobil, h("p", { class: "error", id: "err-mobil" })));
 
       var hp = h("input", { type: "text", name: "website", tabindex: "-1", autocomplete: "off", "aria-hidden": "true" });
@@ -356,7 +376,12 @@
         h("a", { href: "#fragor", onclick: tillFragor }, "Vanliga frågor")));
       content.appendChild(form);
 
-      function setErr(id, msg) { var e = document.getElementById(id); if (e) e.textContent = msg || ""; }
+      // Ett fel står under sitt fält, och fältet får röd kant tills det ändras
+      function setErr(namn, msg) {
+        var e = document.getElementById("err-" + namn), f = document.getElementById(namn);
+        if (e) e.textContent = msg ? U.ord(msg) : "";
+        if (f) { if (msg) f.setAttribute("aria-invalid", "true"); else f.removeAttribute("aria-invalid"); }
+      }
       function normalizeMobil(s) {
         s = String(s || "").replace(/\(0\)/g, "").replace(/[\s\-().]/g, "");
         if (s.indexOf("+46") === 0) s = "0" + s.slice(3); else if (s.indexOf("0046") === 0) s = "0" + s.slice(4);
@@ -365,23 +390,22 @@
 
       form.addEventListener("submit", function (ev) {
         ev.preventDefault();
-        ["barn", "mobil", "antal"].forEach(function (k) { setErr("err-" + k); });
+        ["barn", "mobil", "antal"].forEach(function (k) { setErr(k); });
         errBox.hidden = true;
         var ok = true;
         var namn = barn.value.trim();
-        if (!BARN_RE.test(namn)) { setErr("err-barn", "Skriv barnets namn med bokstäver (2–40 tecken). Mellanslag, bindestreck och & går bra."); ok = false; }
+        if (!BARN_RE.test(namn)) { setErr("barn", "Skriv barnets förnamn."); ok = false; }
         var tel = normalizeMobil(mobil.value);
-        if (!/^07\d{8}$/.test(tel)) { setErr("err-mobil", "Skriv ett svenskt mobilnummer, till exempel 070 123 45 67."); ok = false; }
-        if (state.antal < 1) { setErr("err-antal", "Välj hur många " + E + " du vill beställa."); ok = false; }
-        else if (kvarNu() !== null && state.antal > kvarNu()) { setErr("err-antal", "Det finns bara " + nf.format(kvarNu()) + " kvar."); ok = false; }
-        if (!ok) { var f = form.querySelector(".error:not(:empty)"); if (f) f.scrollIntoView({ block: "center", behavior: "smooth" }); return; }
+        if (!/^07\d{8}$/.test(tel)) { setErr("mobil", "Skriv ett mobilnummer, till exempel 070 123 45 67."); ok = false; }
+        if (kvarNu() !== null && state.antal > kvarNu()) { setErr("antal", "Det finns bara " + nf.format(kvarNu()) + " kvar."); ok = false; }
+        if (!ok) { var f = form.querySelector("[aria-invalid]"); if (f) { f.focus({ preventScroll: true }); f.scrollIntoView({ block: "center", behavior: "smooth" }); } return; }
 
         var payload = { klubb: K.slug, lag: cfg.slug, barn: namn, mobil: tel, antal: state.antal, website: hp.value,
           kod: kodBas + "-" + litenHash(namn + "|" + tel + "|" + state.antal) };
         submit.disabled = true; submit.textContent = "Skickar…";
         function fail(msg) {
           submit.disabled = false; submit.textContent = knappText();
-          errBox.textContent = msg; errBox.hidden = false; errBox.scrollIntoView({ block: "center", behavior: "smooth" });
+          errBox.textContent = U.ord(msg); errBox.hidden = false; errBox.scrollIntoView({ block: "center", behavior: "smooth" });
         }
         if (demo) {
           // Demo: beställningen sparas bara i fliken, så att lagförälderns vy kan visa den. Numret fortsätter efter lagets exempelbeställningar.
@@ -400,64 +424,29 @@
               if (d && d.ok) success(payload, d.id, typeof d.belopp === "number" ? d.belopp : Math.round(payload.antal * cfg.pris * 100) / 100);
               else if (d && typeof d.kvar === "number" && cfg.lager > 0) {
                 // Någon annan hann före: visa hur många som verkligen finns kvar, och behåll det föräldern skrivit
-                state.bestallt = Math.max(0, cfg.lager - d.kvar); state.antal = Math.min(state.antal, d.kvar);
-                renderMeters(); renderForm();
+                state.bestallt = Math.max(0, cfg.lager - d.kvar); state.antal = Math.max(1, Math.min(state.antal, d.kvar));
+                renderForm();
                 var eb = content.querySelector(".formerror");
-                if (eb) { eb.textContent = d.fel; eb.hidden = false; eb.scrollIntoView({ block: "center", behavior: "smooth" }); }
+                if (eb) { eb.textContent = U.ord(d.fel); eb.hidden = false; eb.scrollIntoView({ block: "center", behavior: "smooth" }); }
               } else fail((d && d.fel) || "Något gick fel. Försök igen.");
             })
-            .catch(function () { fail("Det gick inte att skicka just nu. Kolla uppkopplingen och försök igen, eller hör av dig där du brukar prata med laget."); });
+            .catch(function () { fail("Det gick inte att skicka just nu. Kolla uppkopplingen och försök igen."); });
         }, Math.max(0, MIN_VANTA_MS - (Date.now() - loadedAt)));
       });
     }
 
     function success(p, orderId, belopp) {
       if (typeof state.bestallt === "number") state.bestallt += p.antal;
-      sparaKvitto(p, orderId, belopp);
-      renderMeters();
+      sparaKvitto(cfg, p, orderId, belopp);
       renderDone(p, orderId, belopp);
     }
 
-    /* ---------- Bekräftelse med Swish-instruktioner ---------- */
-    function copyText(text, btn) {
-      function flash() { var old = btn.textContent; btn.textContent = "Kopierat ✓"; btn.classList.add("ok"); setTimeout(function () { btn.textContent = old; btn.classList.remove("ok"); }, 1600); }
-      if (navigator.clipboard && navigator.clipboard.writeText) { navigator.clipboard.writeText(text).then(flash, fallback); } else fallback();
-      function fallback() {
-        var t = h("textarea", { style: "position:fixed;opacity:0" }); t.value = text; document.body.appendChild(t); t.select();
-        try { document.execCommand("copy"); flash(); } catch (e) {} document.body.removeChild(t);
-      }
-    }
-
+    /* ---------- Bekräftelse med Swish-uppgifterna ---------- */
     function renderDone(p, orderId, belopp, aterstalld) {
       content.textContent = "";
-      visaOvanfor(false);
-      var nummer = cfg.swish.nummer || (demo ? cfg.demoSwish : "");
-      var meddelande = (cfg.swish.meddelande + " " + orderId).slice(0, 50);
-
-      var swish = h("div", { class: "swish" }, h("h3", { text: "Swisha " + kr(belopp) }));
-      if (nummer) {
-        var row = function (k, v, raw) {
-          var b = h("button", { type: "button", class: "copy", text: "Kopiera", "aria-label": "Kopiera " + k.toLowerCase() });
-          b.addEventListener("click", function () { copyText(raw || v, b); });
-          return h("div", { class: "copyrow" }, h("div", null, h("div", { class: "k", text: k }), h("div", { class: "v num", text: v })), b);
-        };
-        swish.appendChild(row(cfg.swish.namnPaKonto || "Swish-nummer", nummer, String(nummer).replace(/\s/g, "")));
-        swish.appendChild(row("Belopp", kr(belopp), String(belopp)));
-        swish.appendChild(row("Meddelande", meddelande, meddelande));
-        swish.appendChild(h("p", { class: "small", style: "margin:10px 0 0", text: "Behåll meddelandet, så hittar laget din betalning." }));
-      } else {
-        swish.appendChild(h("p", { text: "Swish-uppgifterna kommer snart. Vi hör av oss där du brukar prata med laget." }));
-      }
-
-      content.appendChild(h("div", { class: "card done", style: "margin-top:16px" },
-        demo ? h("p", { class: "okline", text: K.visning ? "Demo: beställningen syns nu hos lagföräldern" : "Förhandsvisning (inget skickades)" }) : null,
-        h("h2", { text: p.barn ? "Tack, " + p.barn + "!" : "Din beställning" }),
-        h("div", { class: "sumrow" }, h("span", { class: "num", text: p.antal + " × " + cfg.produkt.namn }), h("span", { class: "num", text: "Order " + orderId })),
-        aterstalld ? h("p", { class: "notice", text: "Det här är din senaste beställning. Har du redan swishat är du klar." }) : null,
-        swish,
-        cfg.utlamning ? h("p", { style: "margin:14px 0 0", text: fill(cfg.utlamning) }) : null,
-        h("button", { type: "button", class: "ghost", style: "margin-top:16px", text: "Ny beställning",
-          onclick: function () { rensaKvitto(); state.antal = 0; state.barn = ""; renderForm(); window.scrollTo(0, 0); } })));
+      visaRunt(false);
+      content.appendChild(kvittoKort(cfg, p, orderId, belopp, { aterstalld: aterstalld,
+        nyBestallning: function () { rensaKvitto(cfg); state.antal = 1; state.barn = ""; renderForm(); window.scrollTo(0, 0); } }));
       window.scrollTo(0, 0);
     }
 
@@ -469,6 +458,7 @@
       cfg.faq.forEach(function (it) {
         if (it.kraver && !cfg[it.kraver]) return;
         if (it.kraverInte && cfg[it.kraverInte]) return;   // frågor som bara gäller utan lager
+        if (/\{minimum\}/.test(it.f + it.s) && !(cfg.minimum > 1)) return;   // utan ett minsta antal finns inget att fråga om
         c.appendChild(h("details", null, h("summary", { text: fill(it.f) }), h("p", { text: fill(it.s) })));
       });
       viewF.appendChild(c);
@@ -477,22 +467,25 @@
 
     renderFaq();
     renderForm();
-    var kvitto = hamtaKvitto();
+    var kvitto = hamtaKvitto(cfg);
     if (kvitto) renderDone({ barn: "", antal: kvitto.antal }, kvitto.id, kvitto.belopp, true);
     loadStatus();
     if (location.hash === "#fragor") setTimeout(tillFragor, 0);   // äldre länkar till fliken Vanliga frågor
   }
 
+  // Försäljningen är inte öppen: den har inte startat, eller så är den avslutad. Den som redan har beställt ser fortfarande
+  // sitt kvitto med Swish-uppgifterna och när varorna hämtas.
   function renderInteOppen(cfg) {
+    var slut = cfg.status === "avslutad";
     setTopbar(cfg.namn, cfg.titel || K.titel);
     document.title = (cfg.titel || K.titel) + " – " + cfg.namn;
     app.textContent = "";
     app.appendChild(navLank(null, { class: "back" }, "← Alla lag"));
-    app.appendChild(h("h2", { class: "title", text: cfg.status === "avslutad" ? "Försäljningen är avslutad" : "Försäljningen har inte startat än" }));
-    app.appendChild(h("p", { class: "lead", text: cfg.status === "avslutad"
-      ? "Tack till alla som har beställt! Det går inte att beställa längre för " + cfg.namn + "."
-      : "Försäljningen för " + cfg.namn + " öppnar snart. Vi säger till där du brukar få besked från laget när den öppnar." }));
-    app.appendChild(h("p", { class: "small", text: K.kontakt }));
+    app.appendChild(h("h2", { class: "title", text: slut ? "Försäljningen är avslutad" : "Försäljningen har inte startat än" }));
+    var kvitto = slut && cfg.slug && cfg.produkt ? hamtaKvitto(cfg) : null;
+    if (kvitto) app.appendChild(kvittoKort(cfg, { barn: "", antal: kvitto.antal }, kvitto.id, kvitto.belopp, { aterstalld: true }));
+    else if (slut && cfg.utlamning) app.appendChild(h("p", { class: "lead", text: fyll(cfg, cfg.utlamning) }));
+    else if (!slut) app.appendChild(h("p", { class: "lead", text: "Vi säger till där du brukar få besked från laget när den öppnar." }));
   }
 
   function renderFel() {

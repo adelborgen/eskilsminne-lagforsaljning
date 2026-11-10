@@ -28,7 +28,7 @@ var KLUBB = {
     snabbval: null,
     swish: { nummer: "", namnPaKonto: "", meddelande: "" },
 
-    intro: "Stötta {lag} genom att beställa. Pengarna går till klassens kassa.",
+    intro: "",           // lagets egen text överst. Utan den står ingenting där.
     aterbetalning: "Kan vi av något skäl inte genomföra beställningen betalar vi tillbaka din Swish.",
     belonning: "",
     belonningNatt: "",

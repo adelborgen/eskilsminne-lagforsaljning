@@ -35,7 +35,7 @@ var KLUBB = {
     snabbval: null,      // knapparna under antalet. Tom = väljs efter största antal.
     swish: { nummer: "", namnPaKonto: "", meddelande: "" },   // meddelande tom = "<lag> försäljning"
 
-    intro: "Stötta {lag} genom att beställa. Pengarna går till lagets kassa.",
+    intro: "",           // lagets egen text överst. Utan den står ingenting där.
     aterbetalning: "Kan vi av något skäl inte genomföra beställningen betalar vi tillbaka din Swish. Läs mer under Vanliga frågor.",
     belonning: "",       // text under mätaren innan målet är nått. Laget skriver den själv, till exempel en belöning vid {mal}.
     belonningNatt: "",   // text när målet är nått

@@ -7,3 +7,11 @@
 @media (prefers-color-scheme: dark) {
   :root { --bg-a: #12213d; --bg-b: #152645; --hard: #070f1f; --fg2: #c3cee6; }
 }
+
+/* Vitt är skolans ljusa färg, så det som annars lyser gult mot krämvitt får en egen markering */
+.notice { border-left-color: var(--blue); }
+.stat.alert { background: var(--cream); box-shadow: 0 4px 0 var(--hard), inset 0 0 0 3px var(--ink); }
+.swish { background: var(--cream2); }
+/* Mittcirkeln och mittlinjen hör till fotbollsplanen, inte till en skola */
+.hero .deco, .mittlinje { display: none; }
+.hero { padding-bottom: 12px; }
