@@ -90,6 +90,10 @@ Inför Sally Bauerskolorna, andra kunden:
 8. Testa hej@skramlat.se.
 9. **Formuläret på kom-igang fungerar hos riktiga Cloudflare:** ägaren skickade en förfrågan på skramlat.se 18 oktober 2026 och mejlet kom fram (hemligheten `FORFRAGAN_TILL` är alltså rätt inlagd).
 
+## Provat och släppt: knappen Öppna Swish (12 november 2026)
+
+En knapp på kvittot som öppnar Swish med nummer, belopp och meddelande ifyllda byggdes och provades av ägaren i mobilen. Både Swish egen länk (`https://app.swish.nu/1/p/sw/?sw=…`, beskriven för QR-koder på developer.swish.nu) och den äldre `swish://payment?data=…` gav *Felaktig länk* i Swish-appen, från en vanlig webbsida i mobilens webbläsare. Testet gjordes med ägarens eget nummer som mottagare, så det är inte uteslutet att en annan mottagare hade fungerat. Ägaren valde att släppa knappen: föräldern kopierar nummer, belopp och meddelande som förut. En QR-kod för den som beställer på datorn är inte provad.
+
 ## Säkerhet och tester
 
 `npm test` (api, inloggning, attacker och vaktprov för EU-reglerna), `npm run test:mutera` (bevis för att testerna biter, långsamt), `npm run test:xss` (XSS i webbläsare), `npm run test:gammal` (den gamla Apps Script-servern). Se README.md. Alla körs lokalt och kostar ingenting.
