@@ -1,0 +1,45 @@
+/* Guiderna: översikten (guider/index.html) och varje guide (guider/<namn>/index.html). Färgerna och menyn kommer från skramlat.css. */
+.sida { max-width: 760px; margin: 0 auto; padding: calc(env(safe-area-inset-top, 0px) + 32px) max(16px, env(safe-area-inset-right, 0px)) calc(env(safe-area-inset-bottom, 0px) + 56px) max(16px, env(safe-area-inset-left, 0px)); display: flex; flex-direction: column; gap: 24px; }
+h1 { margin: 6px 0 0; font: 900 clamp(38px, 9vw, 60px)/.98 var(--display); font-stretch: 112%; letter-spacing: -.01em; color: var(--kram); text-wrap: balance; }
+.ingress { margin: 14px 0 0; font-size: 19px; color: var(--text); max-width: 58ch; }
+.tillbaka { display: inline-block; margin-bottom: 14px; color: var(--dampad); font-weight: 700; text-decoration: none; }
+.tillbaka:hover { color: var(--mint); }
+
+/* Översikten: ett kort per guide */
+.guider { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 330px), 1fr)); gap: 14px; margin: 0; padding: 0; list-style: none; }
+.guider a { display: flex; flex-direction: column; gap: 8px; height: 100%; background: var(--kram); color: var(--black); border-radius: 22px; padding: 22px 22px 20px; text-decoration: none; box-shadow: 0 5px 0 #050b1c; transition: transform .15s; }
+.guider a:hover { transform: translateY(-2px); }
+.guider h2 { margin: 0; font: 900 25px/1.08 var(--display); font-stretch: 108%; text-wrap: balance; }
+.guider p { margin: 0; color: var(--dampad-kort); }
+.guider .las { margin-top: auto; padding-top: 6px; font: 800 15px/1 var(--display); font-stretch: 106%; color: var(--mint-text); }
+@media (prefers-reduced-motion: reduce) { .guider a { transition: none; } }
+
+/* En guide */
+.kort { background: var(--kram); color: var(--black); border-radius: 22px; padding: 24px 22px; box-shadow: 0 5px 0 #050b1c; }
+.kort h2 { margin: 0 0 12px; font: 900 clamp(24px, 5vw, 30px)/1.05 var(--display); font-stretch: 108%; }
+.kort ul, .kort ol { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 12px; }
+.kort li { position: relative; padding-left: 34px; max-width: 60ch; }
+.kort li::before { position: absolute; left: 0; top: 1px; width: 22px; height: 22px; border-radius: 50%; display: grid; place-items: center; font: 900 14px/1 var(--display); }
+.risk li::before { content: "!"; background: var(--black); color: var(--kram); }
+.rad li::before { content: "✓"; background: #1c8a5f; color: var(--kram); }
+.lista { counter-reset: punkt; }
+.lista li { counter-increment: punkt; }
+.lista li::before { content: counter(punkt); background: #1c8a5f; color: var(--kram); }
+.kort a { color: var(--mint-text); font-weight: 700; }
+.med { background: var(--upphojd); border: 2px solid #3d454e; border-radius: 18px; padding: 18px 20px; }
+.med p { margin: 0; max-width: 60ch; }
+.med strong { display: block; margin-bottom: 4px; font: 800 13px/1.2 var(--display); font-stretch: 125%; letter-spacing: .12em; text-transform: uppercase; color: var(--mint); }
+.med a { font-weight: 700; }
+.kallor { font-size: 15px; color: var(--dampad); }
+.kallor h2 { margin: 0 0 6px; font: 800 13px/1.2 var(--display); font-stretch: 125%; letter-spacing: .12em; text-transform: uppercase; color: var(--dampad); }
+.kallor ul { margin: 0; padding-left: 18px; }
+.kallor li { margin: 4px 0; }
+.kallor a { color: var(--text); }
+.fler h2 { margin: 0 0 10px; font: 800 13px/1.2 var(--display); font-stretch: 125%; letter-spacing: .12em; text-transform: uppercase; color: var(--mint); }
+.fler ul { display: flex; flex-wrap: wrap; gap: 10px; margin: 0; padding: 0; list-style: none; }
+.fler a { display: block; background: var(--upphojd); border: 2px solid #3d454e; color: var(--kram); text-decoration: none; border-radius: 999px; padding: 10px 16px; font-weight: 700; font-size: 15px; }
+.fler a:hover { border-color: var(--mint); }
+
+.fot { color: var(--dampad); font-size: 14.5px; display: flex; flex-direction: column; gap: 8px; }
+.fot p { margin: 0; }
+.fot a { color: var(--dampad); }
