@@ -1,6 +1,6 @@
 # Överlämning
 
-Läs den här filen först när arbetet fortsätter i en ny session. Senast uppdaterad 17 oktober 2026.
+Läs den här filen först när arbetet fortsätter i en ny session. Senast uppdaterad 26 november 2026.
 
 ## Vad det här är
 
@@ -24,7 +24,7 @@ Fas 1 i planen är byggd, testad lokalt och ligger på `main` (publiceras hos Cl
 | `skramlat.se/demo/` | Demosidan (Skramlats färger): förälderns och lagförälderns vy för ett påhittat lag, utan inloggning. Länkad från framsidan. Publicerad 17 oktober 2026. |
 | `skramlat.se/kom-igang/` | Formulär för förfrågningar från klubbar och skolor. Servern mejlar dem till ägaren (hemligheten `FORFRAGAN_TILL` hos Cloudflare, inlagd av ägaren 17 oktober 2026) och sparar inget i databasen. |
 | `skramlat.se/om/` | Om Skramlat: varför det finns, vad vi lovar, vem som står bakom (Andreas Adelborg, med ägarens ok). Räknaren (17 340 kr swishat) står bara på framsidan och uppdateras för hand där. |
-| `skramlat.se/guider/` | Fyra guider med källor: lotter, förenings-Swish eller privat, vem som ansvarar för pengarna, hur länge uppgifter sparas. |
+| `skramlat.se/guider/` | Sex guider för lagföräldern, en sida per guide (`guider/<namn>/`, gemensam stil i `guider/guide.css`): insyn, swishar som inte går att para ihop, privat Swish, när lagföräldern slutar, klubben som inte vet och en checklista. Omtag 26 november 2026: ton som visar vad som går fel utan insyn, bara officiella källor (myndigheter och banker, inga andra lagkasse-tjänster eller leverantörer). |
 | `skramlat.adelborg.workers.dev` | Cloudflare-versionen (Worker och D1), byggs automatiskt från `main`. `/api?action=version` visar serverns version. Databasen är tom. |
 | `skramlat.se/sallybauer/` | Sally Bauerskolornas sida, **skarp** (`endpoint: "/api"`), från 6 november 2026. Klass 1 är första försäljningen. Ägaren är skolans administratör (ägarens val, undantag från regeln i skillen `ny-klubb-och-go-live`). Skolans färger i `sallybauer/tema.css`, och `ord: "skola"` i `sallybauer/lag.js` byter lag mot klass, lagförälder mot klassförälder och klubben mot skolan (se `ord()` i `eskilsminne/util.js`). `noindex`. **Radering för hand:** automatisk radering efter 60 dagar är inte byggd, så ägaren raderar beställningarna senast 60 dagar efter att försäljningen är avslutad (ägarens val). |
 | `skramlat.se/eskilsminne/` | Eskilsminnes sida. **Visar demo**: `endpoint` i `eskilsminne/lag.js` är tom. Sätts till `/api` när Eskilsminne går live (se *Nästa steg*, punkt 4). |
