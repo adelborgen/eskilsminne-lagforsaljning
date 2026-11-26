@@ -19,7 +19,7 @@ Fas 1 i planen är byggd, testad lokalt och ligger på `main` (publiceras hos Cl
 
 | Adress | Vad |
 |---|---|
-| `skramlat.se` | Framsidan (`index.html`): loggan, tre steg, Tryggt för alla, kunder, länkar. Syns i Google sedan 18 oktober 2026 (ägarens val: `noindex` borttaget, Eskilsminne märkt *pilotklubb*). `eskilsminne/` har kvar `noindex`. |
+| `skramlat.se` | Framsidan (`index.html`): loggan, tre steg, en ruta med länkar till guiderna, Tryggt för alla, kunder, länkar. Syns i Google sedan 18 oktober 2026 (ägarens val: `noindex` borttaget, Eskilsminne märkt *pilotklubb*). `eskilsminne/` har kvar `noindex`. |
 | `skramlat.se/pris/` | Gratis, Bas 999 kr och Plus 1 999 kr per år exklusive moms, gratis för pilotklubbar under pilotåret. |
 | `skramlat.se/demo/` | Demosidan (Skramlats färger): förälderns och lagförälderns vy för ett påhittat lag, utan inloggning. Länkad från framsidan. Publicerad 17 oktober 2026. |
 | `skramlat.se/kom-igang/` | Formulär för förfrågningar från klubbar och skolor. Servern mejlar dem till ägaren (hemligheten `FORFRAGAN_TILL` hos Cloudflare, inlagd av ägaren 17 oktober 2026) och sparar inget i databasen. |
@@ -53,7 +53,7 @@ Granskare är inte utsedd. Automatisk radering efter 60 dagar måste byggas inna
 
 ## Marknadsföring
 
-- **Inlägg för sociala medier:** https://claude.ai/artifact/6UV22ao2tioSKLjTRo4RCy (Design-arbetsyta). 17 inlägg plus en karusell. Inlägg 13 har platshållaren [Ditt förnamn].
+- **Inlägg för sociala medier:** https://claude.ai/artifact/6UV22ao2tioSKLjTRo4RCy (Design-arbetsyta). 22 inlägg plus en karusell. Inlägg 13 har platshållaren [Ditt förnamn]. Inlägg 15 och 18–22 hör till guiderna (en per guide, november 2026), och inlägg 17 har dagens priser.
 - **Filmer** i `material/film/`: rörlig logga (10 s, kvadrat), "Så funkar det" (20 s, stående), "Före och efter" (15 s, stående). HTML-filerna bredvid är källorna. De läser typsnitten från `/home/user/eskilsminne-lagforsaljning/fonts/` och renderas bild för bild med Playwright (`rendera.cjs`) och ffmpeg.
 - Ägarens egen skärminspelning av riktiga Swish-betalningar ska **aldrig** användas: riktiga namn.
 
